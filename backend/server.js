@@ -8,6 +8,7 @@ require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
+const messageRoutes = require('./routes/messages');
 // const oauthRoutes = require('./routes/oauth');
 // const passport = require('./config/passport');
 const { connectDB, initializeIndexes, cleanupDatabase } = require('./config/database');
@@ -21,25 +22,48 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 
 // Configuration CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:19006',
+  'http://192.168.1.205:19006',
+  'http://192.168.1.205:8081',
+  'exp://192.168.1.205:8081'
+];
+
+// Ajouter les URLs depuis FRONTEND_URLS si définies
+if (process.env.FRONTEND_URLS) {
+  const additionalUrls = process.env.FRONTEND_URLS.split(',');
+  allowedOrigins.push(...additionalUrls);
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:19006',
+  origin: function (origin, callback) {
+    // Permettre les requêtes sans origin (comme les apps mobiles)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('CORS blocked origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
-// Rate limiting
+// Rate limiting - Augmenté pour le développement
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limite chaque IP à 100 requêtes par windowMs
+  max: 500, // Augmenté de 100 à 500 requêtes par windowMs
   message: {
     error: 'Trop de requêtes depuis cette IP, veuillez réessayer plus tard.'
   }
 });
 app.use(limiter);
 
-// Rate limiting spécifique pour l'auth
+// Rate limiting spécifique pour l'auth - Augmenté pour le développement
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limite chaque IP à 5 tentatives de connexion par windowMs
+  max: 20, // Augmenté de 5 à 20 tentatives de connexion par windowMs
   message: {
     error: 'Trop de tentatives de connexion, veuillez réessayer plus tard.'
   }
@@ -96,6 +120,9 @@ app.use('/api/auth', authLimiter, authRoutes);
 
 // Routes des événements
 app.use('/api/events', eventRoutes);
+
+// Routes de messagerie
+app.use('/api/messages', messageRoutes);
 
 // Middleware de gestion d'erreurs
 app.use((err, req, res, next) => {

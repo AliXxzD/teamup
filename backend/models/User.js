@@ -53,6 +53,12 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  
+  // Statut du compte
+  isActive: {
+    type: Boolean,
+    default: true
+  },
   profile: {
     avatar: {
       type: String,
@@ -372,6 +378,12 @@ userSchema.methods.getOAuthInfo = function() {
 userSchema.methods.updateLastLogin = function() {
   this.lastLogin = new Date();
   this.loginCount = (this.loginCount || 0) + 1;
+  return this.save();
+};
+
+// Méthode pour activer/désactiver le compte
+userSchema.methods.setActiveStatus = function(active) {
+  this.isActive = active;
   return this.save();
 };
 
