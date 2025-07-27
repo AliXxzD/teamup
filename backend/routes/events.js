@@ -207,6 +207,13 @@ router.post('/', authMiddleware, createEventValidation, async (req, res) => {
 
     const savedEvent = await event.save();
 
+    // Mettre à jour les statistiques de l'organisateur
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (user) {
+      await user.calculateRealStats();
+    }
+
     // Populer les données de l'organisateur pour la réponse
     await savedEvent.populate('organizer', 'name email profile.avatar');
 
@@ -372,6 +379,13 @@ router.post('/:id/join', authMiddleware, async (req, res) => {
     await event.addParticipant(req.userId);
     await event.populate('participants.user', 'name profile.avatar');
 
+    // Mettre à jour les statistiques de l'utilisateur
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (user) {
+      await user.calculateRealStats();
+    }
+
     res.json({
       success: true,
       message: 'Vous avez rejoint l\'événement avec succès',
@@ -415,6 +429,13 @@ router.delete('/:id/leave', authMiddleware, async (req, res) => {
     }
 
     await event.removeParticipant(req.userId);
+
+    // Mettre à jour les statistiques de l'utilisateur
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    if (user) {
+      await user.calculateRealStats();
+    }
 
     res.json({
       success: true,

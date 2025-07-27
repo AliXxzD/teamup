@@ -64,6 +64,7 @@ passport.use(new GoogleStrategy({
     const newUser = new User({
       name: profile.displayName || 'Utilisateur Google',
       email: profile.emails?.[0]?.value || `google.${profile.id}@teamup.local`,
+      username: profile.displayName?.toLowerCase().replace(/[^a-z0-9]/g, '') + Date.now().toString().slice(-4),
       // Pas de mot de passe pour les utilisateurs OAuth
       password: null,
       isEmailVerified: true, // Email vérifié par Google
@@ -80,10 +81,10 @@ passport.use(new GoogleStrategy({
         }
       },
       profile: {
-        avatar: profile.photos?.[0]?.value || null
-      },
-      stats: {
-        registrationDate: new Date()
+        avatar: profile.photos?.[0]?.value || null,
+        stats: {
+          registrationDate: new Date()
+        }
       }
     });
 

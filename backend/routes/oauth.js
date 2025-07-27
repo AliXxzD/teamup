@@ -80,7 +80,7 @@ router.get('/google/callback',
         userId: user._id,
         email: user.email,
         name: user.name,
-        isNewUser: user.stats.registrationDate > new Date(Date.now() - 30000) // Créé dans les 30 dernières secondes
+        isNewUser: user.profile?.stats?.registrationDate > new Date(Date.now() - 30000) // Créé dans les 30 dernières secondes
       });
 
       // Redirection vers le frontend avec les tokens

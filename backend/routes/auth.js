@@ -648,7 +648,8 @@ router.post('/reset-password', [
 // Route pour récupérer le profil utilisateur
 router.get('/profile', authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    // L'utilisateur est déjà chargé par le middleware d'authentification
+    const user = req.user;
     
     if (!user) {
       return res.status(404).json({
@@ -657,8 +658,8 @@ router.get('/profile', authMiddleware, async (req, res) => {
       });
     }
 
-    // Récupérer le profil public de l'utilisateur
-    const profile = user.getPublicProfile();
+    // Récupérer le profil public avec statistiques réelles
+    const profile = await user.getPublicProfileWithRealStats();
     
     // Ajouter quelques informations supplémentaires pour le profil personnel
     const enrichedProfile = {
@@ -697,8 +698,8 @@ router.get('/profile/:userId', authMiddleware, async (req, res) => {
       });
     }
 
-    // Récupérer le profil public
-    const profile = user.getPublicProfile();
+    // Récupérer le profil public avec statistiques réelles
+    const profile = await user.getPublicProfileWithRealStats();
     
     // Vérifier si l'utilisateur actuel suit ce profil
     const currentUser = await User.findById(currentUserId);
@@ -732,6 +733,14 @@ router.put('/profile', authMiddleware, [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage('Le nom doit contenir entre 2 et 50 caractères'),
+  
+  body('username')
+    .optional()
+    .trim()
+    .isLength({ min: 3, max: 30 })
+    .withMessage('Le nom d\'utilisateur doit contenir entre 3 et 30 caractères')
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage('Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores'),
   
   body('bio')
     .optional()
@@ -771,7 +780,8 @@ router.put('/profile', authMiddleware, [
       });
     }
 
-    const user = await User.findById(req.user.userId);
+    // L'utilisateur est déjà chargé par le middleware d'authentification
+    const user = req.user;
     
     if (!user) {
       return res.status(404).json({
@@ -779,21 +789,8 @@ router.put('/profile', authMiddleware, [
       });
     }
 
-    // Mettre à jour les champs autorisés
-    const { name, bio, location, favoritesSports, skillLevel, avatar, backgroundImage } = req.body;
-    
-    if (name) user.name = name;
-    
-    if (!user.profile) user.profile = {};
-    
-    if (bio !== undefined) user.profile.bio = bio;
-    if (avatar !== undefined) user.profile.avatar = avatar;
-    if (backgroundImage !== undefined) user.profile.backgroundImage = backgroundImage;
-    if (location) user.profile.location = location;
-    if (favoritesSports) user.profile.favoritesSports = favoritesSports;
-    if (skillLevel) user.profile.skillLevel = skillLevel;
-
-    await user.save();
+    // Utiliser la nouvelle méthode updateProfile
+    await user.updateProfile(req.body);
 
     // Retourner le profil mis à jour
     const updatedProfile = user.getPublicProfile();
@@ -806,6 +803,15 @@ router.put('/profile', authMiddleware, [
 
   } catch (error) {
     console.error('Erreur lors de la mise à jour du profil:', error);
+    
+    // Gérer les erreurs spécifiques
+    if (error.message.includes('nom d\'utilisateur')) {
+      return res.status(400).json({
+        error: 'Nom d\'utilisateur déjà pris',
+        message: error.message
+      });
+    }
+    
     res.status(500).json({
       error: 'Erreur interne du serveur',
       message: 'Impossible de mettre à jour le profil'
@@ -813,10 +819,39 @@ router.put('/profile', authMiddleware, [
   }
 });
 
+// Route pour mettre à jour les statistiques d'un utilisateur
+router.post('/profile/stats/update', authMiddleware, async (req, res) => {
+  try {
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(404).json({
+        error: 'Utilisateur non trouvé'
+      });
+    }
+
+    // Calculer et mettre à jour les statistiques réelles
+    const realStats = await user.calculateRealStats();
+    
+    res.json({
+      success: true,
+      message: 'Statistiques mises à jour avec succès',
+      stats: realStats
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des statistiques:', error);
+    res.status(500).json({
+      error: 'Erreur interne du serveur',
+      message: 'Impossible de mettre à jour les statistiques'
+    });
+  }
+});
+
 // Route pour récupérer les événements récents d'un utilisateur
 router.get('/profile/events/recent', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user._id; // Utiliser req.user._id au lieu de req.user.userId
     const limit = parseInt(req.query.limit) || 5;
     
     // Récupérer les événements récents où l'utilisateur est organisateur ou participant

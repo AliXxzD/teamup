@@ -20,6 +20,18 @@ const userSchema = new mongoose.Schema({
       'Veuillez entrer un email valide'
     ]
   },
+  username: {
+    type: String,
+    unique: true,
+    sparse: true, // Permet les valeurs null/undefined
+    trim: true,
+    minlength: [3, 'Le nom d\'utilisateur doit contenir au moins 3 caractères'],
+    maxlength: [30, 'Le nom d\'utilisateur ne peut pas dépasser 30 caractères'],
+    match: [
+      /^[a-zA-Z0-9_-]+$/,
+      'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres, tirets et underscores'
+    ]
+  },
   password: {
     type: String,
     required: function() { 
@@ -128,6 +140,10 @@ const userSchema = new mongoose.Schema({
       totalRatings: {
         type: Number,
         default: 0
+      },
+      registrationDate: {
+        type: Date,
+        default: Date.now
       }
     }
   },
@@ -225,10 +241,16 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 
 // Méthode pour obtenir le profil public
 userSchema.methods.getPublicProfile = function() {
+  // Générer un username si il n'existe pas
+  if (!this.username) {
+    this.username = this.generateUsername();
+    this.save().catch(err => console.error('Erreur lors de la sauvegarde du username:', err));
+  }
+
   return {
     id: this._id,
     name: this.name,
-    username: this.username || this.email.split('@')[0],
+    username: this.username,
     email: this.email,
     avatar: this.profile?.avatar,
     backgroundImage: this.profile?.backgroundImage,
@@ -244,7 +266,8 @@ userSchema.methods.getPublicProfile = function() {
       eventsOrganized: 0,
       eventsJoined: 0,
       averageRating: 0,
-      totalRatings: 0
+      totalRatings: 0,
+      registrationDate: this.createdAt
     },
     isEmailVerified: this.isEmailVerified,
     skillLevel: this.profile?.skillLevel || 'débutant'
@@ -266,6 +289,35 @@ userSchema.methods.updateStats = function(statType, increment = 1) {
     this.profile.stats.eventsJoined = (this.profile.stats.eventsJoined || 0) + increment;
   }
   
+  return this.save();
+};
+
+// Méthode pour mettre à jour le profil avec validation du username
+userSchema.methods.updateProfile = async function(updates) {
+  // Si un nouveau username est fourni, vérifier qu'il est unique
+  if (updates.username && updates.username !== this.username) {
+    const existingUser = await this.constructor.findOne({ username: updates.username });
+    if (existingUser) {
+      throw new Error('Ce nom d\'utilisateur est déjà pris');
+    }
+    this.username = updates.username;
+  }
+
+  // Mettre à jour les autres champs
+  if (updates.name) this.name = updates.name;
+  if (updates.email) this.email = updates.email;
+  
+  if (!this.profile) this.profile = {};
+  
+  if (updates.bio !== undefined) this.profile.bio = updates.bio;
+  if (updates.avatar !== undefined) this.profile.avatar = updates.avatar;
+  if (updates.backgroundImage !== undefined) this.profile.backgroundImage = updates.backgroundImage;
+  if (updates.location) this.profile.location = updates.location;
+  if (updates.favoritesSports) this.profile.favoritesSports = updates.favoritesSports;
+  if (updates.skillLevel) this.profile.skillLevel = updates.skillLevel;
+  if (updates.points !== undefined) this.profile.points = updates.points;
+  if (updates.level !== undefined) this.profile.level = updates.level;
+
   return this.save();
 };
 
@@ -423,6 +475,91 @@ userSchema.path('profile.dateOfBirth').validate(function(value) {
   
   return age >= 13; // Âge minimum 13 ans
 }, 'Vous devez avoir au moins 13 ans pour utiliser cette application');
+
+// Méthode pour calculer les vraies statistiques depuis la base de données
+userSchema.methods.calculateRealStats = async function() {
+  const Event = require('./Event');
+  
+  try {
+    // Compter les événements organisés
+    const eventsOrganized = await Event.countDocuments({ 
+      organizer: this._id,
+      status: { $ne: 'cancelled' }
+    });
+    
+    // Compter les événements rejoints (participant)
+    // Les participants sont stockés dans un tableau d'objets { user: ObjectId, ... }
+    const eventsJoined = await Event.countDocuments({
+      'participants.user': this._id,
+      status: { $ne: 'cancelled' }
+    });
+    
+    // Pour l'instant, on utilise des valeurs par défaut pour les évaluations
+    // car le système de ratings n'est pas encore implémenté
+    const averageRating = 0;
+    const ratingCount = 0;
+    
+    // Mettre à jour les statistiques dans le profil
+    if (!this.profile) {
+      this.profile = {};
+    }
+    if (!this.profile.stats) {
+      this.profile.stats = {};
+    }
+    
+    this.profile.stats.eventsOrganized = eventsOrganized;
+    this.profile.stats.eventsJoined = eventsJoined;
+    this.profile.stats.averageRating = averageRating;
+    this.profile.stats.totalRatings = ratingCount;
+    
+    await this.save();
+    
+    console.log(`📊 Statistiques calculées pour ${this.name}:`);
+    console.log(`   - Événements organisés: ${eventsOrganized}`);
+    console.log(`   - Événements rejoints: ${eventsJoined}`);
+    
+    return {
+      eventsOrganized,
+      eventsJoined,
+      averageRating,
+      totalRatings: ratingCount
+    };
+  } catch (error) {
+    console.error('Erreur lors du calcul des statistiques:', error);
+    return {
+      eventsOrganized: 0,
+      eventsJoined: 0,
+      averageRating: 0,
+      totalRatings: 0
+    };
+  }
+};
+
+// Méthode pour obtenir le profil public avec statistiques réelles
+userSchema.methods.getPublicProfileWithRealStats = async function() {
+  // Calculer les vraies statistiques
+  const realStats = await this.calculateRealStats();
+  
+  return {
+    id: this._id,
+    name: this.name,
+    username: this.username,
+    email: this.email,
+    avatar: this.profile?.avatar,
+    backgroundImage: this.profile?.backgroundImage,
+    location: this.profile?.location,
+    joinDate: this.createdAt,
+    bio: this.profile?.bio,
+    followers: this.profile?.followers?.length || 0,
+    following: this.profile?.following?.length || 0,
+    points: this.profile?.points || 0,
+    level: this.profile?.level || 1,
+    favoritesSports: this.profile?.favoritesSports || [],
+    stats: realStats,
+    isEmailVerified: this.isEmailVerified,
+    skillLevel: this.profile?.skillLevel || 'débutant'
+  };
+};
 
 const User = mongoose.model('User', userSchema);
 
