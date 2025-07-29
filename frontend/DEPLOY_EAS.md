@@ -65,7 +65,7 @@ Créez un fichier `.env` dans le dossier `frontend` :
 
 ```env
 # URL de votre backend sur Render
-EXPO_PUBLIC_API_URL=https://your-teamup-backend.onrender.com
+EXPO_PUBLIC_API_URL=https://teamup-oa5q.onrender.com
 
 # Autres configurations (optionnel)
 EXPO_PUBLIC_APP_ENV=production
@@ -88,17 +88,17 @@ Créez `eas.json` dans le dossier `frontend` :
         "EXPO_PUBLIC_API_URL": "http://192.168.1.205:5000"
       }
     },
-    "preview": {
-      "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-teamup-backend.onrender.com"
-      }
-    },
-    "production": {
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-teamup-backend.onrender.com"
-      }
-    }
+         "preview": {
+       "distribution": "internal",
+       "env": {
+         "EXPO_PUBLIC_API_URL": "https://teamup-oa5q.onrender.com"
+       }
+     },
+     "production": {
+       "env": {
+         "EXPO_PUBLIC_API_URL": "https://teamup-oa5q.onrender.com"
+       }
+     }
   },
   "submit": {
     "production": {}

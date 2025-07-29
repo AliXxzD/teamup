@@ -13,8 +13,8 @@ export const API_BASE_URL = (() => {
   }
   
   // URL par défaut si aucune variable d'environnement n'est définie
-  // Remplacez par votre URL Render une fois déployée
-  return 'https://your-teamup-backend.onrender.com';
+  // URL Render de production
+  return 'https://teamup-oa5q.onrender.com';
 })();
 
 // Configuration des timeouts

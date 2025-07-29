@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.nassimblm12.teamup"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -30,6 +31,12 @@
         "projectId": "22976ef4-ffc7-4d2e-8e32-177bda56bbe5"
       }
     },
-    "owner": "nassimblm12"
+    "owner": "nassimblm12",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/22976ef4-ffc7-4d2e-8e32-177bda56bbe5"
+    }
   }
 }
