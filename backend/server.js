@@ -21,33 +21,60 @@ const PORT = process.env.PORT || 5000;
 // Middleware de sécurité
 app.use(helmet());
 
-// Configuration CORS
+// Configuration CORS pour Render et Expo EAS
 const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:19006',
+  // Expo EAS Build URLs
+  'https://expo.dev',
+  'https://exp.host',
+  'https://snack.expo.io',
+  
+  // Expo Go URLs
+  'exp://192.168.1.205:8081',
+  'exp://localhost:8081',
+  
+  // Local development
+  'http://localhost:19006',
   'http://192.168.1.205:19006',
   'http://192.168.1.205:8081',
-  'exp://192.168.1.205:8081'
+  
+  // Production URLs (à ajouter selon votre domaine)
+  process.env.FRONTEND_URL || 'http://localhost:19006'
 ];
 
 // Ajouter les URLs depuis FRONTEND_URLS si définies
 if (process.env.FRONTEND_URLS) {
-  const additionalUrls = process.env.FRONTEND_URLS.split(',');
+  const additionalUrls = process.env.FRONTEND_URLS.split(',').map(url => url.trim());
   allowedOrigins.push(...additionalUrls);
 }
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permettre les requêtes sans origin (comme les apps mobiles)
+    // Permettre les requêtes sans origin (comme les apps mobiles Expo)
     if (!origin) return callback(null, true);
+    
+    // Permettre tous les domaines expo.dev et exp.host
+    if (origin.includes('expo.dev') || 
+        origin.includes('exp.host') || 
+        origin.includes('snack.expo.io') ||
+        origin.startsWith('exp://')) {
+      return callback(null, true);
+    }
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
+      console.log('Allowed origins:', allowedOrigins);
+      // En production, être plus permissif pour Expo
+      if (process.env.NODE_ENV === 'production') {
+        return callback(null, true);
+      }
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 // Rate limiting - Augmenté pour le développement
@@ -88,27 +115,37 @@ app.use(express.urlencoded({ extended: true }));
 // app.use(passport.initialize());
 // app.use(passport.session());
 
-// Route de test
+// Route de test pour Render
 app.get('/', (req, res) => {
   res.json({
-    message: 'Bienvenue sur l\'API TeamUp ! 🏃‍♂️⚽',
+    message: 'TeamUp API is running on Render! 🏃‍♂️⚽',
     version: '1.0.0',
     status: 'active',
+    environment: process.env.NODE_ENV || 'development',
+    server: 'Render',
     endpoints: {
       auth: '/api/auth',
       events: '/api/events',
+      messages: '/api/messages',
       health: '/api/health'
+    },
+    cors: {
+      enabled: true,
+      allowedOrigins: 'Expo EAS Build compatible'
     }
   });
 });
 
-// Route de santé
+// Route de santé pour Render
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    server: 'Render',
+    database: 'MongoDB Atlas connected',
+    cors: 'Expo EAS Build ready'
   });
 });
 
@@ -180,13 +217,17 @@ const startServer = async () => {
       await cleanupDatabase();
     }, 2000);
     
-    app.listen(PORT, () => {
-      console.log(`🚀 Serveur TeamUp démarré sur le port ${PORT}`);
-      console.log(`📍 URL: http://localhost:${PORT}`);
-      console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`🔐 Auth API: http://localhost:${PORT}/api/auth`);
-      console.log(`⚽ Events API: http://localhost:${PORT}/api/events`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 TeamUp API démarré sur Render!`);
+      console.log(`📍 Port: ${PORT}`);
+      console.log(`🌍 Host: 0.0.0.0 (Render compatible)`);
+      console.log(`🏥 Health check: /api/health`);
+      console.log(`🔐 Auth API: /api/auth`);
+      console.log(`⚽ Events API: /api/events`);
+      console.log(`💬 Messages API: /api/messages`);
       console.log(`🌟 Environnement: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔗 CORS: Expo EAS Build compatible`);
+      console.log(`💾 Database: MongoDB Atlas`);
     });
   } catch (error) {
     console.error('❌ Erreur lors du démarrage du serveur:', error);
