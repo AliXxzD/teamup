@@ -1,55 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
   StatusBar,
-  Alert,
-  Modal
+  Dimensions,
+  Animated,
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../styles/globalStyles';
 import GlobalMenu from '../components/GlobalMenu';
 
-const DashboardScreen = ({ navigation }) => {
-  const { user } = useAuth();
+const { width } = Dimensions.get('window');
 
-  const handleProfilePress = () => {
-    navigation.navigate('MainTabs', { screen: 'Profile' });
-  };
+const DashboardScreenTailwind = ({ navigation }) => {
+  const { user } = useAuth();
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const quickActions = [
     {
       title: 'Créer un événement',
-      icon: 'add-circle-outline',
-      iconLibrary: 'Ionicons',
-      color: colors.primary,
+      subtitle: 'Organiser votre activité',
+      icon: 'add-circle',
+      gradient: ['#20B2AA', '#1a9b94'],
       onPress: () => navigation.navigate('CreateEvent')
     },
     {
-      title: 'Rejoindre un événement',
-      icon: 'search-outline',
-      iconLibrary: 'Ionicons',
-      color: '#007AFF',
+      title: 'Découvrir',
+      subtitle: 'Rejoindre des événements',
+      icon: 'search',
+      gradient: ['#3B82F6', '#2563EB'],
       onPress: () => navigation.navigate('Discover')
     },
     {
       title: 'Mes événements',
-      icon: 'calendar-outline',
-      iconLibrary: 'Ionicons',
-      color: '#34C759',
+      subtitle: 'Gérer vos activités',
+      icon: 'calendar',
+      gradient: ['#10B981', '#059669'],
       onPress: () => navigation.navigate('MyEventsStack')
     },
     {
-      title: 'Inviter des amis',
-      icon: 'people-outline',
-      iconLibrary: 'Ionicons',
-      color: '#FF9500',
-      onPress: () => navigation.navigate('InviteFriends')
+      title: 'Messages',
+      subtitle: 'Communiquer',
+      icon: 'chatbubbles',
+      gradient: ['#F59E0B', '#D97706'],
+      onPress: () => navigation.navigate('Messages')
     }
   ];
 
@@ -60,7 +74,8 @@ const DashboardScreen = ({ navigation }) => {
       date: 'Aujourd\'hui 18h00',
       location: 'Stade Municipal',
       participants: 12,
-      maxParticipants: 22
+      maxParticipants: 22,
+      sport: 'football'
     },
     {
       id: 2,
@@ -68,7 +83,8 @@ const DashboardScreen = ({ navigation }) => {
       date: 'Demain 08h00',
       location: 'Parc de la Ville',
       participants: 8,
-      maxParticipants: 15
+      maxParticipants: 15,
+      sport: 'running'
     },
     {
       id: 3,
@@ -76,330 +92,217 @@ const DashboardScreen = ({ navigation }) => {
       date: 'Vendredi 19h00',
       location: 'Studio Zen',
       participants: 5,
-      maxParticipants: 10
+      maxParticipants: 10,
+      sport: 'yoga'
     }
   ];
 
   const sports = [
-    { name: 'Football', icon: 'play-circle', iconLibrary: 'Ionicons', count: 45 },
-    { name: 'Basketball', icon: 'radio-button-off', iconLibrary: 'Ionicons', count: 32 },
-    { name: 'Tennis', icon: 'fitness', iconLibrary: 'Ionicons', count: 28 },
-    { name: 'Running', icon: 'walk', iconLibrary: 'Ionicons', count: 67 },
-    { name: 'Yoga', icon: 'leaf', iconLibrary: 'Ionicons', count: 23 },
-    { name: 'Natation', icon: 'water', iconLibrary: 'Ionicons', count: 18 }
+    { name: 'Football', icon: 'football', count: 45, color: '#10B981' },
+    { name: 'Basketball', icon: 'basketball', count: 32, color: '#F59E0B' },
+    { name: 'Tennis', icon: 'tennisball', count: 28, color: '#EF4444' },
+    { name: 'Running', icon: 'walk', count: 67, color: '#3B82F6' },
+    { name: 'Yoga', icon: 'leaf', count: 23, color: '#8B5CF6' },
+    { name: 'Natation', icon: 'water', count: 18, color: '#06B6D4' }
   ];
 
-  const IconComponent = ({ name, library = 'Ionicons', size = 24, color = colors.textSecondary }) => {
-    switch (library) {
-      case 'MaterialIcons':
-        return <MaterialIcons name={name} size={size} color={color} />;
-      default:
-        return <Ionicons name={name} size={size} color={color} />;
-    }
-  };
-
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="trophy" size={20} color={colors.white} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+      
+      {/* Header with Gradient */}
+      <LinearGradient
+        colors={['#20B2AA', '#1a9b94', '#0f172a']}
+        className="pb-6"
+      >
+        <Animated.View 
+          className="flex-row justify-between items-center px-5 pt-4"
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <View className="flex-row items-center">
+            <View className="w-12 h-12 bg-white/20 rounded-2xl items-center justify-center mr-4">
+              <Ionicons name="trophy" size={24} color="#ffffff" />
+            </View>
+            <View>
+              <Text className="text-white text-2xl font-bold">TeamUp</Text>
+              <Text className="text-white/80 text-sm">Votre communauté sportive</Text>
+            </View>
           </View>
-          <Text style={styles.appName}>TeamUp</Text>
-        </View>
-        <GlobalMenu navigation={navigation} />
-      </View>
+          <TouchableOpacity 
+            className="w-12 h-12 bg-white/20 rounded-full items-center justify-center"
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text className="text-white text-lg font-bold">
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Welcome Section */}
-        <View style={styles.welcomeSection}>
-          <Text style={styles.welcomeText}>Bonjour, {user?.name} ! 
-            <Ionicons name="hand-right" size={20} color={colors.primary} style={{ marginLeft: 8 }} />
-          </Text>
-          <Text style={styles.welcomeSubtext}>Prêt pour votre prochaine aventure sportive ?</Text>
-        </View>
+        <Animated.View 
+          className="mx-5 -mt-8 bg-dark-800 rounded-3xl p-6 mb-6"
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <View className="flex-row justify-between items-start mb-6">
+            <View className="flex-1">
+              <Text className="text-white text-xl font-bold mb-2">
+                Bonjour, {user?.name} ! 👋
+              </Text>
+              <Text className="text-dark-300 text-base">
+                Prêt pour votre prochaine aventure sportive ?
+              </Text>
+            </View>
+            <View className="bg-warning/20 px-3 py-2 rounded-xl flex-row items-center">
+              <Ionicons name="sunny" size={16} color="#F59E0B" />
+              <Text className="text-warning ml-2 font-semibold">22°C</Text>
+            </View>
+          </View>
+
+          {/* Quick Stats */}
+          <View className="flex-row justify-between">
+            <View className="bg-dark-700 rounded-2xl p-4 flex-1 mr-2">
+              <Text className="text-white text-2xl font-bold">12</Text>
+              <Text className="text-dark-400 text-sm">Événements</Text>
+            </View>
+            <View className="bg-dark-700 rounded-2xl p-4 flex-1 mx-1">
+              <Text className="text-white text-2xl font-bold">47h</Text>
+              <Text className="text-dark-400 text-sm">Activité</Text>
+            </View>
+            <View className="bg-dark-700 rounded-2xl p-4 flex-1 ml-2">
+              <Text className="text-white text-2xl font-bold">5⭐</Text>
+              <Text className="text-dark-400 text-sm">Note</Text>
+            </View>
+          </View>
+        </Animated.View>
 
         {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions rapides</Text>
-          <View style={styles.quickActionsGrid}>
+        <View className="px-5 mb-6">
+          <Text className="text-white text-xl font-bold mb-4">Actions rapides</Text>
+          <View className="flex-row flex-wrap justify-between">
             {quickActions.map((action, index) => (
               <TouchableOpacity
                 key={index}
-                style={[styles.quickActionCard, { borderLeftColor: action.color }]}
+                className="w-[48%] mb-4"
                 onPress={action.onPress}
+                activeOpacity={0.8}
               >
-                <IconComponent 
-                  name={action.icon} 
-                  library={action.iconLibrary} 
-                  size={28} 
-                  color={action.color} 
-                />
-                <Text style={styles.quickActionTitle}>{action.title}</Text>
+                <LinearGradient
+                  colors={action.gradient}
+                  className="rounded-2xl p-4 h-24"
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <View className="flex-row items-center h-full">
+                    <View className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-3">
+                      <Ionicons name={action.icon} size={20} color="#ffffff" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-white font-bold text-base">{action.title}</Text>
+                      <Text className="text-white/80 text-xs">{action.subtitle}</Text>
+                    </View>
+                  </View>
+                </LinearGradient>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
         {/* Upcoming Events */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Événements à venir</Text>
-            <TouchableOpacity>
-              <Text style={styles.seeAllText}>Voir tout</Text>
+        <View className="px-5 mb-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <Text className="text-white text-xl font-bold">Événements à venir</Text>
+            <TouchableOpacity className="flex-row items-center">
+              <Text className="text-primary-500 font-semibold mr-1">Voir tout</Text>
+              <Ionicons name="chevron-forward" size={16} color="#20B2AA" />
             </TouchableOpacity>
           </View>
           
           {upcomingEvents.map((event) => (
-            <TouchableOpacity key={event.id} style={styles.eventCard}>
-              <View style={styles.eventInfo}>
-                <Text style={styles.eventTitle}>{event.title}</Text>
-                <Text style={styles.eventDate}>{event.date}</Text>
-                <Text style={styles.eventLocation}>📍 {event.location}</Text>
+            <TouchableOpacity 
+              key={event.id} 
+              className="bg-dark-800 rounded-2xl p-4 mb-3"
+              activeOpacity={0.8}
+            >
+              <View className="flex-row items-start justify-between mb-3">
+                <View className="w-10 h-10 bg-primary-500/20 rounded-xl items-center justify-center mr-4">
+                  <Ionicons name="calendar" size={20} color="#20B2AA" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white font-bold text-lg mb-1">{event.title}</Text>
+                  <Text className="text-dark-300 text-sm mb-1">🕐 {event.date}</Text>
+                  <Text className="text-dark-300 text-sm">📍 {event.location}</Text>
+                </View>
               </View>
-              <View style={styles.eventParticipants}>
-                <Text style={styles.participantsText}>
-                  {event.participants}/{event.maxParticipants}
-                </Text>
-                <Text style={styles.participantsLabel}>participants</Text>
+              
+              <View className="flex-row justify-between items-center">
+                <View className="flex-row items-center">
+                  <View className="flex-row">
+                    <View className="w-6 h-6 bg-primary-500 rounded-full border-2 border-dark-800" />
+                    <View className="w-6 h-6 bg-secondary-500 rounded-full border-2 border-dark-800 -ml-2" />
+                    <View className="w-6 h-6 bg-success rounded-full border-2 border-dark-800 -ml-2" />
+                  </View>
+                  <Text className="text-dark-300 text-sm ml-3">
+                    {event.participants}/{event.maxParticipants}
+                  </Text>
+                </View>
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-success rounded-full mr-2" />
+                  <Text className="text-success text-sm font-semibold">Confirmé</Text>
+                </View>
               </View>
             </TouchableOpacity>
           ))}
         </View>
 
         {/* Sports populaires */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sports populaires</Text>
-          <View style={styles.sportsGrid}>
-            {sports.map((sport, index) => (
-              <TouchableOpacity key={index} style={styles.sportCard}>
-                <IconComponent 
-                  name={sport.icon} 
-                  library={sport.iconLibrary} 
-                  size={24} 
-                  color={colors.textSecondary} 
-                />
-                <Text style={styles.sportName}>{sport.name}</Text>
-                <Text style={styles.sportCount}>{sport.count} événements</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Stats Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Vos statistiques</Text>
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>12</Text>
-              <Text style={styles.statLabel}>Événements rejoints</Text>
+        <View className="px-5 mb-6">
+          <Text className="text-white text-xl font-bold mb-4">Sports populaires</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View className="flex-row">
+              {sports.map((sport, index) => (
+                <TouchableOpacity 
+                  key={index} 
+                  className="bg-dark-800 rounded-2xl p-4 mr-4 w-32"
+                  style={{ minWidth: 120 }}
+                >
+                  <LinearGradient
+                    colors={['rgba(255,255,255,0.05)', 'rgba(255,255,255,0.02)']}
+                    className="absolute inset-0 rounded-2xl"
+                  />
+                  <View 
+                    className="w-12 h-12 rounded-2xl items-center justify-center mb-4"
+                    style={{ backgroundColor: sport.color + '20' }}
+                  >
+                    <Ionicons 
+                      name={sport.icon} 
+                      size={24} 
+                      color={sport.color}
+                    />
+                  </View>
+                  <Text className="text-white font-bold text-base mb-1">{sport.name}</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-white text-xl font-bold">{sport.count}</Text>
+                    <Text className="text-dark-400 text-xs ml-1">événements</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>5</Text>
-              <Text style={styles.statLabel}>Événements créés</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statNumber}>47</Text>
-              <Text style={styles.statLabel}>Heures d'activité</Text>
-            </View>
-          </View>
+          </ScrollView>
         </View>
 
         {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
+        <View className="h-6" />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[700],
-  },
-
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-
-  content: {
-    flex: 1,
-  },
-  welcomeSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    backgroundColor: colors.surface,
-    marginBottom: 8,
-  },
-  welcomeText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  welcomeSubtext: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  section: {
-    backgroundColor: colors.surface,
-    marginBottom: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 16,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  quickActionCard: {
-    width: '48%',
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    alignItems: 'center',
-  },
-  quickActionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  eventCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  eventInfo: {
-    flex: 1,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  eventDate: {
-    fontSize: 14,
-    color: colors.primary,
-    marginBottom: 4,
-  },
-  eventLocation: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  eventParticipants: {
-    alignItems: 'center',
-  },
-  participantsText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  participantsLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  sportsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  sportCard: {
-    width: '31%',
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  sportName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: 4,
-  },
-  sportCount: {
-    fontSize: 10,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 4,
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  bottomSpacing: {
-    height: 20,
-  },
-});
-
-export default DashboardScreen; 
+export default DashboardScreenTailwind;

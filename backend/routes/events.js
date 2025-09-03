@@ -96,17 +96,28 @@ router.get('/', searchEventsValidation, async (req, res) => {
       filters.dateTo = req.query.dateTo;
     }
 
-    // Recherche avec pagination
+    // Recherche avec pagination (findByFilters inclut déjà les populates)
     const events = await Event.findByFilters(filters)
       .skip(skip)
       .limit(limit);
 
-    const totalEvents = await Event.countDocuments({ 
+    // Compter le total avec les mêmes filtres que findByFilters
+    const countQuery = { 
       status: 'active',
-      ...(filters.sport && { sport: filters.sport }),
-      ...(filters.level && { level: filters.level }),
-      ...(filters.isFree !== undefined && { 'price.isFree': filters.isFree })
-    });
+      date: { $gte: new Date() } // Exclure les événements passés
+    };
+    
+    if (filters.sport) countQuery.sport = filters.sport;
+    if (filters.level) countQuery.level = filters.level;
+    if (filters.isFree !== undefined) countQuery['price.isFree'] = filters.isFree;
+    if (filters.dateFrom) {
+      countQuery.date.$gte = new Date(filters.dateFrom);
+    }
+    if (filters.dateTo) {
+      countQuery.date.$lte = new Date(filters.dateTo);
+    }
+    
+    const totalEvents = await Event.countDocuments(countQuery);
 
     res.json({
       success: true,
@@ -127,6 +138,51 @@ router.get('/', searchEventsValidation, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des événements'
+    });
+  }
+});
+
+// GET /api/events/past - Récupérer les événements passés (optionnel)
+router.get('/past', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const pastEvents = await Event.find({ 
+      date: { $lt: new Date() },
+      status: { $in: ['active', 'completed', 'full'] }
+    })
+      .populate('organizer', 'name email profile.avatar')
+      .populate('participants.user', 'name profile.avatar')
+      .sort({ date: -1 }) // Plus récents en premier
+      .skip(skip)
+      .limit(limit);
+
+    const totalPastEvents = await Event.countDocuments({ 
+      date: { $lt: new Date() },
+      status: { $in: ['active', 'completed', 'full'] }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        events: pastEvents,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalPastEvents / limit),
+          totalEvents: totalPastEvents,
+          hasNext: page < Math.ceil(totalPastEvents / limit),
+          hasPrev: page > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération des événements passés:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la récupération des événements passés'
     });
   }
 });

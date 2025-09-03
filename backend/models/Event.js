@@ -170,7 +170,35 @@ const eventSchema = new mongoose.Schema({
       type: Number,
       default: 0
     }
-  }
+  },
+  notifications: [{
+    subject: {
+      type: String,
+      required: true
+    },
+    message: {
+      type: String,
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['info', 'warning', 'error'],
+      default: 'info'
+    },
+    sentAt: {
+      type: Date,
+      default: Date.now
+    },
+    sentBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    recipientCount: {
+      type: Number,
+      default: 0
+    }
+  }]
 }, {
   timestamps: true, // Ajoute createdAt et updatedAt automatiquement
   toJSON: { virtuals: true },
@@ -263,6 +291,11 @@ eventSchema.methods.canUserJoin = function(userId) {
   if (this.isPast) return { canJoin: false, reason: 'Événement passé' };
   if (this.status !== 'active') return { canJoin: false, reason: 'Événement non actif' };
   
+  // Vérifier si l'utilisateur est l'organisateur
+  if (this.organizer.toString() === userId.toString()) {
+    return { canJoin: false, reason: 'L\'organisateur ne peut pas rejoindre son propre événement' };
+  }
+  
   const isAlreadyParticipant = this.participants.some(
     participant => participant.user.toString() === userId.toString()
   );
@@ -274,19 +307,24 @@ eventSchema.methods.canUserJoin = function(userId) {
 
 // Méthode statique pour rechercher des événements
 eventSchema.statics.findByFilters = function(filters = {}) {
-  const query = { status: 'active' };
+  const query = { 
+    status: 'active',
+    // Exclure automatiquement les événements passés
+    date: { $gte: new Date() }
+  };
   
   if (filters.sport) query.sport = filters.sport;
   if (filters.level) query.level = filters.level;
   if (filters.isFree !== undefined) query['price.isFree'] = filters.isFree;
-  if (filters.dateFrom) query.date = { $gte: new Date(filters.dateFrom) };
+  if (filters.dateFrom) {
+    query.date.$gte = new Date(filters.dateFrom);
+  }
   if (filters.dateTo) {
-    query.date = query.date || {};
     query.date.$lte = new Date(filters.dateTo);
   }
   
   return this.find(query)
-    .populate('organizer', 'name profile.avatar')
+    .populate('organizer', 'name email profile.avatar')
     .populate('participants.user', 'name profile.avatar')
     .sort({ date: 1 });
 };

@@ -41,24 +41,7 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Le mot de passe doit contenir au moins 6 caractères']
   },
   
-  // Support OAuth (Google, Facebook, etc.)
-  oauth: {
-    google: {
-      id: String,
-      accessToken: String,
-      profile: {
-        id: String,
-        displayName: String,
-        photos: [{ value: String }],
-        emails: [{ value: String, verified: Boolean }]
-      }
-    },
-    facebook: {
-      id: String,
-      accessToken: String,
-      profile: mongoose.Schema.Types.Mixed
-    }
-  },
+
   
   // Vérification email
   isEmailVerified: {

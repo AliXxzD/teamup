@@ -13,8 +13,8 @@ export const API_BASE_URL = (() => {
   }
   
   // URL par défaut si aucune variable d'environnement n'est définie
-  // URL Render de production
-  return 'https://teamup-oa5q.onrender.com';
+  // URL locale pour le développement
+  return 'http://192.168.1.205:5000';
 })();
 
 // Configuration des timeouts
@@ -37,7 +37,6 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: '/api/auth/reset-password',
     VERIFY_RESET_CODE: '/api/auth/verify-reset-code',
     PROFILE: '/api/auth/profile',
-    GOOGLE: '/api/auth/google',
   },
   
   // Events

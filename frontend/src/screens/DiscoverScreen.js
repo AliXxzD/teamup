@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
@@ -10,15 +9,17 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-  Image
+  Image,
+  Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../styles/globalStyles';
+import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import GlobalMenu from '../components/GlobalMenu';
 import { navigateToEventDetails } from '../utils/navigationUtils';
 
-const DiscoverScreen = ({ navigation }) => {
+const DiscoverScreenTailwind = ({ navigation }) => {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,17 +28,25 @@ const DiscoverScreen = ({ navigation }) => {
     level: '',
     isFree: null
   });
+  const [fadeAnim] = useState(new Animated.Value(0));
 
-  // Configuration de l'API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+  useEffect(() => {
+    fetchEvents();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, [filters]);
 
   const sports = ['Football', 'Basketball', 'Tennis', 'Running', 'Yoga', 'Natation'];
   const levels = ['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux'];
 
   const fetchEvents = async () => {
     try {
-      // Construire l'URL avec les filtres
-      let url = `${API_BASE_URL}/api/events?`;
+      console.log('🔄 Chargement des événements...');
+      
+      let url = `${API_BASE_URL}${API_ENDPOINTS.EVENTS.LIST}?`;
       const params = [];
       
       if (filters.sport) params.push(`sport=${encodeURIComponent(filters.sport)}`);
@@ -45,11 +54,13 @@ const DiscoverScreen = ({ navigation }) => {
       if (filters.isFree !== null) params.push(`isFree=${filters.isFree}`);
       
       url += params.join('&');
-
-      console.log('Fetching events from:', url);
+      console.log('📡 URL de requête:', url);
 
       const response = await fetch(url);
       const data = await response.json();
+      
+      console.log('📊 Statut de la réponse:', response.status);
+      console.log('✅ Événements reçus:', data.data?.events?.length || 0);
 
       if (data.success) {
         setEvents(data.data.events);
@@ -58,7 +69,7 @@ const DiscoverScreen = ({ navigation }) => {
         Alert.alert('Erreur', 'Impossible de charger les événements');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des événements:', error);
+      console.error('❌ Erreur lors du chargement des événements:', error);
       Alert.alert('Erreur de connexion', 'Vérifiez votre connexion internet');
     } finally {
       setLoading(false);
@@ -68,6 +79,8 @@ const DiscoverScreen = ({ navigation }) => {
 
   const joinEvent = async (eventId) => {
     try {
+      console.log('🔄 Tentative de rejoindre l\'événement:', eventId);
+      
       const token = await AsyncStorage.getItem('accessToken');
       
       if (!token) {
@@ -76,31 +89,25 @@ const DiscoverScreen = ({ navigation }) => {
         return;
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/join`, {
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EVENTS.JOIN(eventId)}`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: getAuthHeaders(token)
       });
-
+      
+      console.log('📊 Statut de participation:', response.status);
       const data = await response.json();
 
       if (data.success) {
         Alert.alert('Succès !', 'Vous avez rejoint l\'événement avec succès');
-        fetchEvents(); // Recharger la liste
+        fetchEvents();
       } else {
         Alert.alert('Erreur', data.message || 'Impossible de rejoindre l\'événement');
       }
     } catch (error) {
-      console.error('Erreur lors de l\'inscription:', error);
+      console.error('❌ Erreur lors de l\'inscription:', error);
       Alert.alert('Erreur', 'Impossible de rejoindre l\'événement');
     }
   };
-
-  useEffect(() => {
-    fetchEvents();
-  }, [filters]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -117,7 +124,7 @@ const DiscoverScreen = ({ navigation }) => {
   };
 
   const formatEventTime = (timeString) => {
-    return timeString.substring(0, 5); // HH:MM
+    return timeString.substring(0, 5);
   };
 
   const getEventImage = (sport) => {
@@ -132,114 +139,131 @@ const DiscoverScreen = ({ navigation }) => {
     return sportImages[sport] || sportImages['Football'];
   };
 
-  const FilterChip = ({ title, isSelected, onPress }) => (
+  const FilterChip = ({ title, isSelected, onPress, color = '#20B2AA' }) => (
     <TouchableOpacity
-      style={[styles.filterChip, isSelected && styles.filterChipSelected]}
+      className={`px-4 py-2 rounded-full mr-3 mb-2 flex-row items-center ${
+        isSelected 
+          ? 'bg-primary-500' 
+          : 'bg-dark-700 border border-dark-600'
+      }`}
       onPress={onPress}
+      activeOpacity={0.8}
     >
-      <Text style={[styles.filterChipText, isSelected && styles.filterChipTextSelected]}>
+      <Text className={`text-sm font-semibold ${
+        isSelected ? 'text-white' : 'text-dark-300'
+      }`}>
         {title}
       </Text>
       {isSelected && (
-        <Ionicons name="close" size={16} color={colors.white} style={styles.chipCloseIcon} />
+        <Ionicons name="close" size={16} color="#ffffff" className="ml-2" />
       )}
     </TouchableOpacity>
   );
 
   const EventCard = ({ event }) => (
     <TouchableOpacity
-      style={styles.eventCard}
+      className="bg-dark-800 rounded-2xl mb-4 overflow-hidden"
       onPress={() => {
         console.log('🔍 Navigation vers EventDetails:', {
           eventId: event._id,
           eventTitle: event.title,
-          navigationState: navigation.getState()
         });
         navigateToEventDetails(navigation, event._id);
       }}
+      activeOpacity={0.9}
     >
-      <View style={styles.eventImageContainer}>
+      {/* Image Header */}
+      <View className="h-40 relative">
         <Image
           source={{ uri: getEventImage(event.sport) }}
-          style={styles.eventImage}
+          className="w-full h-full"
           resizeMode="cover"
         />
-        <View style={styles.eventImageOverlay}>
-          <View style={styles.eventBadges}>
-            {event.price.isFree && (
-              <View style={styles.freeBadge}>
-                <Text style={styles.freeBadgeText}>GRATUIT</Text>
-              </View>
-            )}
-            <View style={styles.sportBadge}>
-              <Text style={styles.sportBadgeText}>{event.sport}</Text>
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          className="absolute inset-0"
+        />
+        
+        {/* Badges */}
+        <View className="absolute top-3 right-3 flex-col items-end">
+          {event.price.isFree && (
+            <View className="bg-success px-3 py-1 rounded-full mb-2">
+              <Text className="text-white text-xs font-bold">GRATUIT</Text>
             </View>
+          )}
+          <View className="bg-black/70 px-3 py-1 rounded-full">
+            <Text className="text-white text-xs font-semibold">{event.sport}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.eventInfo}>
-        <Text style={styles.eventTitle}>{event.title}</Text>
-        <Text style={styles.eventDescription} numberOfLines={2}>
+      {/* Content */}
+      <View className="p-4">
+        <Text className="text-white text-lg font-bold mb-2">{event.title}</Text>
+        <Text className="text-dark-300 text-sm mb-4 leading-5" numberOfLines={2}>
           {event.description}
         </Text>
 
-        <View style={styles.eventDetails}>
-          <View style={styles.eventDetailRow}>
-            <Ionicons name="calendar-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.eventDetailText}>
+        {/* Event Details */}
+        <View className="mb-4">
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="calendar-outline" size={16} color="#64748b" />
+            <Text className="text-dark-300 text-sm ml-2">
               {formatDate(event.date)} à {formatEventTime(event.time)}
             </Text>
           </View>
 
-          <View style={styles.eventDetailRow}>
-            <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.eventDetailText} numberOfLines={1}>
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="location-outline" size={16} color="#64748b" />
+            <Text className="text-dark-300 text-sm ml-2 flex-1" numberOfLines={1}>
               {event.location.address}
             </Text>
           </View>
 
-          <View style={styles.eventDetailRow}>
-            <Ionicons name="people-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.eventDetailText}>
+          <View className="flex-row items-center mb-2">
+            <Ionicons name="people-outline" size={16} color="#64748b" />
+            <Text className="text-dark-300 text-sm ml-2">
               {event.currentParticipants}/{event.maxParticipants} participants
             </Text>
           </View>
 
-          <View style={styles.eventDetailRow}>
-            <Ionicons name="star-outline" size={16} color={colors.textSecondary} />
-            <Text style={styles.eventDetailText}>
+          <View className="flex-row items-center">
+            <Ionicons name="star-outline" size={16} color="#64748b" />
+            <Text className="text-dark-300 text-sm ml-2">
               Niveau: {event.level}
             </Text>
           </View>
         </View>
 
-        <View style={styles.eventFooter}>
-          <View style={styles.organizerInfo}>
-            <View style={styles.organizerAvatar}>
-              <Text style={styles.organizerAvatarText}>
-                {event.organizer.name.charAt(0).toUpperCase()}
+        {/* Footer */}
+        <View className="flex-row justify-between items-center">
+          <View className="flex-row items-center flex-1">
+            <View className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center mr-3">
+              <Text className="text-white text-sm font-bold">
+                {event.organizer?.name ? event.organizer.name.charAt(0).toUpperCase() : '?'}
               </Text>
             </View>
-            <Text style={styles.organizerName}>
-              Par {event.organizer.name}
+            <Text className="text-dark-300 text-sm flex-1">
+              Par {event.organizer?.name || 'Organisateur inconnu'}
             </Text>
           </View>
 
           <TouchableOpacity
-            style={[
-              styles.joinButton,
-              event.currentParticipants >= event.maxParticipants && styles.joinButtonDisabled
-            ]}
+            className={`px-4 py-2 rounded-full flex-row items-center ${
+              event.currentParticipants >= event.maxParticipants 
+                ? 'bg-dark-600' 
+                : 'bg-primary-500'
+            }`}
             onPress={() => joinEvent(event._id)}
             disabled={event.currentParticipants >= event.maxParticipants}
+            activeOpacity={0.8}
           >
             <Ionicons 
               name={event.currentParticipants >= event.maxParticipants ? "lock-closed" : "add"} 
               size={16} 
-              color={colors.white} 
+              color="#ffffff"
             />
-            <Text style={styles.joinButtonText}>
+            <Text className="text-white text-sm font-semibold ml-1">
               {event.currentParticipants >= event.maxParticipants ? 'Complet' : 'Rejoindre'}
             </Text>
           </TouchableOpacity>
@@ -249,96 +273,119 @@ const DiscoverScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <View style={styles.logoIcon}>
-            <Ionicons name="trophy" size={20} color={colors.white} />
+      <LinearGradient
+        colors={['#20B2AA', '#1a9b94', '#0f172a']}
+        className="pb-4"
+      >
+        <View className="flex-row justify-between items-center px-5 pt-4">
+          <View className="flex-row items-center">
+            <View className="w-10 h-10 bg-white/20 rounded-2xl items-center justify-center mr-3">
+              <Ionicons name="trophy" size={20} color="#ffffff" />
+            </View>
+            <Text className="text-white text-xl font-bold">TEAMUP</Text>
           </View>
-          <Text style={styles.appName}>TEAMUP</Text>
+          <GlobalMenu navigation={navigation} />
         </View>
-        <GlobalMenu navigation={navigation} />
-      </View>
+      </LinearGradient>
 
       {/* Title Section */}
-      <View style={styles.titleSection}>
-        <View style={styles.titleContainer}>
-          <Ionicons name="search" size={32} color={colors.primary} />
-          <Text style={styles.pageTitle}>Découvrir</Text>
+      <Animated.View 
+        className="px-5 py-5 -mt-6 bg-dark-800 mx-5 rounded-2xl mb-4"
+        style={{ opacity: fadeAnim }}
+      >
+        <View className="flex-row items-center mb-2">
+          <Ionicons name="search" size={28} color="#20B2AA" />
+          <Text className="text-white text-2xl font-bold ml-3">Découvrir</Text>
         </View>
-        <Text style={styles.pageSubtitle}>Trouvez votre prochaine activité sportive</Text>
-      </View>
+        <Text className="text-dark-300 text-base">Trouvez votre prochaine activité sportive</Text>
+        <Text className="text-dark-400 text-xs mt-1 italic">Affiche uniquement les événements à venir</Text>
+      </Animated.View>
 
       {/* Filters */}
-      <View style={styles.filtersSection}>
-        <Text style={styles.filtersTitle}>Filtres</Text>
+      <View className="px-5 mb-4">
+        <Text className="text-white text-lg font-semibold mb-3">Filtres</Text>
         
         {/* Sport Filters */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScrollView}>
-          <FilterChip
-            title="Tous les sports"
-            isSelected={!filters.sport}
-            onPress={() => setFilters({ ...filters, sport: '' })}
-          />
-          {sports.map((sport) => (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
+          <View className="flex-row">
             <FilterChip
-              key={sport}
-              title={sport}
-              isSelected={filters.sport === sport}
-              onPress={() => setFilters({ ...filters, sport: filters.sport === sport ? '' : sport })}
+              title="Tous les sports"
+              isSelected={!filters.sport}
+              onPress={() => setFilters({ ...filters, sport: '' })}
             />
-          ))}
+            {sports.map((sport) => (
+              <FilterChip
+                key={sport}
+                title={sport}
+                isSelected={filters.sport === sport}
+                onPress={() => setFilters({ 
+                  ...filters, 
+                  sport: filters.sport === sport ? '' : sport 
+                })}
+              />
+            ))}
+          </View>
         </ScrollView>
 
         {/* Price and Level Filters */}
-        <View style={styles.secondaryFilters}>
+        <View className="flex-row flex-wrap">
           <FilterChip
             title="Gratuit"
             isSelected={filters.isFree === true}
-            onPress={() => setFilters({ ...filters, isFree: filters.isFree === true ? null : true })}
+            onPress={() => setFilters({ 
+              ...filters, 
+              isFree: filters.isFree === true ? null : true 
+            })}
+            color="#10B981"
           />
           <FilterChip
             title="Payant"
             isSelected={filters.isFree === false}
-            onPress={() => setFilters({ ...filters, isFree: filters.isFree === false ? null : false })}
+            onPress={() => setFilters({ 
+              ...filters, 
+              isFree: filters.isFree === false ? null : false 
+            })}
+            color="#F59E0B"
           />
         </View>
       </View>
 
       {/* Events List */}
       <ScrollView
-        style={styles.eventsContainer}
+        className="flex-1 px-5"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Chargement des événements...</Text>
+          <View className="flex-1 items-center justify-center py-20">
+            <ActivityIndicator size="large" color="#20B2AA" />
+            <Text className="text-dark-300 text-base mt-3">Chargement des événements...</Text>
           </View>
         ) : events.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="calendar-outline" size={64} color={colors.textMuted} />
-            <Text style={styles.emptyTitle}>Aucun événement trouvé</Text>
-            <Text style={styles.emptySubtitle}>
+          <View className="flex-1 items-center justify-center py-20">
+            <Ionicons name="calendar-outline" size={64} color="#475569" />
+            <Text className="text-white text-xl font-bold mt-4 mb-2">Aucun événement trouvé</Text>
+            <Text className="text-dark-300 text-center text-base mb-6 leading-6">
               Essayez de modifier vos filtres ou créez votre propre événement
             </Text>
             <TouchableOpacity
-              style={styles.createEventButton}
+              className="bg-primary-500 px-6 py-3 rounded-full flex-row items-center"
               onPress={() => navigation.navigate('CreateEvent')}
+              activeOpacity={0.8}
             >
-              <Ionicons name="add" size={20} color={colors.white} />
-              <Text style={styles.createEventButtonText}>Créer un événement</Text>
+              <Ionicons name="add" size={20} color="#ffffff" />
+              <Text className="text-white text-base font-semibold ml-2">Créer un événement</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.eventsList}>
-            <Text style={styles.resultsCount}>
+          <View>
+            <Text className="text-dark-300 text-base mb-4 font-medium">
               {events.length} événement{events.length > 1 ? 's' : ''} trouvé{events.length > 1 ? 's' : ''}
             </Text>
             {events.map((event) => (
@@ -347,298 +394,10 @@ const DiscoverScreen = ({ navigation }) => {
           </View>
         )}
 
-        <View style={styles.bottomSpacing} />
+        <View className="h-6" />
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  titleSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginLeft: 12,
-  },
-  pageSubtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  filtersSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  filtersTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 12,
-  },
-  filtersScrollView: {
-    marginBottom: 12,
-  },
-  filterChip: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  filterChipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  filterChipText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  filterChipTextSelected: {
-    color: colors.white,
-  },
-  chipCloseIcon: {
-    marginLeft: 6,
-  },
-  secondaryFilters: {
-    flexDirection: 'row',
-  },
-  eventsContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginTop: 12,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
-  },
-  createEventButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  createEventButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-    marginLeft: 8,
-  },
-  eventsList: {
-    paddingBottom: 20,
-  },
-  resultsCount: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: 16,
-    fontWeight: '500',
-  },
-  eventCard: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    marginBottom: 16,
-    overflow: 'hidden',
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  eventImageContainer: {
-    height: 160,
-    position: 'relative',
-  },
-  eventImage: {
-    width: '100%',
-    height: '100%',
-  },
-  eventImageOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  eventBadges: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-  },
-  freeBadge: {
-    backgroundColor: colors.success,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  freeBadgeText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  sportBadge: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  sportBadgeText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  eventInfo: {
-    padding: 16,
-  },
-  eventTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  eventDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  eventDetails: {
-    marginBottom: 16,
-  },
-  eventDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  eventDetailText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginLeft: 8,
-    flex: 1,
-  },
-  eventFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  organizerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  organizerAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  organizerAvatarText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  organizerName: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  joinButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  joinButtonDisabled: {
-    backgroundColor: colors.gray[600],
-  },
-  joinButtonText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  bottomSpacing: {
-    height: 30,
-  },
-});
-
-export default DiscoverScreen; 
+export default DiscoverScreenTailwind;

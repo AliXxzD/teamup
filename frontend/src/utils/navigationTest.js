@@ -75,7 +75,7 @@ export const checkNavigationConsistency = () => {
     'ForgotPasswordScreen',
     'ResetPasswordScreen',
     'VerifyCodeScreen',
-    'OAuthSuccessScreen',
+
     'UserProfileScreen',
     'StatsScreen'
   ];
@@ -85,7 +85,7 @@ export const checkNavigationConsistency = () => {
     'CreateTabButton',
     'TabIconWithBadge',
     'GlobalMenu',
-    'GoogleSignInButton',
+
     'CustomAlert',
     'GradientButton',
     'DrawerContent'

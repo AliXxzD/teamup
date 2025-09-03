@@ -33,11 +33,11 @@
     "mongoose": "^8.16.4",
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.5",
-    "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0"
+    "passport": "^0.7.0"
   },
   "devDependencies": {
     "axios": "^1.10.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4"
   }
 }

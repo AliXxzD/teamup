@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../styles/globalStyles';
+import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 
 const EventDetailsScreen = ({ route, navigation }) => {
   const { eventId } = route.params || {};
@@ -33,8 +34,7 @@ const EventDetailsScreen = ({ route, navigation }) => {
   const [userToken, setUserToken] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Configuration de l'API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+
 
   useEffect(() => {
     fetchEventDetails();

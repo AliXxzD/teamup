@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
   SafeAreaView,
   StatusBar,
-  Alert,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+  Animated,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../styles/globalStyles';
+import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import GlobalMenu from '../components/GlobalMenu';
-import CustomAlert from '../components/CustomAlert';
-import { useCustomAlert } from '../hooks/useCustomAlert';
+import GradientButton from '../components/GradientButton';
 
-const CreateEventScreen = ({ navigation, route }) => {
+const CreateEventScreenTailwind = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -35,145 +35,90 @@ const CreateEventScreen = ({ navigation, route }) => {
     isFree: true
   });
 
-  const [errors, setErrors] = useState({});
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedTime, setSelectedTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Refs pour la navigation automatique entre les champs
-  const titleRef = React.useRef(null);
-  const descriptionRef = React.useRef(null);
-  const locationRef = React.useRef(null);
-  const maxParticipantsRef = React.useRef(null);
-  const priceRef = React.useRef(null);
+  const [errors, setErrors] = useState({});
+  const [fadeAnim] = useState(new Animated.Value(0));
 
-  // Hook pour les alertes personnalisées
-  const { alertConfig, showSuccessAlert, showErrorAlert } = useCustomAlert();
-
-  // Récupérer les paramètres d'édition
   const { eventId, eventData, isEditing } = route.params || {};
 
-  // Configuration de l'API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+
+    if (isEditing && eventData) {
+      setFormData({
+        title: eventData.title || '',
+        description: eventData.description || '',
+        sport: eventData.sport || '',
+        date: eventData.date || '',
+        time: eventData.time || '',
+        location: eventData.location?.address || '',
+        maxParticipants: eventData.maxParticipants?.toString() || '',
+        level: eventData.level || '',
+        price: eventData.price?.amount?.toString() || '',
+        isFree: eventData.price?.isFree ?? true
+      });
+    }
+  }, [isEditing, eventData]);
 
   const sports = [
-    'Football', 'Basketball', 'Tennis', 'Running', 'Yoga', 'Natation',
-    'Volleyball', 'Badminton', 'Cyclisme', 'Fitness', 'Rugby', 'Handball'
+    { name: 'Football', icon: 'football', color: '#10B981' },
+    { name: 'Basketball', icon: 'basketball', color: '#F59E0B' },
+    { name: 'Tennis', icon: 'tennisball', color: '#EF4444' },
+    { name: 'Running', icon: 'walk', color: '#3B82F6' },
+    { name: 'Yoga', icon: 'leaf', color: '#8B5CF6' },
+    { name: 'Natation', icon: 'water', color: '#06B6D4' },
+    { name: 'Volleyball', icon: 'radio-button-off', color: '#EC4899' },
+    { name: 'Badminton', icon: 'tennisball', color: '#84CC16' },
+    { name: 'Cyclisme', icon: 'bicycle', color: '#F97316' },
+    { name: 'Fitness', icon: 'fitness', color: '#A855F7' },
+    { name: 'Rugby', icon: 'american-football', color: '#059669' },
+    { name: 'Handball', icon: 'radio-button-off', color: '#DC2626' }
   ];
 
   const levels = ['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux'];
 
-  // Pré-remplir le formulaire si on est en mode édition
-  React.useEffect(() => {
-    if (isEditing && eventData) {
-      const eventDate = new Date(eventData.date);
-      const eventTime = new Date(`1970-01-01T${eventData.time}:00`);
-      
-      setFormData({
-        title: eventData.title,
-        description: eventData.description,
-        sport: eventData.sport,
-        date: formatDate(eventDate),
-        time: eventData.time,
-        location: eventData.location.address,
-        maxParticipants: eventData.maxParticipants.toString(),
-        level: eventData.level,
-        price: eventData.price.isFree ? '' : eventData.price.amount.toString(),
-        isFree: eventData.price.isFree
-      });
-      
-      setSelectedDate(eventDate);
-      setSelectedTime(eventTime);
-    }
-  }, [isEditing, eventData]);
-
-  const handleInputChange = (field, value) => {
-    setFormData({ ...formData, [field]: value });
-    if (errors[field]) {
-      setErrors({ ...errors, [field]: null });
-    }
-  };
-
-  const formatDate = (date) => {
-    return date.toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  const formatTime = (time) => {
-    return time.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatDateForAPI = (date) => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const onDateChange = (event, date) => {
-    setShowDatePicker(false);
-    if (date) {
-      setSelectedDate(date);
-      handleInputChange('date', formatDate(date));
-    }
-  };
-
-  const onTimeChange = (event, time) => {
-    setShowTimePicker(false);
-    if (time) {
-      setSelectedTime(time);
-      handleInputChange('time', formatTime(time));
-    }
-  };
-
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.title.trim()) newErrors.title = 'Le titre est obligatoire';
-    if (!formData.description.trim()) newErrors.description = 'La description est obligatoire';
-    if (!formData.sport) newErrors.sport = 'Veuillez sélectionner un sport';
-    if (!formData.date) newErrors.date = 'La date est obligatoire';
-    if (!formData.time) newErrors.time = 'L\'heure est obligatoire';
-    if (!formData.location.trim()) newErrors.location = 'Le lieu est obligatoire';
-    if (!formData.maxParticipants) newErrors.maxParticipants = 'Le nombre de participants est obligatoire';
-    if (!formData.level) newErrors.level = 'Le niveau est obligatoire';
-    if (!formData.isFree && !formData.price) newErrors.price = 'Le prix est obligatoire';
-
+    
+    if (!formData.title.trim()) newErrors.title = 'Titre requis';
+    if (!formData.description.trim()) newErrors.description = 'Description requise';
+    if (!formData.sport) newErrors.sport = 'Sport requis';
+    if (!formData.date) newErrors.date = 'Date requise';
+    if (!formData.time) newErrors.time = 'Heure requise';
+    if (!formData.location.trim()) newErrors.location = 'Lieu requis';
+    if (!formData.maxParticipants) newErrors.maxParticipants = 'Nombre de participants requis';
+    if (!formData.level) newErrors.level = 'Niveau requis';
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitEvent = async () => {
-    if (!validateForm()) {
-      return;
-    }
-
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+    
     setIsLoading(true);
-
+    
     try {
-      // Récupérer le token d'authentification
       const token = await AsyncStorage.getItem('accessToken');
-      
       if (!token) {
-        showErrorAlert(
-          'Connexion requise',
-          'Vous devez être connecté pour créer un événement',
-          () => navigation.navigate('Login')
-        );
+        Alert.alert('Erreur', 'Session expirée. Veuillez vous reconnecter.');
+        navigation.navigate('Login');
         return;
       }
 
-      // Préparer les données pour l'API
       const eventData = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         sport: formData.sport,
-        date: formatDateForAPI(selectedDate),
+        date: formData.date,
         time: formData.time,
         location: formData.location.trim(),
         maxParticipants: parseInt(formData.maxParticipants),
@@ -182,641 +127,372 @@ const CreateEventScreen = ({ navigation, route }) => {
         ...((!formData.isFree && formData.price) && { price: parseFloat(formData.price) })
       };
 
-      console.log('Envoi des données:', eventData);
-
       const url = isEditing 
-        ? `${API_BASE_URL}/api/events/${eventId}`
-        : `${API_BASE_URL}/api/events`;
+        ? `${API_BASE_URL}${API_ENDPOINTS.EVENTS.DETAILS(eventId)}`
+        : `${API_BASE_URL}${API_ENDPOINTS.EVENTS.CREATE}`;
       
       const method = isEditing ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify(eventData)
       });
 
       const responseData = await response.json();
-      console.log('Réponse du serveur:', responseData);
 
       if (response.ok && responseData.success) {
-        showSuccessAlert(
+        Alert.alert(
           'Succès !',
-          isEditing ? 'Votre événement a été modifié avec succès.' : 'Votre événement a été créé avec succès.',
-          () => {
-            if (!isEditing) {
-              // Réinitialiser le formulaire seulement en mode création
-                setFormData({
-                  title: '',
-                  description: '',
-                  sport: '',
-                  date: '',
-                  time: '',
-                  location: '',
-                  maxParticipants: '',
-                  level: '',
-                  price: '',
-                  isFree: true
-                });
-                setSelectedDate(new Date());
-                setSelectedTime(new Date());
-            }
-                // Retourner au dashboard ou à la liste des événements
-                navigation.goBack();
-              }
+          isEditing ? 'Événement modifié avec succès.' : 'Événement créé avec succès.',
+          [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       } else {
-        // Gérer les erreurs de validation du serveur
-        if (responseData.errors && Array.isArray(responseData.errors)) {
-          const serverErrors = {};
-          responseData.errors.forEach(error => {
-            if (error.path) {
-              serverErrors[error.path] = error.msg;
-            }
-          });
-          setErrors(serverErrors);
-        }
-        
-        showErrorAlert(
-          isEditing ? 'Erreur de modification' : 'Erreur de création',
-          responseData.message || (isEditing ? 'Une erreur est survenue lors de la modification de l\'événement' : 'Une erreur est survenue lors de la création de l\'événement')
-        );
+        Alert.alert('Erreur', responseData.message || 'Une erreur est survenue');
       }
 
     } catch (error) {
-      console.error('Erreur lors de la soumission de l\'événement:', error);
-      showErrorAlert(
-        'Erreur de connexion',
-        'Impossible de se connecter au serveur. Vérifiez votre connexion internet.'
-      );
+      console.error('❌ Erreur:', error);
+      Alert.alert('Erreur', 'Impossible de créer l\'événement');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const renderSportSelector = () => (
-    <View style={styles.selectorContainer}>
-      <Text style={styles.inputLabel}>Sport *</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScrollView}>
-        {sports.map((sport, index) => (
+  const SportSelector = () => (
+    <View className="mb-6">
+      <Text className="text-dark-300 text-sm font-medium mb-3">Sport *</Text>
+      <View className="flex-row flex-wrap">
+        {sports.map((sport) => (
           <TouchableOpacity
-            key={index}
-            style={[
-              styles.chip,
-              formData.sport === sport && styles.chipSelected
-            ]}
-            onPress={() => handleInputChange('sport', sport)}
+            key={sport.name}
+            className={`flex-row items-center px-4 py-2 rounded-full mr-2 mb-2 border ${
+              formData.sport === sport.name
+                ? 'bg-primary-500 border-primary-500'
+                : 'bg-dark-700 border-dark-600'
+            }`}
+            onPress={() => setFormData({ ...formData, sport: sport.name })}
           >
-            <Text style={[
-              styles.chipText,
-              formData.sport === sport && styles.chipTextSelected
-            ]}>
-              {sport}
+            <Ionicons 
+              name={sport.icon} 
+              size={16} 
+              color={formData.sport === sport.name ? '#ffffff' : sport.color}
+            />
+            <Text className={`ml-2 text-sm font-medium ${
+              formData.sport === sport.name ? 'text-white' : 'text-dark-300'
+            }`}>
+              {sport.name}
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
-      {errors.sport && <Text style={styles.errorText}>{errors.sport}</Text>}
+      </View>
+      {errors.sport && (
+        <Text className="text-danger text-xs mt-1">{errors.sport}</Text>
+      )}
     </View>
   );
 
-  const renderLevelSelector = () => (
-    <View style={styles.selectorContainer}>
-      <Text style={styles.inputLabel}>Niveau requis *</Text>
-      <View style={styles.levelContainer}>
-        {levels.map((level, index) => (
+  const LevelSelector = () => (
+    <View className="mb-6">
+      <Text className="text-dark-300 text-sm font-medium mb-3">Niveau *</Text>
+      <View className="flex-row flex-wrap">
+        {levels.map((level) => (
           <TouchableOpacity
-            key={index}
-            style={[
-              styles.levelButton,
-              formData.level === level && styles.levelButtonSelected
-            ]}
-            onPress={() => handleInputChange('level', level)}
+            key={level}
+            className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+              formData.level === level
+                ? 'bg-secondary-500 border-secondary-500'
+                : 'bg-dark-700 border-dark-600'
+            }`}
+            onPress={() => setFormData({ ...formData, level })}
           >
-            <Text style={[
-              styles.levelButtonText,
-              formData.level === level && styles.levelButtonTextSelected
-            ]}>
+            <Text className={`text-sm font-medium ${
+              formData.level === level ? 'text-white' : 'text-dark-300'
+            }`}>
               {level}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
-      {errors.level && <Text style={styles.errorText}>{errors.level}</Text>}
+      {errors.level && (
+        <Text className="text-danger text-xs mt-1">{errors.level}</Text>
+      )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       <KeyboardAvoidingView 
-        style={styles.keyboardView}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoIcon}>
-              <Ionicons name="trophy" size={20} color={colors.white} />
-            </View>
-            <Text style={styles.appName}>TEAMUP</Text>
-          </View>
-          <GlobalMenu navigation={navigation} />
-        </View>
-
-        {/* Title Section */}
-        <View style={styles.titleSection}>
-          <View style={styles.titleIconContainer}>
-            <Ionicons 
-              name={isEditing ? "create" : "add-circle"} 
-              size={40} 
-              color={colors.primary} 
-            />
-          </View>
-          <Text style={styles.pageTitle}>
-            {isEditing ? 'Modifier l\'événement' : 'Créer un événement'}
-          </Text>
-          <Text style={styles.pageSubtitle}>
-            {isEditing ? 'Modifiez les détails de votre événement' : 'Organisez votre prochaine activité sportive'}
-          </Text>
-        </View>
-
-        <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-          {/* Event Title */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Titre de l'événement *</Text>
-            <TextInput
-              ref={titleRef}
-              style={[styles.input, errors.title && styles.inputError]}
-              placeholder="Ex: Match de football amical"
-              placeholderTextColor={colors.textMuted}
-              value={formData.title}
-              onChangeText={(value) => handleInputChange('title', value)}
-              editable={!isLoading}
-              returnKeyType="next"
-              onSubmitEditing={() => descriptionRef.current?.focus()}
-              blurOnSubmit={false}
-            />
-            {errors.title && <Text style={styles.errorText}>{errors.title}</Text>}
-          </View>
-
-          {/* Description */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Description *</Text>
-            <TextInput
-              ref={descriptionRef}
-              style={[styles.textArea, errors.description && styles.inputError]}
-              placeholder="Décrivez votre événement, les détails importants..."
-              placeholderTextColor={colors.textMuted}
-              value={formData.description}
-              onChangeText={(value) => handleInputChange('description', value)}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-              editable={!isLoading}
-              returnKeyType="next"
-              onSubmitEditing={() => locationRef.current?.focus()}
-              blurOnSubmit={false}
-            />
-            {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-          </View>
-
-          {/* Sport Selector */}
-          {renderSportSelector()}
-
-          {/* Date and Time */}
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>Date *</Text>
-              <TouchableOpacity 
-                style={[styles.input, styles.dateInput, errors.date && styles.inputError]}
-                onPress={() => !isLoading && setShowDatePicker(true)}
-                disabled={isLoading}
-              >
-                <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
-                <Text style={[styles.dateText, !formData.date && styles.placeholderText]}>
-                  {formData.date || 'Sélectionner'}
-                </Text>
-              </TouchableOpacity>
-              {errors.date && <Text style={styles.errorText}>{errors.date}</Text>}
-            </View>
-
-            <View style={[styles.inputContainer, styles.halfWidth]}>
-              <Text style={styles.inputLabel}>Heure *</Text>
-              <TouchableOpacity 
-                style={[styles.input, styles.dateInput, errors.time && styles.inputError]}
-                onPress={() => !isLoading && setShowTimePicker(true)}
-                disabled={isLoading}
-              >
-                <Ionicons name="time-outline" size={20} color={colors.textSecondary} />
-                <Text style={[styles.dateText, !formData.time && styles.placeholderText]}>
-                  {formData.time || 'Sélectionner'}
-                </Text>
-              </TouchableOpacity>
-              {errors.time && <Text style={styles.errorText}>{errors.time}</Text>}
-            </View>
-          </View>
-
-          {/* Date Time Pickers */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onDateChange}
-              minimumDate={isEditing ? undefined : new Date()}
-              themeVariant="dark"
-              accentColor={colors.primary}
-              textColor={colors.textPrimary}
-              style={styles.dateTimePicker}
-            />
-          )}
-
-          {showTimePicker && (
-            <DateTimePicker
-              value={selectedTime}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onTimeChange}
-              themeVariant="dark"
-              accentColor={colors.primary}
-              textColor={colors.textPrimary}
-              style={styles.dateTimePicker}
-            />
-          )}
-
-          {/* Location */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Lieu/Adresse *</Text>
-            <View style={[styles.locationInputContainer, errors.location && styles.inputError]}>
-              <Ionicons name="location-outline" size={20} color={colors.textSecondary} />
-              <TextInput
-                ref={locationRef}
-                style={styles.locationInput}
-                placeholder="Adresse ou nom du lieu"
-                placeholderTextColor={colors.textMuted}
-                value={formData.location}
-                onChangeText={(value) => handleInputChange('location', value)}
-                editable={!isLoading}
-                returnKeyType="next"
-                onSubmitEditing={() => maxParticipantsRef.current?.focus()}
-                blurOnSubmit={false}
-              />
-            </View>
-            {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
-          </View>
-
-          {/* Max Participants */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Nombre maximum de participants *</Text>
-            <TextInput
-              ref={maxParticipantsRef}
-              style={[styles.input, errors.maxParticipants && styles.inputError]}
-              placeholder="Ex: 20"
-              placeholderTextColor={colors.textMuted}
-              value={formData.maxParticipants}
-              onChangeText={(value) => handleInputChange('maxParticipants', value)}
-              keyboardType="numeric"
-              editable={!isLoading}
-              returnKeyType="done"
-              onSubmitEditing={() => !formData.isFree && priceRef.current?.focus()}
-              blurOnSubmit={!formData.isFree}
-            />
-            {errors.maxParticipants && <Text style={styles.errorText}>{errors.maxParticipants}</Text>}
-          </View>
-
-          {/* Level Selector */}
-          {renderLevelSelector()}
-
-          {/* Price */}
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Prix</Text>
-            <View style={styles.priceContainer}>
-              <TouchableOpacity
-                style={[styles.priceToggle, formData.isFree && styles.priceToggleSelected]}
-                onPress={() => {
-                  if (!isLoading) {
-                    handleInputChange('isFree', true);
-                    handleInputChange('price', '');
-                  }
-                }}
-                disabled={isLoading}
-              >
-                <Text style={[styles.priceToggleText, formData.isFree && styles.priceToggleTextSelected]}>
-                  Gratuit
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.priceToggle, !formData.isFree && styles.priceToggleSelected]}
-                onPress={() => !isLoading && handleInputChange('isFree', false)}
-                disabled={isLoading}
-              >
-                <Text style={[styles.priceToggleText, !formData.isFree && styles.priceToggleTextSelected]}>
-                  Payant
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {!formData.isFree && (
-              <TextInput
-                ref={priceRef}
-                style={[styles.input, styles.priceInput, errors.price && styles.inputError]}
-                placeholder="Prix en €"
-                placeholderTextColor={colors.textMuted}
-                value={formData.price}
-                onChangeText={(value) => handleInputChange('price', value)}
-                keyboardType="numeric"
-                editable={!isLoading}
-                returnKeyType="done"
-                onSubmitEditing={() => {
-                  priceRef.current?.blur();
-                }}
-              />
-            )}
-            {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
-          </View>
-
-          {/* Create Button */}
-          <TouchableOpacity 
-            style={[styles.createButton, isLoading && styles.createButtonDisabled]} 
-            onPress={handleSubmitEvent}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={colors.white} />
-            ) : (
-              <Ionicons name={isEditing ? "checkmark" : "add"} size={24} color={colors.white} />
-            )}
-            <Text style={styles.createButtonText}>
-              {isLoading 
-                ? (isEditing ? 'Modification en cours...' : 'Création en cours...') 
-                : (isEditing ? 'Modifier l\'événement' : 'Créer l\'événement')
-              }
+        <LinearGradient
+          colors={['#20B2AA', '#1a9b94', '#0f172a']}
+          className="pb-4"
+        >
+          <View className="flex-row justify-between items-center px-6 pt-4">
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text className="text-white text-lg font-bold">
+              {isEditing ? 'Modifier l\'événement' : 'Créer un événement'}
             </Text>
-          </TouchableOpacity>
+            <View className="w-6" />
+          </View>
+        </LinearGradient>
 
-          <View style={styles.bottomSpacing} />
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          <Animated.View 
+            className="px-6 py-6"
+            style={{ opacity: fadeAnim }}
+          >
+            {/* Title & Description */}
+            <View className="bg-dark-800 rounded-2xl p-6 mb-4">
+              <Text className="text-white text-lg font-bold mb-4">Informations générales</Text>
+              
+              {/* Title */}
+              <View className="mb-4">
+                <Text className="text-dark-300 text-sm font-medium mb-2">Titre de l'événement *</Text>
+                <TextInput
+                  className={`bg-dark-700 rounded-xl px-4 py-3 text-white text-base border ${
+                    errors.title ? 'border-danger' : 'border-dark-600'
+                  }`}
+                  placeholder="Ex: Match de football amical"
+                  placeholderTextColor="#64748b"
+                  value={formData.title}
+                  onChangeText={(text) => setFormData({ ...formData, title: text })}
+                  maxLength={100}
+                />
+                {errors.title && (
+                  <Text className="text-danger text-xs mt-1">{errors.title}</Text>
+                )}
+              </View>
+
+              {/* Description */}
+              <View className="mb-4">
+                <Text className="text-dark-300 text-sm font-medium mb-2">Description *</Text>
+                <TextInput
+                  className={`bg-dark-700 rounded-xl px-4 py-3 text-white text-base border ${
+                    errors.description ? 'border-danger' : 'border-dark-600'
+                  }`}
+                  placeholder="Décrivez votre événement..."
+                  placeholderTextColor="#64748b"
+                  value={formData.description}
+                  onChangeText={(text) => setFormData({ ...formData, description: text })}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  maxLength={1000}
+                />
+                {errors.description && (
+                  <Text className="text-danger text-xs mt-1">{errors.description}</Text>
+                )}
+              </View>
+
+              <SportSelector />
+            </View>
+
+            {/* Date & Time */}
+            <View className="bg-dark-800 rounded-2xl p-6 mb-4">
+              <Text className="text-white text-lg font-bold mb-4">Date et heure</Text>
+              
+              <View className="flex-row justify-between mb-4">
+                {/* Date */}
+                <View className="flex-1 mr-2">
+                  <Text className="text-dark-300 text-sm font-medium mb-2">Date *</Text>
+                  <TouchableOpacity
+                    className={`bg-dark-700 rounded-xl px-4 py-3 flex-row items-center border ${
+                      errors.date ? 'border-danger' : 'border-dark-600'
+                    }`}
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Ionicons name="calendar-outline" size={20} color="#64748b" />
+                    <Text className="text-white text-base ml-3">
+                      {formData.date || 'Sélectionner'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Time */}
+                <View className="flex-1 ml-2">
+                  <Text className="text-dark-300 text-sm font-medium mb-2">Heure *</Text>
+                  <TouchableOpacity
+                    className={`bg-dark-700 rounded-xl px-4 py-3 flex-row items-center border ${
+                      errors.time ? 'border-danger' : 'border-dark-600'
+                    }`}
+                    onPress={() => setShowTimePicker(true)}
+                  >
+                    <Ionicons name="time-outline" size={20} color="#64748b" />
+                    <Text className="text-white text-base ml-3">
+                      {formData.time || 'Sélectionner'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Location & Participants */}
+            <View className="bg-dark-800 rounded-2xl p-6 mb-4">
+              <Text className="text-white text-lg font-bold mb-4">Lieu et participants</Text>
+              
+              {/* Location */}
+              <View className="mb-4">
+                <Text className="text-dark-300 text-sm font-medium mb-2">Lieu *</Text>
+                <View className={`flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border ${
+                  errors.location ? 'border-danger' : 'border-dark-600'
+                }`}>
+                  <Ionicons name="location-outline" size={20} color="#64748b" />
+                  <TextInput
+                    className="flex-1 text-white text-base ml-3"
+                    placeholder="Adresse du lieu"
+                    placeholderTextColor="#64748b"
+                    value={formData.location}
+                    onChangeText={(text) => setFormData({ ...formData, location: text })}
+                    maxLength={200}
+                  />
+                </View>
+                {errors.location && (
+                  <Text className="text-danger text-xs mt-1">{errors.location}</Text>
+                )}
+              </View>
+
+              {/* Max Participants */}
+              <View className="mb-4">
+                <Text className="text-dark-300 text-sm font-medium mb-2">Nombre max de participants *</Text>
+                <View className={`flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border ${
+                  errors.maxParticipants ? 'border-danger' : 'border-dark-600'
+                }`}>
+                  <Ionicons name="people-outline" size={20} color="#64748b" />
+                  <TextInput
+                    className="flex-1 text-white text-base ml-3"
+                    placeholder="Ex: 20"
+                    placeholderTextColor="#64748b"
+                    value={formData.maxParticipants}
+                    onChangeText={(text) => setFormData({ ...formData, maxParticipants: text })}
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                </View>
+                {errors.maxParticipants && (
+                  <Text className="text-danger text-xs mt-1">{errors.maxParticipants}</Text>
+                )}
+              </View>
+
+              <LevelSelector />
+            </View>
+
+            {/* Price */}
+            <View className="bg-dark-800 rounded-2xl p-6 mb-6">
+              <Text className="text-white text-lg font-bold mb-4">Tarification</Text>
+              
+              {/* Free/Paid Toggle */}
+              <View className="flex-row mb-4">
+                <TouchableOpacity
+                  className={`flex-1 py-3 px-4 rounded-l-xl border-r border-dark-600 ${
+                    formData.isFree ? 'bg-success' : 'bg-dark-700'
+                  }`}
+                  onPress={() => setFormData({ ...formData, isFree: true, price: '' })}
+                >
+                  <Text className={`text-center font-semibold ${
+                    formData.isFree ? 'text-white' : 'text-dark-300'
+                  }`}>
+                    Gratuit
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  className={`flex-1 py-3 px-4 rounded-r-xl ${
+                    !formData.isFree ? 'bg-warning' : 'bg-dark-700'
+                  }`}
+                  onPress={() => setFormData({ ...formData, isFree: false })}
+                >
+                  <Text className={`text-center font-semibold ${
+                    !formData.isFree ? 'text-white' : 'text-dark-300'
+                  }`}>
+                    Payant
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Price Input */}
+              {!formData.isFree && (
+                <View>
+                  <Text className="text-dark-300 text-sm font-medium mb-2">Prix (€)</Text>
+                  <View className="flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border border-dark-600">
+                    <Ionicons name="card-outline" size={20} color="#64748b" />
+                    <TextInput
+                      className="flex-1 text-white text-base ml-3"
+                      placeholder="Ex: 15"
+                      placeholderTextColor="#64748b"
+                      value={formData.price}
+                      onChangeText={(text) => setFormData({ ...formData, price: text })}
+                      keyboardType="numeric"
+                    />
+                    <Text className="text-dark-400 text-sm">€</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Submit Button */}
+            <GradientButton
+              title={isEditing ? 'Modifier l\'événement' : 'Créer l\'événement'}
+              onPress={handleSubmit}
+              loading={isLoading}
+              disabled={isLoading}
+              variant="primary"
+              size="large"
+              icon={isEditing ? "checkmark" : "add"}
+            />
+          </Animated.View>
         </ScrollView>
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={selectedDate}
+            mode="date"
+            display="default"
+            onChange={(event, date) => {
+              setShowDatePicker(false);
+              if (date) {
+                setSelectedDate(date);
+                setFormData({ 
+                  ...formData, 
+                  date: date.toISOString().split('T')[0] 
+                });
+              }
+            }}
+            minimumDate={new Date()}
+          />
+        )}
+
+        {/* Time Picker */}
+        {showTimePicker && (
+          <DateTimePicker
+            value={selectedTime}
+            mode="time"
+            display="default"
+            onChange={(event, time) => {
+              setShowTimePicker(false);
+              if (time) {
+                setSelectedTime(time);
+                const hours = time.getHours().toString().padStart(2, '0');
+                const minutes = time.getMinutes().toString().padStart(2, '0');
+                setFormData({ 
+                  ...formData, 
+                  time: `${hours}:${minutes}` 
+                });
+              }
+            }}
+          />
+        )}
       </KeyboardAvoidingView>
-      
-      {/* Alerte personnalisée */}
-      <CustomAlert {...alertConfig} />
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  titleSection: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-  },
-  titleIconContainer: {
-    marginBottom: 15,
-  },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  pageSubtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  formContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-  },
-  inputError: {
-    borderColor: colors.danger,
-  },
-  textArea: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    minHeight: 100,
-  },
-  errorText: {
-    color: colors.danger,
-    fontSize: 14,
-    marginTop: 5,
-  },
-  selectorContainer: {
-    marginBottom: 20,
-  },
-  chipScrollView: {
-    flexDirection: 'row',
-  },
-  chip: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-  },
-  chipSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  chipTextSelected: {
-    color: colors.white,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  halfWidth: {
-    width: '48%',
-  },
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  dateText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    marginLeft: 10,
-  },
-  placeholderText: {
-    color: colors.textMuted,
-  },
-  locationInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-  },
-  locationInput: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingLeft: 10,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  levelContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -5,
-  },
-  levelButton: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    margin: 5,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    flex: 1,
-    minWidth: '45%',
-  },
-  levelButtonSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  levelButtonText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  levelButtonTextSelected: {
-    color: colors.white,
-  },
-  priceContainer: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  priceToggle: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    marginHorizontal: 5,
-  },
-  priceToggleSelected: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  priceToggleText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  priceToggleTextSelected: {
-    color: colors.white,
-  },
-  priceInput: {
-    marginTop: 10,
-  },
-  createButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  createButtonDisabled: {
-    backgroundColor: colors.gray[500],
-    opacity: 0.7,
-  },
-  createButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginLeft: 10,
-  },
-  bottomSpacing: {
-    height: 50,
-  },
-  dateTimePicker: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-  },
-});
-
-export default CreateEventScreen; 
+export default CreateEventScreenTailwind;

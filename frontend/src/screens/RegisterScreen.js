@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import { colors } from '../styles/globalStyles';
 import GlobalMenu from '../components/GlobalMenu';
-import GoogleSignInButton from '../components/GoogleSignInButton';
+
 
 const RegisterScreen = ({ navigation }) => {
   const [firstName, setFirstName] = useState('');
@@ -245,12 +245,7 @@ const RegisterScreen = ({ navigation }) => {
               <View style={styles.dividerLine}></View>
             </View>
 
-            {/* Google Button */}
-            <GoogleSignInButton 
-              variant="signup"
-              style={styles.googleButton}
-              disabled={isLoading}
-            />
+
           </View>
 
           {/* Login Link */}

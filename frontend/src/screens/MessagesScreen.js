@@ -2,52 +2,82 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   StatusBar,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  RefreshControl
+  RefreshControl,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/globalStyles';
-import GlobalMenu from '../components/GlobalMenu';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import GlobalMenu from '../components/GlobalMenu';
 
-const MessagesScreen = ({ navigation }) => {
+const MessagesScreenTailwind = ({ navigation }) => {
   const { user } = useAuth();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+  const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     loadConversations();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const loadConversations = async () => {
     try {
       setLoading(true);
-      const accessToken = await AsyncStorage.getItem('accessToken');
+      console.log('🔄 Chargement des conversations...');
       
-      const response = await fetch(`${API_BASE_URL}/api/messages/conversations`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        }
+      const accessToken = await AsyncStorage.getItem('accessToken');
+      if (!accessToken) {
+        console.error('❌ Aucun token d\'accès trouvé');
+        Alert.alert('Erreur', 'Session expirée. Veuillez vous reconnecter.');
+        navigation.navigate('Login');
+        return;
+      }
+
+      console.log('📡 URL:', `${API_BASE_URL}${API_ENDPOINTS.MESSAGES.CONVERSATIONS}`);
+      
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.MESSAGES.CONVERSATIONS}`, {
+        headers: getAuthHeaders(accessToken)
       });
+
+      console.log('📊 Statut de la réponse:', response.status);
 
       if (response.ok) {
         const data = await response.json();
-        setConversations(data.conversations || []);
+        console.log('✅ Conversations reçues:', data.conversations?.length || 0);
+        
+        if (data.conversations && data.conversations.length > 0) {
+          const formattedConversations = data.conversations.map(conv => ({
+            ...conv,
+            displayName: getDisplayName(conv, user),
+            displayAvatar: getDisplayAvatar(conv, user)
+          }));
+          
+          setConversations(formattedConversations);
+        } else {
+          setConversations([]);
+        }
       } else {
-        console.error('Erreur lors du chargement des conversations');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Erreur API:', response.status, errorData);
+        Alert.alert('Erreur', `Impossible de charger les conversations (${response.status})`);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des conversations:', error);
+      console.error('❌ Erreur lors du chargement des conversations:', error);
+      Alert.alert('Erreur', 'Impossible de charger les conversations. Vérifiez votre connexion.');
     } finally {
       setLoading(false);
     }
@@ -59,7 +89,39 @@ const MessagesScreen = ({ navigation }) => {
     setRefreshing(false);
   };
 
+  const getDisplayName = (conversation, currentUser) => {
+    if (conversation.type === 'group' || conversation.type === 'event') {
+      return conversation.name || 'Groupe';
+    }
+    
+    const otherParticipant = conversation.participants?.find(
+      p => p._id !== currentUser?.id && p._id !== currentUser?._id
+    );
+    
+    return otherParticipant?.name || 'Utilisateur inconnu';
+  };
+
+  const getDisplayAvatar = (conversation, currentUser) => {
+    if (conversation.avatar) {
+      return conversation.avatar;
+    }
+    
+    if (conversation.type === 'private') {
+      const otherParticipant = conversation.participants?.find(
+        p => p._id !== currentUser?.id && p._id !== currentUser?._id
+      );
+      return otherParticipant?.profile?.avatar;
+    }
+    
+    return null;
+  };
+
   const handleConversationPress = (conversation) => {
+    console.log('🔍 Navigation vers Chat:', {
+      conversationId: conversation.id,
+      conversationType: conversation.type,
+      participants: conversation.participants?.length
+    });
     navigation.navigate('Chat', { conversation });
   };
 
@@ -93,265 +155,132 @@ const MessagesScreen = ({ navigation }) => {
     
     return (
       <TouchableOpacity 
-        style={styles.messageItem}
+        className="bg-dark-800 rounded-2xl p-4 mb-3 flex-row items-center"
         onPress={() => handleConversationPress(conversation)}
+        activeOpacity={0.8}
       >
-        <View style={styles.avatarContainer}>
-          <View style={[styles.avatar, unreadCount > 0 && styles.avatarUnread]}>
-            <Text style={styles.avatarText}>
+        {/* Avatar */}
+        <View className="relative mr-4">
+          <View className={`w-12 h-12 rounded-full items-center justify-center ${
+            unreadCount > 0 ? 'bg-primary-500' : 'bg-dark-600'
+          }`}>
+            <Text className="text-white font-bold text-lg">
               {avatar ? '👤' : displayName.charAt(0)}
             </Text>
           </View>
           {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>
+            <View className="absolute -top-1 -right-1 w-6 h-6 bg-danger rounded-full items-center justify-center">
+              <Text className="text-white text-xs font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </Text>
             </View>
           )}
         </View>
         
-        <View style={styles.messageContent}>
-          <View style={styles.messageHeader}>
-            <Text style={[styles.senderName, unreadCount > 0 && styles.unreadText]}>
+        {/* Content */}
+        <View className="flex-1">
+          <View className="flex-row justify-between items-center mb-1">
+            <Text className={`text-base font-semibold ${
+              unreadCount > 0 ? 'text-white' : 'text-dark-200'
+            }`}>
               {displayName}
             </Text>
-            <Text style={styles.messageTime}>
+            <Text className="text-dark-400 text-xs">
               {formatTime(conversation.lastMessage?.timestamp)}
             </Text>
           </View>
           <Text 
-            style={[styles.messagePreview, unreadCount > 0 && styles.unreadText]} 
+            className={`text-sm ${
+              unreadCount > 0 ? 'text-dark-200' : 'text-dark-400'
+            }`}
             numberOfLines={1}
           >
             {lastMessage}
           </Text>
         </View>
+        
+        {/* Arrow */}
+        <Ionicons name="chevron-forward" size={16} color="#64748b" />
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Messages</Text>
-          {conversations.some(c => c.unreadCount > 0) && (
-            <View style={styles.unreadCount}>
-              <Text style={styles.unreadCountText}>
-                {conversations.reduce((sum, c) => sum + c.unreadCount, 0)}
-              </Text>
-            </View>
-          )}
-        </View>
-        <GlobalMenu navigation={navigation} />
-      </View>
-
-      {/* Conversations List */}
-      {loading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement des conversations...</Text>
-        </View>
-      ) : conversations.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-          <Text style={styles.emptyText}>Aucune conversation</Text>
-          <Text style={styles.emptySubtext}>
-            Commencez à discuter avec d'autres utilisateurs !
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={conversations}
-          renderItem={({ item }) => <ConversationItem conversation={item} />}
-          keyExtractor={(item) => item.id}
-          style={styles.messagesList}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-            />
-          }
-        />
-      )}
-
-      {/* Floating Compose Button */}
-      <TouchableOpacity 
-        style={styles.composeButton}
-        onPress={() => navigation.navigate('NewConversation')}
+      <LinearGradient
+        colors={['#20B2AA', '#1a9b94', '#0f172a']}
+        className="pb-4"
       >
-        <Ionicons name="add" size={24} color={colors.white} />
-      </TouchableOpacity>
+        <View className="flex-row justify-between items-center px-6 pt-4">
+          <View className="flex-row items-center">
+            <Ionicons name="chatbubbles" size={24} color="#ffffff" />
+            <Text className="text-white text-xl font-bold ml-3">Messages</Text>
+            {conversations.some(c => c.unreadCount > 0) && (
+              <View className="w-6 h-6 bg-danger rounded-full items-center justify-center ml-3">
+                <Text className="text-white text-xs font-bold">
+                  {conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
+                </Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center"
+            onPress={() => navigation.navigate('NewConversation')}
+          >
+            <Ionicons name="add" size={20} color="#ffffff" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      {/* Content */}
+      <Animated.View className="flex-1 px-6" style={{ opacity: fadeAnim }}>
+        {loading ? (
+          <View className="flex-1 items-center justify-center">
+            <ActivityIndicator size="large" color="#20B2AA" />
+            <Text className="text-dark-300 text-base mt-3">Chargement des conversations...</Text>
+          </View>
+        ) : conversations.length === 0 ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <View className="w-24 h-24 bg-dark-700 rounded-full items-center justify-center mb-6">
+              <Ionicons name="chatbubbles-outline" size={40} color="#64748b" />
+            </View>
+            <Text className="text-white text-xl font-bold mb-2 text-center">
+              Aucune conversation
+            </Text>
+            <Text className="text-dark-300 text-center text-base mb-8 leading-6">
+              Commencez à échanger avec d'autres sportifs en rejoignant des événements
+            </Text>
+            <TouchableOpacity
+              className="bg-primary-500 px-6 py-3 rounded-xl flex-row items-center"
+              onPress={() => navigation.navigate('Discover')}
+            >
+              <Ionicons name="search" size={20} color="#ffffff" />
+              <Text className="text-white font-semibold ml-2">Découvrir des événements</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={conversations}
+            keyExtractor={(item) => item.id || item._id}
+            renderItem={({ item }) => <ConversationItem conversation={item} />}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl 
+                refreshing={refreshing} 
+                onRefresh={onRefresh}
+                tintColor="#20B2AA"
+              />
+            }
+            className="pt-4"
+            contentContainerStyle={{ paddingBottom: 20 }}
+          />
+        )}
+      </Animated.View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[700],
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginRight: 8,
-  },
-  unreadCount: {
-    backgroundColor: colors.danger,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  unreadCountText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  messagesList: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  messageItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.gray[800],
-  },
-  avatarContainer: {
-    position: 'relative',
-    marginRight: 12,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.gray[600],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarUnread: {
-    backgroundColor: colors.primary,
-  },
-  avatarText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  unreadBadge: {
-    position: 'absolute',
-    top: -2,
-    right: -2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.danger,
-    borderWidth: 2,
-    borderColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  unreadBadgeText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  messageContent: {
-    flex: 1,
-  },
-  messageHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  senderName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.textSecondary,
-  },
-  unreadText: {
-    color: colors.textPrimary,
-    fontWeight: '600',
-  },
-  messageTime: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  messagePreview: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  composeButton: {
-    position: 'absolute',
-    bottom: 80,
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: colors.textSecondary,
-    marginTop: 16,
-    fontSize: 16,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyText: {
-    color: colors.textPrimary,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    color: colors.textMuted,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-});
-
-export default MessagesScreen; 
+export default MessagesScreenTailwind;

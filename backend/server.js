@@ -9,7 +9,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
 const messageRoutes = require('./routes/messages');
-// const oauthRoutes = require('./routes/oauth');
+
 // const passport = require('./config/passport');
 const { connectDB, initializeIndexes, cleanupDatabase } = require('./config/database');
 
@@ -157,6 +157,12 @@ app.use('/api/auth', authLimiter, authRoutes);
 
 // Routes des événements
 app.use('/api/events', eventRoutes);
+
+// Routes des notifications d'événements
+app.use('/api/events', require('./routes/events-notifications'));
+
+// Routes des statistiques d'événements
+app.use('/api/events', require('./routes/events-stats'));
 
 // Routes de messagerie
 app.use('/api/messages', messageRoutes);

@@ -1,446 +1,263 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
   KeyboardAvoidingView,
-  ScrollView,
   Platform,
-  StatusBar
+  ScrollView,
+  ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../styles/globalStyles';
 import GlobalMenu from '../components/GlobalMenu';
-import GoogleSignInButton from '../components/GoogleSignInButton';
+import GradientButton from '../components/GradientButton';
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreenTailwind = ({ navigation }) => {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  
-  const { login, isLoading } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email requis';
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      newErrors.email = 'Email invalide';
+    }
+    
+    if (!password) {
+      newErrors.password = 'Mot de passe requis';
+    } else if (password.length < 6) {
+      newErrors.password = 'Mot de passe trop court (min 6 caractères)';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
-    }
-
-    const result = await login(email.trim(), password, rememberMe);
+    if (!validateForm()) return;
     
-    if (!result.success) {
-      Alert.alert('Erreur de connexion', result.error);
+    setIsLoading(true);
+    
+    try {
+      const result = await login(email.trim().toLowerCase(), password, rememberMe);
+      
+      if (result.success) {
+        console.log('✅ Connexion réussie');
+      } else {
+        setErrors({ general: result.error || 'Erreur de connexion' });
+      }
+    } catch (error) {
+      console.error('❌ Erreur de connexion:', error);
+      setErrors({ general: 'Erreur de connexion. Vérifiez votre réseau.' });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       <KeyboardAvoidingView 
-        style={styles.keyboardView}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          {/* Header with Global Menu */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#20B2AA', '#17A2B8', '#0891B2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoIcon}
-              >
-                <Ionicons name="trophy" size={20} color={colors.white} />
-              </LinearGradient>
-              <Text style={styles.appName}>TEAMUP</Text>
-            </View>
-            <GlobalMenu navigation={navigation} />
-          </View>
-
-          {/* Login Icon */}
-          <View style={styles.loginIconContainer}>
-            <LinearGradient
-              colors={['#20B2AA', '#17A2B8', '#0891B2']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.loginIcon}
-            >
-              <Ionicons name="arrow-forward" size={32} color={colors.white} />
-            </LinearGradient>
-          </View>
-
-          {/* Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.mainTitle}>Bon retour !</Text>
-            <Text style={styles.subtitle}>Connectez-vous à votre compte TeamUp</Text>
-          </View>
-
-          {/* Form */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Adresse email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="votre@email.com"
-                placeholderTextColor={colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Mot de passe</Text>
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={styles.passwordInput}
-                  placeholder="Votre mot de passe"
-                  placeholderTextColor={colors.textMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
+        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <LinearGradient
+            colors={['#20B2AA', '#1a9b94', '#0f172a']}
+            className="pb-8"
+          >
+            <View className="flex-row justify-between items-center px-6 pt-4">
+              <View className="flex-row items-center">
+                <LinearGradient
+                  colors={['#ffffff', '#f1f5f9']}
+                  className="w-8 h-8 rounded-2xl items-center justify-center mr-3"
                 >
-                  <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁️'}</Text>
-                </TouchableOpacity>
+                  <Text className="text-primary-500 text-lg font-bold">T</Text>
+                </LinearGradient>
+                <Text className="text-white text-xl font-bold">TEAMUP</Text>
               </View>
+              <GlobalMenu navigation={navigation} />
             </View>
+          </LinearGradient>
 
-            {/* Options */}
-            <View style={styles.optionsContainer}>
-              <TouchableOpacity 
-                style={styles.rememberContainer}
-                onPress={() => setRememberMe(!rememberMe)}
-              >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+          {/* Main Content */}
+          <Animated.View 
+            className="px-6 -mt-6"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            {/* Login Card */}
+            <View className="bg-dark-800 rounded-3xl p-6 mb-6">
+              {/* Icon */}
+              <View className="items-center mb-8">
+                <LinearGradient
+                  colors={['#20B2AA', '#1a9b94']}
+                  className="w-20 h-20 rounded-full items-center justify-center mb-4"
+                >
+                  <Ionicons name="log-in" size={32} color="#ffffff" />
+                </LinearGradient>
+              </View>
+
+              {/* Title */}
+              <View className="items-center mb-8">
+                <Text className="text-white text-3xl font-bold mb-2">Connexion</Text>
+                <Text className="text-dark-300 text-base text-center">
+                  Connectez-vous à votre compte TeamUp
+                </Text>
+              </View>
+
+              {/* Form */}
+              <View className="mb-6">
+                {/* Email Input */}
+                <View className="mb-4">
+                  <Text className="text-dark-300 text-sm font-medium mb-2">Email</Text>
+                  <View className={`flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border ${
+                    errors.email ? 'border-danger' : 'border-dark-600'
+                  }`}>
+                    <Ionicons name="mail-outline" size={20} color="#64748b" />
+                    <TextInput
+                      className="flex-1 text-white text-base ml-3"
+                      placeholder="votre@email.com"
+                      placeholderTextColor="#64748b"
+                      value={email}
+                      onChangeText={(text) => {
+                        setEmail(text);
+                        if (errors.email) setErrors({ ...errors, email: '' });
+                      }}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                  </View>
+                  {errors.email && (
+                    <Text className="text-danger text-xs mt-1">{errors.email}</Text>
+                  )}
                 </View>
-                <Text style={styles.rememberText}>Se souvenir de moi</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-                <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+
+                {/* Password Input */}
+                <View className="mb-4">
+                  <Text className="text-dark-300 text-sm font-medium mb-2">Mot de passe</Text>
+                  <View className={`flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border ${
+                    errors.password ? 'border-danger' : 'border-dark-600'
+                  }`}>
+                    <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
+                    <TextInput
+                      className="flex-1 text-white text-base ml-3"
+                      placeholder="Votre mot de passe"
+                      placeholderTextColor="#64748b"
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        if (errors.password) setErrors({ ...errors, password: '' });
+                      }}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                    />
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                      <Ionicons 
+                        name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                        size={20} 
+                        color="#64748b" 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {errors.password && (
+                    <Text className="text-danger text-xs mt-1">{errors.password}</Text>
+                  )}
+                </View>
+
+                {/* Remember Me */}
+                <TouchableOpacity 
+                  className="flex-row items-center mb-4"
+                  onPress={() => setRememberMe(!rememberMe)}
+                >
+                  <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-3 ${
+                    rememberMe ? 'bg-primary-500 border-primary-500' : 'border-dark-500'
+                  }`}>
+                    {rememberMe && (
+                      <Ionicons name="checkmark" size={12} color="#ffffff" />
+                    )}
+                  </View>
+                  <Text className="text-dark-300 text-sm">Se souvenir de moi</Text>
+                </TouchableOpacity>
+
+                {/* General Error */}
+                {errors.general && (
+                  <View className="bg-danger/10 border border-danger/20 rounded-xl p-3 mb-4">
+                    <Text className="text-danger text-sm text-center">{errors.general}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Login Button */}
+              <GradientButton
+                title="Se connecter"
+                onPress={handleLogin}
+                loading={isLoading}
+                disabled={isLoading}
+                variant="primary"
+                size="large"
+                icon="log-in"
+              />
+
+              {/* Forgot Password */}
+              <TouchableOpacity 
+                className="items-center mt-4"
+                onPress={() => navigation.navigate('ForgotPassword')}
+              >
+                <Text className="text-primary-500 text-sm font-medium">
+                  Mot de passe oublié ?
+                </Text>
               </TouchableOpacity>
             </View>
 
-            {/* Login Button */}
-            <TouchableOpacity
-              onPress={handleLogin}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={isLoading ? ['#64748B', '#64748B'] : ['#20B2AA', '#17A2B8', '#0891B2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <>
-                  <Text style={styles.loginButtonText}>Se connecter</Text>
-                  <Text style={styles.loginButtonIcon}>→</Text>
-                </>
-              )}
-              </LinearGradient>
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine}></View>
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine}></View>
+            {/* Register Link */}
+            <View className="flex-row justify-center items-center">
+              <Text className="text-dark-300 text-base">Pas de compte ? </Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                <Text className="text-primary-500 text-base font-semibold">S'inscrire</Text>
+              </TouchableOpacity>
             </View>
-
-            {/* Google Button */}
-            <GoogleSignInButton 
-              variant="signin"
-              style={styles.googleButton}
-              disabled={isLoading}
-            />
-          </View>
-
-          {/* Register Link */}
-          <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>Pas de compte ? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.registerLink}>S'inscrire</Text>
-            </TouchableOpacity>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-
-  
-  // Login Icon
-  loginIconContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  loginIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  
-  // Title
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  mainTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  
-  // Form
-  formContainer: {
-    marginBottom: 30,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  eyeButton: {
-    padding: 16,
-  },
-  eyeText: {
-    fontSize: 16,
-    color: colors.textMuted,
-  },
-  
-  // Options
-  optionsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  rememberContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderColor: colors.gray[600],
-    borderRadius: 3,
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  rememberText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  
-  // Login Button
-  loginButton: {
-    borderRadius: 25,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  loginButtonDisabled: {
-    opacity: 0.7,
-  },
-  loginButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
-  },
-  loginButtonIcon: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  
-  // Divider
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.gray[700],
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  
-  // Google Button
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 25,
-    padding: 16,
-    backgroundColor: colors.surface,
-    marginBottom: 30,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4285F4',
-    marginRight: 12,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  
-  // Register
-  registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  registerText: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  registerLink: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-});
-
-export default LoginScreen; 
+export default LoginScreenTailwind;

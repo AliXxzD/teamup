@@ -1,186 +1,159 @@
 import React from 'react';
 import {
+  Modal,
   View,
   Text,
-  Modal,
   TouchableOpacity,
-  StyleSheet,
+  Animated,
   Dimensions,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/globalStyles';
+import { LinearGradient } from 'expo-linear-gradient';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-const CustomAlert = ({ 
-  visible, 
-  title, 
-  message, 
-  type = 'info', // 'success', 'error', 'warning', 'info'
-  buttons = [], 
-  onBackdropPress,
-  showIcon = true 
+const CustomAlertTailwind = ({
+  visible,
+  title,
+  message,
+  type = 'info',
+  confirmText = 'OK',
+  cancelText = 'Annuler',
+  onConfirm,
+  onCancel,
+  showCancel = false,
+  icon = null,
 }) => {
-  const getIconConfig = () => {
-    switch (type) {
-      case 'success':
-        return { name: 'checkmark-circle', color: colors.success };
-      case 'error':
-        return { name: 'alert-circle', color: colors.danger };
-      case 'warning':
-        return { name: 'warning', color: colors.warning };
-      default:
-        return { name: 'information-circle', color: colors.info };
+  const [scaleAnim] = React.useState(new Animated.Value(0));
+  const [opacityAnim] = React.useState(new Animated.Value(0));
+
+  React.useEffect(() => {
+    if (visible) {
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
+  const typeConfig = {
+    success: {
+      icon: icon || 'checkmark-circle',
+      iconColor: '#10B981',
+      gradient: ['#10B981', '#059669']
+    },
+    error: {
+      icon: icon || 'close-circle',
+      iconColor: '#EF4444',
+      gradient: ['#EF4444', '#DC2626']
+    },
+    warning: {
+      icon: icon || 'warning',
+      iconColor: '#F59E0B',
+      gradient: ['#F59E0B', '#D97706']
+    },
+    info: {
+      icon: icon || 'information-circle',
+      iconColor: '#20B2AA',
+      gradient: ['#20B2AA', '#1a9b94']
     }
   };
 
-  const iconConfig = getIconConfig();
+  const config = typeConfig[type] || typeConfig.info;
+
+  if (!visible) return null;
 
   return (
     <Modal
-      visible={visible}
       transparent
-      animationType="fade"
+      visible={visible}
+      animationType="none"
       statusBarTranslucent
     >
-      <TouchableWithoutFeedback onPress={onBackdropPress}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View style={styles.alertContainer}>
-              {showIcon && (
-                <View style={styles.iconContainer}>
-                  <Ionicons 
-                    name={iconConfig.name} 
-                    size={48} 
-                    color={iconConfig.color} 
-                  />
-                </View>
-              )}
-              
-              {title && (
-                <Text style={styles.title}>{title}</Text>
-              )}
-              
-              {message && (
-                <Text style={styles.message}>{message}</Text>
-              )}
-              
-              {buttons.length > 0 && (
-                <View style={styles.buttonsContainer}>
-                  {buttons.map((button, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      style={[
-                        styles.button,
-                        button.style === 'cancel' && styles.cancelButton,
-                        button.style === 'destructive' && styles.destructiveButton,
-                        buttons.length === 1 && styles.singleButton,
-                        index === 0 && buttons.length > 1 && styles.firstButton,
-                        index === buttons.length - 1 && buttons.length > 1 && styles.lastButton,
-                      ]}
-                      onPress={button.onPress}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[
-                        styles.buttonText,
-                        button.style === 'cancel' && styles.cancelButtonText,
-                        button.style === 'destructive' && styles.destructiveButtonText,
-                      ]}>
-                        {button.text}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+      <Animated.View 
+        className="flex-1 items-center justify-center bg-black/50 px-5"
+        style={{ opacity: opacityAnim }}
+      >
+        <Animated.View
+          className="bg-dark-800 rounded-3xl w-full max-w-sm overflow-hidden"
+          style={{
+            transform: [{ scale: scaleAnim }]
+          }}
+        >
+          {/* Header avec gradient */}
+          <LinearGradient
+            colors={config.gradient}
+            className="px-6 py-6 items-center"
+          >
+            <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center mb-4">
+              <Ionicons name={config.icon} size={32} color="#ffffff" />
             </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+            <Text className="text-white text-xl font-bold text-center">
+              {title}
+            </Text>
+          </LinearGradient>
+
+          {/* Content */}
+          <View className="px-6 py-6">
+            <Text className="text-dark-200 text-base leading-6 text-center mb-6">
+              {message}
+            </Text>
+
+            {/* Buttons */}
+            <View className={`flex-row ${showCancel ? 'justify-between' : 'justify-center'}`}>
+              {showCancel && (
+                <TouchableOpacity
+                  className="flex-1 bg-dark-700 py-3 px-4 rounded-xl mr-3"
+                  onPress={onCancel}
+                  activeOpacity={0.8}
+                >
+                  <Text className="text-dark-300 text-base font-semibold text-center">
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity
+                className={`${showCancel ? 'flex-1' : 'w-full'} py-3 px-4 rounded-xl`}
+                onPress={onConfirm}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={config.gradient}
+                  className="absolute inset-0 rounded-xl"
+                />
+                <Text className="text-white text-base font-semibold text-center">
+                  {confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 };
 
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-  alertContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 20,
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    maxWidth: width - 40,
-    minWidth: width * 0.7,
-    alignItems: 'center',
-    shadowColor: colors.black,
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  iconContainer: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  message: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-  buttonsContainer: {
-    width: '100%',
-    gap: 12,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    backgroundColor: colors.gray[600],
-  },
-  destructiveButton: {
-    backgroundColor: colors.danger,
-  },
-  singleButton: {
-    minHeight: 48,
-  },
-  firstButton: {
-    // Styles spécifiques pour le premier bouton si nécessaire
-  },
-  lastButton: {
-    // Styles spécifiques pour le dernier bouton si nécessaire
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-  },
-  cancelButtonText: {
-    color: colors.white,
-  },
-  destructiveButtonText: {
-    color: colors.white,
-  },
-});
-
-export default CustomAlert; 
+export default CustomAlertTailwind;

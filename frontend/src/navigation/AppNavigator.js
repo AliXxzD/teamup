@@ -24,7 +24,7 @@ import NewConversationScreen from '../screens/NewConversationScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import VerifyCodeScreen from '../screens/VerifyCodeScreen';
-import OAuthSuccessScreen from '../screens/OAuthSuccessScreen';
+
 import UserProfileScreen from '../screens/UserProfileScreen';
 import StatsScreen from '../screens/StatsScreen';
 
@@ -49,7 +49,7 @@ const GuestNavigator = () => (
             <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="VerifyCode" component={VerifyCodeScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-        <Stack.Screen name="OAuthSuccess" component={OAuthSuccessScreen} />
+
   </Stack.Navigator>
 );
 

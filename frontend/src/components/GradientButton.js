@@ -1,65 +1,116 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../styles/globalStyles';
+import { Ionicons } from '@expo/vector-icons';
 
-const GradientButton = ({
-  title,
-  onPress,
+const GradientButtonTailwind = ({ 
+  title, 
+  onPress, 
+  loading = false, 
   disabled = false,
-  loading = false,
-  style,
-  textStyle,
-  gradientColors = ['#20B2AA', '#17A2B8', '#0891B2'],
-  disabledColors = ['#64748B', '#64748B'],
-  children,
-  ...props
+  variant = 'primary',
+  size = 'medium',
+  icon = null,
+  style = {},
+  textStyle = {},
+  ...props 
 }) => {
+  
+  const variants = {
+    primary: {
+      colors: ['#20B2AA', '#1a9b94'],
+      textColor: 'text-white'
+    },
+    secondary: {
+      colors: ['#3B82F6', '#2563EB'],
+      textColor: 'text-white'
+    },
+    success: {
+      colors: ['#10B981', '#059669'],
+      textColor: 'text-white'
+    },
+    danger: {
+      colors: ['#EF4444', '#DC2626'],
+      textColor: 'text-white'
+    },
+    warning: {
+      colors: ['#F59E0B', '#D97706'],
+      textColor: 'text-white'
+    }
+  };
+
+  const sizes = {
+    small: {
+      height: 'h-10',
+      paddingX: 'px-4',
+      fontSize: 'text-sm',
+      iconSize: 16
+    },
+    medium: {
+      height: 'h-12',
+      paddingX: 'px-6',
+      fontSize: 'text-base',
+      iconSize: 20
+    },
+    large: {
+      height: 'h-14',
+      paddingX: 'px-8',
+      fontSize: 'text-lg',
+      iconSize: 24
+    }
+  };
+
+  const currentVariant = variants[variant] || variants.primary;
+  const currentSize = sizes[size] || sizes.medium;
+
+  const baseClasses = `
+    ${currentSize.height} 
+    ${currentSize.paddingX} 
+    rounded-xl 
+    flex-row 
+    items-center 
+    justify-center
+    ${disabled ? 'opacity-50' : 'opacity-100'}
+  `.replace(/\s+/g, ' ').trim();
+
   return (
     <TouchableOpacity
+      className={baseClasses}
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.8}
+      style={style}
       {...props}
     >
       <LinearGradient
-        colors={loading || disabled ? disabledColors : gradientColors}
+        colors={disabled ? ['#475569', '#475569'] : currentVariant.colors}
+        className="absolute inset-0 rounded-xl"
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[styles.button, style]}
-      >
-        {loading ? (
-          <ActivityIndicator color={colors.white} />
-        ) : children ? (
-          children
-        ) : (
-          <Text style={[styles.buttonText, textStyle]}>{title}</Text>
-        )}
-      </LinearGradient>
+        end={{ x: 1, y: 1 }}
+      />
+      
+      {loading ? (
+        <ActivityIndicator color="#ffffff" size="small" />
+      ) : (
+        <>
+          {icon && (
+            <Ionicons 
+              name={icon} 
+              size={currentSize.iconSize} 
+              color="#ffffff"
+              className="mr-2"
+            />
+          )}
+          <Text 
+            className={`${currentVariant.textColor} ${currentSize.fontSize} font-semibold`}
+            style={textStyle}
+          >
+            {title}
+          </Text>
+        </>
+      )}
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
-  button: {
-    borderRadius: 25,
-    padding: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.white,
-  },
-});
-
-export default GradientButton; 
+export default GradientButtonTailwind;
