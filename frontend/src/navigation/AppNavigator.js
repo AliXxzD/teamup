@@ -27,10 +27,12 @@ import VerifyCodeScreen from '../screens/VerifyCodeScreen';
 
 import UserProfileScreen from '../screens/UserProfileScreen';
 import StatsScreen from '../screens/StatsScreen';
+import EventParticipantsScreen from '../screens/EventParticipantsScreen';
 
 // Custom Components
 import CreateTabButton from '../components/CreateTabButton';
 import TabIconWithBadge from '../components/TabIconWithBadge';
+import CustomTabBar from '../components/CustomTabBar';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -118,63 +120,10 @@ const MyEventsStackNavigator = () => (
 // Navigateur pour les utilisateurs authentifiés
 const AuthenticatedNavigator = () => (
   <Tab.Navigator
-    screenOptions={({ route }) => ({
-      tabBarIcon: ({ focused, color, size }) => {
-        let iconName;
-
-        switch (route.name) {
-          case 'Dashboard':
-            iconName = focused ? 'home' : 'home-outline';
-            return <Ionicons name={iconName} size={size} color={color} />;
-          case 'Discover':
-            iconName = focused ? 'search' : 'search-outline';
-            return <Ionicons name={iconName} size={size} color={color} />;
-          case 'CreateEvent':
-            // Le bouton personnalisé sera géré différemment
-            return null;
-          case 'Messages':
-            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
-            return (
-              <TabIconWithBadge 
-                iconName={iconName} 
-                size={size} 
-                color={color}
-                badgeCount={3}
-                showBadge={true}
-              />
-            );
-          case 'Profile':
-            iconName = focused ? 'person' : 'person-outline';
-            return <Ionicons name={iconName} size={size} color={color} />;
-          default:
-            return <Ionicons name="circle" size={size} color={color} />;
-        }
-      },
-      tabBarActiveTintColor: colors.primary,
-      tabBarInactiveTintColor: colors.textMuted,
-      tabBarStyle: {
-        backgroundColor: colors.background,
-        borderTopColor: colors.gray[800],
-        borderTopWidth: 1,
-        paddingBottom: 8,
-        paddingTop: 8,
-        height: 80,
-        shadowColor: colors.black,
-        shadowOffset: {
-          width: 0,
-          height: -4,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 8,
-      },
-      tabBarLabelStyle: {
-        fontSize: 10,
-        fontWeight: '600',
-        marginTop: 4,
-      },
+    tabBar={(props) => <CustomTabBar {...props} />}
+    screenOptions={{
       headerShown: false,
-    })}
+    }}
   >
     <Tab.Screen 
       name="Dashboard" 
@@ -195,9 +144,6 @@ const AuthenticatedNavigator = () => (
       component={CreateEventScreen}
       options={{
         tabBarLabel: 'Créer',
-        tabBarButton: ({ onPress }) => (
-          <CreateTabButton onPress={onPress} />
-        ),
       }}
     />
     <Tab.Screen 
@@ -257,13 +203,6 @@ const RootStackNavigator = () => {
             }}
           />
           <Stack.Screen 
-            name="UserProfile" 
-            component={UserProfileScreen}
-            options={{
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen 
             name="Stats" 
             component={StatsScreen}
             options={{
@@ -289,6 +228,14 @@ const RootStackNavigator = () => {
           <Stack.Screen 
             name="NewConversation" 
             component={NewConversationScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="EventParticipants" 
+            component={EventParticipantsScreen}
             options={{
               presentation: 'card',
               gestureEnabled: true,

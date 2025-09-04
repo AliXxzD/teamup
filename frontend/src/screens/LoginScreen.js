@@ -121,36 +121,36 @@ const LoginScreenTailwind = ({ navigation }) => {
             }}
           >
             {/* Login Card */}
-            <View className="bg-dark-800 rounded-3xl p-6 mb-6">
+            <View className="bg-dark-800/95 backdrop-blur border border-dark-600/50 rounded-3xl p-8 mb-8 shadow-2xl shadow-primary-500/10">
               {/* Icon */}
-              <View className="items-center mb-8">
+              <View className="items-center mb-10">
                 <LinearGradient
                   colors={['#20B2AA', '#1a9b94']}
-                  className="w-20 h-20 rounded-full items-center justify-center mb-4"
+                  className="w-24 h-24 rounded-full items-center justify-center shadow-lg shadow-primary-500/30"
                 >
-                  <Ionicons name="log-in" size={32} color="#ffffff" />
+                  <Ionicons name="log-in" size={36} color="#ffffff" />
                 </LinearGradient>
               </View>
 
               {/* Title */}
-              <View className="items-center mb-8">
-                <Text className="text-white text-3xl font-bold mb-2">Connexion</Text>
-                <Text className="text-dark-300 text-base text-center">
+              <View className="items-center mb-10">
+                <Text className="text-white text-4xl font-bold mb-3">Connexion</Text>
+                <Text className="text-dark-300 text-lg text-center leading-6">
                   Connectez-vous à votre compte TeamUp
                 </Text>
               </View>
 
               {/* Form */}
-              <View className="mb-6">
+              <View className="mb-8">
                 {/* Email Input */}
-                <View className="mb-4">
-                  <Text className="text-dark-300 text-sm font-medium mb-2">Email</Text>
-                  <View className={`flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border ${
-                    errors.email ? 'border-danger' : 'border-dark-600'
-                  }`}>
-                    <Ionicons name="mail-outline" size={20} color="#64748b" />
+                <View className="mb-6">
+                  <Text className="text-dark-200 text-base font-semibold mb-3">Email</Text>
+                  <View className={`flex-row items-center bg-dark-700/80 rounded-2xl px-5 py-4 border-2 ${
+                    errors.email ? 'border-danger' : 'border-dark-600/50'
+                  } shadow-lg`}>
+                    <Ionicons name="mail-outline" size={22} color="#64748b" />
                     <TextInput
-                      className="flex-1 text-white text-base ml-3"
+                      className="flex-1 text-white text-lg ml-4"
                       placeholder="votre@email.com"
                       placeholderTextColor="#64748b"
                       value={email}
@@ -164,19 +164,19 @@ const LoginScreenTailwind = ({ navigation }) => {
                     />
                   </View>
                   {errors.email && (
-                    <Text className="text-danger text-xs mt-1">{errors.email}</Text>
+                    <Text className="text-danger text-sm mt-2 ml-2">{errors.email}</Text>
                   )}
                 </View>
 
                 {/* Password Input */}
-                <View className="mb-4">
-                  <Text className="text-dark-300 text-sm font-medium mb-2">Mot de passe</Text>
-                  <View className={`flex-row items-center bg-dark-700 rounded-xl px-4 py-3 border ${
-                    errors.password ? 'border-danger' : 'border-dark-600'
-                  }`}>
-                    <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
+                <View className="mb-6">
+                  <Text className="text-dark-200 text-base font-semibold mb-3">Mot de passe</Text>
+                  <View className={`flex-row items-center bg-dark-700/80 rounded-2xl px-5 py-4 border-2 ${
+                    errors.password ? 'border-danger' : 'border-dark-600/50'
+                  } shadow-lg`}>
+                    <Ionicons name="lock-closed-outline" size={22} color="#64748b" />
                     <TextInput
-                      className="flex-1 text-white text-base ml-3"
+                      className="flex-1 text-white text-lg ml-4"
                       placeholder="Votre mot de passe"
                       placeholderTextColor="#64748b"
                       value={password}
@@ -188,69 +188,74 @@ const LoginScreenTailwind = ({ navigation }) => {
                       autoCapitalize="none"
                       autoCorrect={false}
                     />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <TouchableOpacity 
+                      className="p-2"
+                      onPress={() => setShowPassword(!showPassword)}
+                    >
                       <Ionicons 
                         name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                        size={20} 
+                        size={22} 
                         color="#64748b" 
                       />
                     </TouchableOpacity>
                   </View>
                   {errors.password && (
-                    <Text className="text-danger text-xs mt-1">{errors.password}</Text>
+                    <Text className="text-danger text-sm mt-2 ml-2">{errors.password}</Text>
                   )}
                 </View>
 
                 {/* Remember Me */}
                 <TouchableOpacity 
-                  className="flex-row items-center mb-4"
+                  className="flex-row items-center mb-6"
                   onPress={() => setRememberMe(!rememberMe)}
                 >
-                  <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-3 ${
-                    rememberMe ? 'bg-primary-500 border-primary-500' : 'border-dark-500'
+                  <View className={`w-6 h-6 rounded-lg border-2 items-center justify-center mr-4 ${
+                    rememberMe ? 'bg-primary-500 border-primary-500' : 'border-dark-400'
                   }`}>
                     {rememberMe && (
-                      <Ionicons name="checkmark" size={12} color="#ffffff" />
+                      <Ionicons name="checkmark" size={14} color="#ffffff" />
                     )}
                   </View>
-                  <Text className="text-dark-300 text-sm">Se souvenir de moi</Text>
+                  <Text className="text-dark-200 text-base">Se souvenir de moi</Text>
                 </TouchableOpacity>
 
                 {/* General Error */}
                 {errors.general && (
-                  <View className="bg-danger/10 border border-danger/20 rounded-xl p-3 mb-4">
-                    <Text className="text-danger text-sm text-center">{errors.general}</Text>
+                  <View className="bg-danger/15 border-2 border-danger/30 rounded-2xl p-4 mb-6">
+                    <Text className="text-danger text-base text-center font-medium">{errors.general}</Text>
                   </View>
                 )}
               </View>
 
               {/* Login Button */}
-              <GradientButton
-                title="Se connecter"
-                onPress={handleLogin}
-                loading={isLoading}
-                disabled={isLoading}
-                variant="primary"
-                size="large"
-                icon="log-in"
-              />
+              <View className="mb-6">
+                <GradientButton
+                  title="Se connecter"
+                  onPress={handleLogin}
+                  loading={isLoading}
+                  disabled={isLoading}
+                  variant="primary"
+                  size="large"
+                  icon="log-in"
+                />
+              </View>
 
               {/* Forgot Password */}
               <TouchableOpacity 
-                className="items-center mt-4"
+                className="items-center py-3"
                 onPress={() => navigation.navigate('ForgotPassword')}
               >
-                <Text className="text-primary-500 text-sm font-medium">
+                <Text className="text-primary-500 text-base font-semibold">
                   Mot de passe oublié ?
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Register Link */}
-            <View className="flex-row justify-center items-center">
-              <Text className="text-dark-300 text-base">Pas de compte ? </Text>
+            <View className="bg-dark-800/60 border border-dark-600/30 rounded-2xl p-6 flex-row justify-center items-center">
+              <Text className="text-dark-200 text-lg">Pas de compte ? </Text>
               <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text className="text-primary-500 text-base font-semibold">S'inscrire</Text>
+                <Text className="text-primary-500 text-lg font-bold">S'inscrire</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

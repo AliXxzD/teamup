@@ -4,15 +4,14 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  StatusBar
+  StatusBar,
+  SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../styles/globalStyles';
 import GlobalMenu from '../components/GlobalMenu';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
@@ -146,87 +145,88 @@ const ResetPasswordScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       <KeyboardAvoidingView 
-        style={styles.keyboardView}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <ScrollView className="flex-1 px-6 pb-10" showsVerticalScrollIndicator={false}>
           {/* Header with Global Menu */}
-          <View style={styles.header}>
-            <View style={styles.logoContainer}>
+          <View className="flex-row justify-between items-center pt-4 pb-5">
+            <View className="flex-row items-center">
               <LinearGradient
                 colors={['#20B2AA', '#17A2B8', '#0891B2']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.logoIcon}
+                className="w-8 h-8 rounded-2xl items-center justify-center mr-3"
               >
-                <Ionicons name="trophy" size={20} color={colors.white} />
+                <Ionicons name="trophy" size={20} color="#ffffff" />
               </LinearGradient>
-              <Text style={styles.appName}>TEAMUP</Text>
+              <Text className="text-white text-xl font-bold">TEAMUP</Text>
             </View>
             <GlobalMenu navigation={navigation} />
           </View>
 
           {/* Reset Icon */}
-          <View style={styles.iconContainer}>
+          <View className="items-center mt-10 mb-10">
             <LinearGradient
               colors={['#20B2AA', '#17A2B8', '#0891B2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.icon}
+              className="w-20 h-20 rounded-full items-center justify-center mb-3 shadow-lg shadow-primary-500/30"
             >
-              <Ionicons name="key" size={32} color={colors.white} />
+              <Ionicons name="key" size={32} color="#ffffff" />
             </LinearGradient>
           </View>
 
           {/* Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.mainTitle}>Nouveau mot de passe</Text>
-            <Text style={styles.subtitle}>
+          <View className="items-center mb-10">
+            <Text className="text-white text-3xl font-bold mb-3 text-center">
+              Nouveau mot de passe
+            </Text>
+            <Text className="text-dark-300 text-base text-center leading-6 px-5">
               Créez un nouveau mot de passe sécurisé pour votre compte TeamUp
             </Text>
           </View>
 
           {/* Form */}
-          <View style={styles.formContainer}>
+          <View className="mb-8">
             {/* New Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Nouveau mot de passe</Text>
-              <View style={styles.passwordContainer}>
+            <View className="mb-5">
+              <Text className="text-dark-300 text-sm font-medium mb-2">Nouveau mot de passe</Text>
+              <View className="flex-row items-center bg-dark-800 border border-dark-600 rounded-xl px-4 py-3">
+                <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
                 <TextInput
-                  style={styles.passwordInput}
+                  className="flex-1 text-white text-base ml-3"
                   placeholder="Votre nouveau mot de passe"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#64748b"
                   value={newPassword}
                   onChangeText={setNewPassword}
                   secureTextEntry={!showPassword}
                   editable={!isLoading}
                   returnKeyType="next"
                 />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                   <Ionicons 
-                    name={showPassword ? 'eye-off' : 'eye'} 
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
                     size={20} 
-                    color={colors.textMuted} 
+                    color="#64748b" 
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Confirm Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirmer le mot de passe</Text>
-              <View style={styles.passwordContainer}>
+            <View className="mb-5">
+              <Text className="text-dark-300 text-sm font-medium mb-2">Confirmer le mot de passe</Text>
+              <View className="flex-row items-center bg-dark-800 border border-dark-600 rounded-xl px-4 py-3">
+                <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
                 <TextInput
-                  style={styles.passwordInput}
+                  className="flex-1 text-white text-base ml-3"
                   placeholder="Confirmez votre mot de passe"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#64748b"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
@@ -234,71 +234,64 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                   returnKeyType="done"
                   onSubmitEditing={handleResetPassword}
                 />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
                   <Ionicons 
-                    name={showConfirmPassword ? 'eye-off' : 'eye'} 
+                    name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} 
                     size={20} 
-                    color={colors.textMuted} 
+                    color="#64748b" 
                   />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Password Requirements */}
-            <View style={styles.requirementsContainer}>
-              <Text style={styles.requirementsTitle}>Le mot de passe doit contenir :</Text>
-              <View style={styles.requirementItem}>
+            <View className="bg-dark-800 rounded-xl p-4 mb-6">
+              <Text className="text-dark-300 text-sm font-medium mb-3">Le mot de passe doit contenir :</Text>
+              <View className="flex-row items-center mb-2">
                 <Ionicons 
                   name={newPassword.length >= 6 ? 'checkmark-circle' : 'ellipse-outline'} 
                   size={16} 
-                  color={newPassword.length >= 6 ? colors.success : colors.textMuted} 
+                  color={newPassword.length >= 6 ? '#10B981' : '#64748b'} 
                 />
-                <Text style={[
-                  styles.requirementText,
-                  newPassword.length >= 6 && styles.requirementMet
-                ]}>
+                <Text className={`text-sm ml-2 ${
+                  newPassword.length >= 6 ? 'text-success' : 'text-dark-400'
+                }`}>
                   Au moins 6 caractères
                 </Text>
               </View>
-              <View style={styles.requirementItem}>
+              <View className="flex-row items-center mb-2">
                 <Ionicons 
                   name={/[A-Z]/.test(newPassword) ? 'checkmark-circle' : 'ellipse-outline'} 
                   size={16} 
-                  color={/[A-Z]/.test(newPassword) ? colors.success : colors.textMuted} 
+                  color={/[A-Z]/.test(newPassword) ? '#10B981' : '#64748b'} 
                 />
-                <Text style={[
-                  styles.requirementText,
-                  /[A-Z]/.test(newPassword) && styles.requirementMet
-                ]}>
+                <Text className={`text-sm ml-2 ${
+                  /[A-Z]/.test(newPassword) ? 'text-success' : 'text-dark-400'
+                }`}>
                   Une lettre majuscule
                 </Text>
               </View>
-              <View style={styles.requirementItem}>
+              <View className="flex-row items-center mb-2">
                 <Ionicons 
                   name={/[a-z]/.test(newPassword) ? 'checkmark-circle' : 'ellipse-outline'} 
                   size={16} 
-                  color={/[a-z]/.test(newPassword) ? colors.success : colors.textMuted} 
+                  color={/[a-z]/.test(newPassword) ? '#10B981' : '#64748b'} 
                 />
-                <Text style={[
-                  styles.requirementText,
-                  /[a-z]/.test(newPassword) && styles.requirementMet
-                ]}>
+                <Text className={`text-sm ml-2 ${
+                  /[a-z]/.test(newPassword) ? 'text-success' : 'text-dark-400'
+                }`}>
                   Une lettre minuscule
                 </Text>
               </View>
-              <View style={styles.requirementItem}>
+              <View className="flex-row items-center">
                 <Ionicons 
                   name={/\d/.test(newPassword) ? 'checkmark-circle' : 'ellipse-outline'} 
                   size={16} 
-                  color={/\d/.test(newPassword) ? colors.success : colors.textMuted} 
+                  color={/\d/.test(newPassword) ? '#10B981' : '#64748b'} 
                 />
-                <Text style={[
-                  styles.requirementText,
-                  /\d/.test(newPassword) && styles.requirementMet
-                ]}>
+                <Text className={`text-sm ml-2 ${
+                  /\d/.test(newPassword) ? 'text-success' : 'text-dark-400'
+                }`}>
                   Un chiffre
                 </Text>
               </View>
@@ -309,17 +302,22 @@ const ResetPasswordScreen = ({ navigation, route }) => {
               title="Réinitialiser le mot de passe"
               onPress={handleResetPassword}
               loading={isLoading}
-              style={styles.resetButton}
+              disabled={isLoading}
+              variant="primary"
+              size="large"
+              icon="key"
             />
 
             {/* Back to Login */}
             <TouchableOpacity 
-              style={styles.backButton}
+              className="flex-row items-center justify-center py-4 mt-4"
               onPress={() => navigation.navigate('Login')}
               disabled={isLoading}
             >
-              <Ionicons name="arrow-back" size={16} color={colors.primary} />
-              <Text style={styles.backButtonText}>Retour à la connexion</Text>
+              <Ionicons name="arrow-back" size={16} color="#20B2AA" />
+              <Text className="text-primary-500 text-base font-medium ml-2">
+                Retour à la connexion
+              </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -327,167 +325,10 @@ const ResetPasswordScreen = ({ navigation, route }) => {
       
       {/* Custom Alert */}
       <CustomAlert {...alertConfig} />
-    </View>
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
 
-  // Icon
-  iconContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  icon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  
-  // Title
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  mainTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
-  },
-  
-  // Form
-  formContainer: {
-    marginBottom: 30,
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  eyeButton: {
-    padding: 16,
-  },
-
-  // Requirements
-  requirementsContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 24,
-  },
-  requirementsTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    marginBottom: 12,
-  },
-  requirementItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  requirementText: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginLeft: 8,
-  },
-  requirementMet: {
-    color: colors.success,
-  },
-  
-  // Buttons
-  resetButton: {
-    marginBottom: 24,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: colors.primary,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-});
 
 export default ResetPasswordScreen; 

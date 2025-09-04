@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -12,7 +11,9 @@ import {
   Alert,
   ImageBackground,
   RefreshControl,
-  ActivityIndicator
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet
 } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +22,7 @@ import { colors } from '../styles/globalStyles';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logNetworkInfo, generateNetworkReport } from '../utils/networkUtils';
 import { navigateToEventDetails } from '../utils/navigationUtils';
+import GradientButton from '../components/GradientButton';
 
 const { width } = Dimensions.get('window');
 
@@ -508,15 +510,15 @@ const UserProfileScreen = ({ navigation, route }) => {
   // Affichage du chargement
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Chargement du profil...</Text>
-      </View>
+      <SafeAreaView className="flex-1 justify-center items-center bg-dark-900">
+        <ActivityIndicator size="large" color="#20B2AA" />
+        <Text className="text-dark-300 text-base mt-4">Chargement du profil...</Text>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView className="flex-1 bg-dark-900">
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
       {/* Header avec image de fond */}
@@ -855,7 +857,7 @@ const UserProfileScreen = ({ navigation, route }) => {
 
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 

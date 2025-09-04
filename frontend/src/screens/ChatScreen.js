@@ -11,6 +11,7 @@ import {
   Platform,
   Alert,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -134,40 +135,18 @@ const ChatScreenTailwind = ({ route, navigation }) => {
 
   const MessageBubble = ({ message, isOwn }) => (
     <Animated.View 
-      className={`flex-row mb-4 ${isOwn ? 'justify-end' : 'justify-start'}`}
+      className={`mb-4 ${isOwn ? 'items-end' : 'items-start'}`}
       style={{ opacity: fadeAnim }}
     >
-      {!isOwn && (
-        <View className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center mr-3">
-          <Text className="text-white text-xs font-bold">
-            {message.sender?.name?.charAt(0)?.toUpperCase() || 'U'}
-          </Text>
-        </View>
-      )}
-      
       <View className={`max-w-[75%] ${isOwn ? 'items-end' : 'items-start'}`}>
         <View className={`px-4 py-3 rounded-2xl ${
           isOwn 
-            ? 'bg-primary-500 rounded-br-md' 
+            ? 'bg-lime rounded-br-md' 
             : 'bg-dark-700 rounded-bl-md'
         }`}>
-          <Text className={`text-base ${isOwn ? 'text-white' : 'text-white'}`}>
+          <Text className="text-white text-base">
             {message.content}
           </Text>
-        </View>
-        
-        <View className={`flex-row items-center mt-1 ${isOwn ? 'flex-row-reverse' : ''}`}>
-          <Text className="text-dark-400 text-xs">
-            {formatMessageTime(message.createdAt)}
-          </Text>
-          {isOwn && (
-            <Ionicons 
-              name={message.status === 'read' ? "checkmark-done" : "checkmark"} 
-              size={12} 
-              color={message.status === 'read' ? "#20B2AA" : "#64748b"}
-              className="mr-1"
-            />
-          )}
         </View>
       </View>
     </Animated.View>
@@ -190,34 +169,67 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       {/* Header */}
-      <LinearGradient
-        colors={['#20B2AA', '#1a9b94', '#0f172a']}
-        className="pb-4"
-      >
-        <View className="flex-row justify-between items-center px-6 pt-4">
+      <View className="bg-dark-900 px-6 pt-4 pb-4">
+        {/* Top Bar with Logo and Icons */}
+        <View className="flex-row justify-between items-center mb-4">
+          <View className="flex-row items-center">
+            <View className="w-10 h-10 bg-gradient-to-br from-lime to-green-500 rounded-2xl items-center justify-center mr-3">
+              <Ionicons name="people" size={20} color="#ffffff" />
+            </View>
+            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
+          </View>
+          
+          <View className="flex-row items-center space-x-3">
+            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
+              <Ionicons name="search" size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
+              <Ionicons name="ellipsis-vertical" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Conversation Header */}
+        <View className="flex-row justify-between items-center">
           <View className="flex-row items-center flex-1">
             <TouchableOpacity 
-              className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center mr-4"
+              className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center mr-4"
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={20} color="#ffffff" />
             </TouchableOpacity>
             
-            <View className="flex-1">
-              <Text className="text-white text-lg font-bold">
-                {getDisplayName()}
-              </Text>
-              <Text className="text-white/70 text-sm">
-                {conversation.participants?.length || 0} participant{(conversation.participants?.length || 0) > 1 ? 's' : ''}
-              </Text>
+            <View className="flex-row items-center flex-1">
+              <View className="w-12 h-12 bg-primary-500 rounded-full items-center justify-center mr-3">
+                <Text className="text-white font-bold text-lg">
+                  {getDisplayName().charAt(0)}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-white text-lg font-bold">
+                  {getDisplayName()}
+                </Text>
+                <View className="flex-row items-center">
+                  <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
+                  <Text className="text-white/70 text-sm">En ligne</Text>
+                </View>
+              </View>
             </View>
           </View>
           
-          <TouchableOpacity className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center">
-            <Ionicons name="call" size={20} color="#ffffff" />
-          </TouchableOpacity>
+          <View className="flex-row items-center space-x-3">
+            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
+              <Ionicons name="call" size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
+              <Ionicons name="videocam" size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
+              <Ionicons name="ellipsis-vertical" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Messages List */}
       <Animated.View className="flex-1" style={{ opacity: fadeAnim }}>
@@ -237,7 +249,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
                 isOwn={item.sender?.id === user?.id || item.sender?.id === user?._id} 
               />
             )}
-            className="flex-1 px-4 pt-4"
+            className="flex-1 px-6 pt-6"
             showsVerticalScrollIndicator={false}
             onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
           />
@@ -247,10 +259,10 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       {/* Message Input */}
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="bg-dark-800 px-4 py-4"
+        className="bg-dark-900 px-6 py-4"
       >
         <View className="flex-row items-end">
-          <View className="flex-1 bg-dark-700 rounded-2xl px-4 py-3 mr-3 max-h-24">
+          <View className="flex-1 bg-dark-800 rounded-2xl px-4 py-3 mr-3 max-h-24">
             <TextInput
               className="text-white text-base"
               placeholder="Écrivez votre message..."
@@ -264,7 +276,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
           
           <TouchableOpacity
             className={`w-12 h-12 rounded-full items-center justify-center ${
-              newMessage.trim() ? 'bg-primary-500' : 'bg-dark-600'
+              newMessage.trim() ? 'bg-lime' : 'bg-dark-600'
             }`}
             onPress={sendMessage}
             disabled={!newMessage.trim() || sending}

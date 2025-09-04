@@ -159,15 +159,15 @@ const MyEventsScreenTailwind = ({ navigation }) => {
         
         {showManageButton && (
           <TouchableOpacity
-            className="bg-secondary-500 px-4 py-2 rounded-xl flex-row items-center"
+            className="bg-secondary-500 px-6 py-3 rounded-lg flex-row items-center"
             onPress={() => navigation.navigate('CreateEvent', { 
               eventId: event._id, 
               eventData: event, 
               isEditing: true 
             })}
           >
-            <Ionicons name="settings" size={16} color="#ffffff" />
-            <Text className="text-white text-sm font-medium ml-1">Gérer</Text>
+            <Ionicons name="settings" size={18} color="#ffffff" />
+            <Text className="text-white text-base font-medium ml-2">Gérer</Text>
           </TouchableOpacity>
         )}
       </View>

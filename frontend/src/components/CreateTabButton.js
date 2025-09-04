@@ -2,7 +2,6 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/globalStyles';
 
 const CreateTabButton = ({ onPress }) => {
   return (
@@ -12,12 +11,12 @@ const CreateTabButton = ({ onPress }) => {
       activeOpacity={0.8}
     >
       <LinearGradient
-        colors={['#20B2AA', '#17A2B8', '#0891B2']}
+        colors={['#84cc16', '#22c55e']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
       >
-        <Ionicons name="add" size={28} color={colors.white} />
+        <Ionicons name="add" size={24} color="#ffffff" />
       </LinearGradient>
       <Text style={styles.label}>Créer</Text>
     </TouchableOpacity>
@@ -28,29 +27,27 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     justifyContent: 'center',
-    top: -20, // Élever le bouton au-dessus de la tab bar
+    top: -8, // Slightly elevated
   },
   gradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 50,
+    height: 50,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary,
+    shadowColor: '#84cc16',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 4,
     },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 10,
-    borderWidth: 4,
-    borderColor: colors.background,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '600',
-    color: colors.primary,
+    color: '#ffffff',
     marginTop: 4,
   },
 });

@@ -249,10 +249,10 @@ const DiscoverScreenTailwind = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            className={`px-4 py-2 rounded-full flex-row items-center ${
+            className={`px-6 py-3 rounded-lg flex-row items-center ${
               event.currentParticipants >= event.maxParticipants 
                 ? 'bg-dark-600' 
-                : 'bg-primary-500'
+                : 'bg-lime'
             }`}
             onPress={() => joinEvent(event._id)}
             disabled={event.currentParticipants >= event.maxParticipants}
@@ -260,10 +260,10 @@ const DiscoverScreenTailwind = ({ navigation }) => {
           >
             <Ionicons 
               name={event.currentParticipants >= event.maxParticipants ? "lock-closed" : "add"} 
-              size={16} 
+              size={18} 
               color="#ffffff"
             />
-            <Text className="text-white text-sm font-semibold ml-1">
+            <Text className="text-white text-base font-semibold ml-2">
               {event.currentParticipants >= event.maxParticipants ? 'Complet' : 'Rejoindre'}
             </Text>
           </TouchableOpacity>

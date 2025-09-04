@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
@@ -13,9 +12,10 @@ import {
   Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../styles/globalStyles';
 import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import GradientButton from '../components/GradientButton';
 
 const EventDetailsScreen = ({ route, navigation }) => {
   const { eventId } = route.params || {};
@@ -251,11 +251,11 @@ const EventDetailsScreen = ({ route, navigation }) => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Chargement...</Text>
+      <SafeAreaView className="flex-1 bg-dark-900">
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#20B2AA" />
+          <Text className="text-dark-300 text-base mt-3">Chargement...</Text>
         </View>
       </SafeAreaView>
     );
@@ -263,11 +263,11 @@ const EventDetailsScreen = ({ route, navigation }) => {
 
   if (!event) {
     return (
-      <SafeAreaView style={styles.container}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
-        <View style={styles.errorContainer}>
-          <Ionicons name="alert-circle-outline" size={64} color={colors.danger} />
-          <Text style={styles.errorText}>Événement non trouvé</Text>
+      <SafeAreaView className="flex-1 bg-dark-900">
+        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+        <View className="flex-1 items-center justify-center">
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text className="text-danger text-lg mt-3">Événement non trouvé</Text>
         </View>
       </SafeAreaView>
     );
@@ -277,140 +277,152 @@ const EventDetailsScreen = ({ route, navigation }) => {
   const isEventPast = new Date(event.date) < new Date();
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
-      <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header Image */}
-        <View style={styles.imageContainer}>
+        <View className="h-64 relative">
           <Image
             source={{ uri: getEventImage(event.sport) }}
-            style={styles.eventImage}
+            className="w-full h-full"
             resizeMode="cover"
           />
-          <View style={styles.imageOverlay}>
+          <View className="absolute inset-0 bg-black/40">
             <SafeAreaView>
-              <View style={styles.headerButtons}>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                  <Ionicons name="arrow-back" size={24} color={colors.white} />
+              <View className="flex-row justify-between items-center px-5 pt-2">
+                <TouchableOpacity 
+                  className="w-11 h-11 rounded-full bg-black/50 items-center justify-center"
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons name="arrow-back" size={24} color="#ffffff" />
                 </TouchableOpacity>
-                <View style={styles.rightButtons}>
+                <View className="flex-row items-center">
                   {isUserOrganizer() && (
                     <>
-                      <TouchableOpacity style={styles.actionHeaderButton} onPress={handleEditEvent}>
-                        <Ionicons name="create-outline" size={20} color={colors.white} />
+                      <TouchableOpacity 
+                        className="w-10 h-10 rounded-full bg-black/50 items-center justify-center mr-2"
+                        onPress={handleEditEvent}
+                      >
+                        <Ionicons name="create-outline" size={20} color="#ffffff" />
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.actionHeaderButton} onPress={handleDeleteEvent}>
-                        <Ionicons name="trash-outline" size={20} color={colors.white} />
+                      <TouchableOpacity 
+                        className="w-10 h-10 rounded-full bg-black/50 items-center justify-center mr-2"
+                        onPress={handleDeleteEvent}
+                      >
+                        <Ionicons name="trash-outline" size={20} color="#ffffff" />
                       </TouchableOpacity>
                     </>
                   )}
-                  <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
-                    <Ionicons name="share-outline" size={24} color={colors.white} />
+                  <TouchableOpacity 
+                    className="w-11 h-11 rounded-full bg-black/50 items-center justify-center"
+                    onPress={handleShare}
+                  >
+                    <Ionicons name="share-outline" size={24} color="#ffffff" />
                   </TouchableOpacity>
                 </View>
               </View>
             </SafeAreaView>
             
-            <View style={styles.eventBadges}>
+            <View className="absolute bottom-4 right-4 items-end">
               {event.price.isFree && (
-                <View style={styles.freeBadge}>
-                  <Text style={styles.freeBadgeText}>GRATUIT</Text>
+                <View className="bg-success px-3 py-1.5 rounded-full mb-2">
+                  <Text className="text-white text-xs font-bold">GRATUIT</Text>
                 </View>
               )}
-              <View style={styles.sportBadge}>
-                <Text style={styles.sportBadgeText}>{event.sport}</Text>
+              <View className="bg-black/70 px-3 py-1.5 rounded-full">
+                <Text className="text-white text-sm font-semibold">{event.sport}</Text>
               </View>
             </View>
           </View>
         </View>
 
         {/* Event Content */}
-        <View style={styles.contentContainer}>
+        <View className="p-5">
           {/* Title and Description */}
-          <View style={styles.titleSection}>
-            <Text style={styles.eventTitle}>{event.title}</Text>
-            <Text style={styles.eventDescription}>{event.description}</Text>
+          <View className="mb-6">
+            <Text className="text-white text-2xl font-bold mb-3">{event.title}</Text>
+            <Text className="text-dark-300 text-base leading-6">{event.description}</Text>
           </View>
 
           {/* Event Details */}
-          <View style={styles.detailsSection}>
-            <Text style={styles.sectionTitle}>Détails de l'événement</Text>
+          <View className="mb-6">
+            <Text className="text-white text-lg font-bold mb-4">Détails de l'événement</Text>
             
-            <View style={styles.detailRow}>
-              <Ionicons name="calendar-outline" size={20} color={colors.primary} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Date et heure</Text>
-                <Text style={styles.detailValue}>
+            <View className="flex-row items-start mb-4">
+              <Ionicons name="calendar-outline" size={20} color="#20B2AA" />
+              <View className="ml-3 flex-1">
+                <Text className="text-dark-400 text-sm mb-0.5">Date et heure</Text>
+                <Text className="text-white text-base font-medium">
                   {formatDate(event.date)} à {formatTime(event.time)}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.detailRow}>
-              <Ionicons name="location-outline" size={20} color={colors.primary} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Lieu</Text>
-                <Text style={styles.detailValue}>{event.location.address}</Text>
+            <View className="flex-row items-start mb-4">
+              <Ionicons name="location-outline" size={20} color="#20B2AA" />
+              <View className="ml-3 flex-1">
+                <Text className="text-dark-400 text-sm mb-0.5">Lieu</Text>
+                <Text className="text-white text-base font-medium">{event.location.address}</Text>
               </View>
             </View>
 
-            <View style={styles.detailRow}>
-              <Ionicons name="people-outline" size={20} color={colors.primary} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Participants</Text>
-                <Text style={styles.detailValue}>
+            <View className="flex-row items-start mb-4">
+              <Ionicons name="people-outline" size={20} color="#20B2AA" />
+              <View className="ml-3 flex-1">
+                <Text className="text-dark-400 text-sm mb-0.5">Participants</Text>
+                <Text className="text-white text-base font-medium">
                   {event.currentParticipants}/{event.maxParticipants} personnes
                 </Text>
               </View>
             </View>
 
-            <View style={styles.detailRow}>
-              <Ionicons name="star-outline" size={20} color={colors.primary} />
-              <View style={styles.detailTextContainer}>
-                <Text style={styles.detailLabel}>Niveau requis</Text>
-                <Text style={styles.detailValue}>{event.level}</Text>
+            <View className="flex-row items-start mb-4">
+              <Ionicons name="star-outline" size={20} color="#20B2AA" />
+              <View className="ml-3 flex-1">
+                <Text className="text-dark-400 text-sm mb-0.5">Niveau requis</Text>
+                <Text className="text-white text-base font-medium">{event.level}</Text>
               </View>
             </View>
 
             {!event.price.isFree && (
-              <View style={styles.detailRow}>
-                <Ionicons name="card-outline" size={20} color={colors.primary} />
-                <View style={styles.detailTextContainer}>
-                  <Text style={styles.detailLabel}>Prix</Text>
-                  <Text style={styles.detailValue}>{event.price.amount}€</Text>
+              <View className="flex-row items-start mb-4">
+                <Ionicons name="card-outline" size={20} color="#20B2AA" />
+                <View className="ml-3 flex-1">
+                  <Text className="text-dark-400 text-sm mb-0.5">Prix</Text>
+                  <Text className="text-white text-base font-medium">{event.price.amount}€</Text>
                 </View>
               </View>
             )}
           </View>
 
           {/* Organizer */}
-          <View style={styles.organizerSection}>
-            <Text style={styles.sectionTitle}>Organisateur</Text>
-            <View style={styles.organizerInfo}>
-              <View style={styles.organizerAvatar}>
-                <Text style={styles.organizerAvatarText}>
+          <View className="mb-6">
+            <Text className="text-white text-lg font-bold mb-4">Organisateur</Text>
+            <View className="flex-row items-center">
+              <View className="w-12 h-12 rounded-full bg-primary-500 items-center justify-center mr-3">
+                <Text className="text-white text-lg font-bold">
                   {event.organizer.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
-              <View style={styles.organizerDetails}>
-                <Text style={styles.organizerName}>{event.organizer.name}</Text>
-                <Text style={styles.organizerEmail}>{event.organizer.email}</Text>
+              <View className="flex-1">
+                <Text className="text-white text-base font-semibold">{event.organizer.name}</Text>
+                <Text className="text-dark-300 text-sm">{event.organizer.email}</Text>
               </View>
             </View>
           </View>
 
           {/* Participants */}
           {event.participants && event.participants.length > 0 && (
-            <View style={styles.participantsSection}>
-              <Text style={styles.sectionTitle}>
+            <View className="mb-6">
+              <Text className="text-white text-lg font-bold mb-4">
                 Participants ({event.participants.length})
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={styles.participantsList}>
+                <View className="flex-row">
                   {event.participants.map((participant, index) => (
-                    <View key={index} style={styles.participantAvatar}>
-                      <Text style={styles.participantAvatarText}>
+                    <View key={index} className="w-10 h-10 rounded-full bg-primary-500 items-center justify-center mr-2">
+                      <Text className="text-white text-sm font-bold">
                         {participant.user.name.charAt(0).toUpperCase()}
                       </Text>
                     </View>
@@ -421,75 +433,52 @@ const EventDetailsScreen = ({ route, navigation }) => {
           )}
 
           {/* Action Buttons */}
-          <View style={styles.actionsSection}>
+          <View className="mt-5">
             {isEventPast ? (
-              <View style={styles.pastEventNotice}>
-                <Ionicons name="time-outline" size={24} color={colors.textMuted} />
-                <Text style={styles.pastEventText}>Cet événement est terminé</Text>
+              <View className="flex-row items-center justify-center py-4 bg-dark-800 rounded-xl">
+                <Ionicons name="time-outline" size={24} color="#64748b" />
+                <Text className="text-dark-400 text-base ml-2">Cet événement est terminé</Text>
               </View>
             ) : isUserOrganizer() ? (
-              <View style={styles.organizerActions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.editButton]}
+              <View className="gap-3">
+                <GradientButton
+                  title="Modifier l'événement"
                   onPress={handleEditEvent}
                   disabled={isJoining}
-                >
-                  <Ionicons name="create-outline" size={20} color={colors.white} />
-                  <Text style={styles.actionButtonText}>Modifier l'événement</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.deleteButton]}
+                  variant="primary"
+                  size="large"
+                  icon="create-outline"
+                />
+                <GradientButton
+                  title={isJoining ? 'Suppression...' : 'Supprimer l\'événement'}
                   onPress={handleDeleteEvent}
+                  loading={isJoining}
                   disabled={isJoining}
-                >
-                  {isJoining ? (
-                    <ActivityIndicator size="small" color={colors.white} />
-                  ) : (
-                    <Ionicons name="trash-outline" size={20} color={colors.white} />
-                  )}
-                  <Text style={styles.actionButtonText}>
-                    {isJoining ? 'Suppression...' : 'Supprimer l\'événement'}
-                  </Text>
-                </TouchableOpacity>
+                  variant="danger"
+                  size="large"
+                  icon="trash-outline"
+                />
               </View>
             ) : isUserParticipant() ? (
-              <TouchableOpacity
-                style={[styles.actionButton, styles.leaveButton]}
+              <GradientButton
+                title={isJoining ? 'Désinscription...' : 'Quitter l\'événement'}
                 onPress={handleLeaveEvent}
+                loading={isJoining}
                 disabled={isJoining}
-              >
-                {isJoining ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Ionicons name="exit-outline" size={20} color={colors.white} />
-                )}
-                <Text style={styles.actionButtonText}>
-                  {isJoining ? 'Désinscription...' : 'Quitter l\'événement'}
-                </Text>
-              </TouchableOpacity>
+                variant="danger"
+                size="large"
+                icon="exit-outline"
+              />
             ) : (
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.joinButton,
-                  isEventFull && styles.actionButtonDisabled
-                ]}
+              <GradientButton
+                title={isJoining ? 'Inscription...' : isEventFull ? 'Événement complet' : 'Rejoindre l\'événement'}
                 onPress={handleJoinEvent}
+                loading={isJoining}
                 disabled={isJoining || isEventFull}
-              >
-                {isJoining ? (
-                  <ActivityIndicator size="small" color={colors.white} />
-                ) : (
-                  <Ionicons 
-                    name={isEventFull ? "lock-closed" : "add"} 
-                    size={20} 
-                    color={colors.white} 
-                  />
-                )}
-                <Text style={styles.actionButtonText}>
-                  {isJoining ? 'Inscription...' : isEventFull ? 'Événement complet' : 'Rejoindre l\'événement'}
-                </Text>
-              </TouchableOpacity>
+                variant={isEventFull ? "disabled" : "primary"}
+                size="large"
+                icon={isEventFull ? "lock-closed" : "add"}
+              />
             )}
           </View>
         </View>
@@ -498,262 +487,6 @@ const EventDetailsScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginTop: 12,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  errorText: {
-    fontSize: 18,
-    color: colors.danger,
-    marginTop: 12,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  imageContainer: {
-    height: 250,
-    position: 'relative',
-  },
-  eventImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  actionHeaderButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  shareButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eventBadges: {
-    position: 'absolute',
-    bottom: 16,
-    right: 16,
-    alignItems: 'flex-end',
-  },
-  freeBadge: {
-    backgroundColor: colors.success,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    marginBottom: 8,
-  },
-  freeBadgeText: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  sportBadge: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-  },
-  sportBadgeText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  contentContainer: {
-    padding: 20,
-  },
-  titleSection: {
-    marginBottom: 24,
-  },
-  eventTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 12,
-  },
-  eventDescription: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    lineHeight: 24,
-  },
-  detailsSection: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 16,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  detailTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 14,
-    color: colors.textMuted,
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  organizerSection: {
-    marginBottom: 24,
-  },
-  organizerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  organizerAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  organizerAvatarText: {
-    color: colors.white,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  organizerDetails: {
-    flex: 1,
-  },
-  organizerName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    marginBottom: 2,
-  },
-  organizerEmail: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  participantsSection: {
-    marginBottom: 24,
-  },
-  participantsList: {
-    flexDirection: 'row',
-  },
-  participantAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  participantAvatarText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  actionsSection: {
-    marginTop: 20,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  joinButton: {
-    backgroundColor: colors.primary,
-  },
-  leaveButton: {
-    backgroundColor: colors.danger,
-  },
-  editButton: {
-    backgroundColor: colors.primary,
-  },
-  deleteButton: {
-    backgroundColor: colors.danger,
-  },
-  organizerActions: {
-    gap: 12,
-  },
-  actionButtonDisabled: {
-    backgroundColor: colors.gray[600],
-    opacity: 0.7,
-  },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.white,
-    marginLeft: 8,
-  },
-  pastEventNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-  },
-  pastEventText: {
-    fontSize: 16,
-    color: colors.textMuted,
-    marginLeft: 8,
-  },
-});
+
 
 export default EventDetailsScreen; 

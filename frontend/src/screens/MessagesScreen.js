@@ -10,6 +10,7 @@ import {
   Alert,
   RefreshControl,
   Animated,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -152,6 +153,8 @@ const MessagesScreenTailwind = ({ navigation }) => {
     const lastMessage = conversation.lastMessage?.content || 'Aucun message';
     const unreadCount = conversation.unreadCount || 0;
     const avatar = conversation.displayAvatar || conversation.avatar;
+    const isGroup = conversation.type === 'group' || conversation.type === 'event';
+    const memberCount = conversation.participants?.length || 0;
     
     return (
       <TouchableOpacity 
@@ -159,20 +162,31 @@ const MessagesScreenTailwind = ({ navigation }) => {
         onPress={() => handleConversationPress(conversation)}
         activeOpacity={0.8}
       >
-        {/* Avatar */}
+        {/* Avatar with Online Indicator */}
         <View className="relative mr-4">
-          <View className={`w-12 h-12 rounded-full items-center justify-center ${
-            unreadCount > 0 ? 'bg-primary-500' : 'bg-dark-600'
-          }`}>
-            <Text className="text-white font-bold text-lg">
-              {avatar ? '👤' : displayName.charAt(0)}
-            </Text>
+          <View className="w-14 h-14 rounded-full items-center justify-center bg-dark-600">
+            {isGroup ? (
+              <View className="w-14 h-14 rounded-full items-center justify-center bg-lime/20">
+                <Ionicons name="people" size={24} color="#84cc16" />
+              </View>
+            ) : (
+              <View className="w-14 h-14 rounded-full items-center justify-center bg-primary-500">
+                <Text className="text-white font-bold text-lg">
+                  {displayName.charAt(0)}
+                </Text>
+              </View>
+            )}
           </View>
-          {unreadCount > 0 && (
-            <View className="absolute -top-1 -right-1 w-6 h-6 bg-danger rounded-full items-center justify-center">
-              <Text className="text-white text-xs font-bold">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </Text>
+          
+          {/* Online Indicator for individual chats */}
+          {!isGroup && (
+            <View className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-800" />
+          )}
+          
+          {/* Group Indicator */}
+          {isGroup && (
+            <View className="absolute bottom-0 right-0 w-5 h-5 bg-lime rounded-full items-center justify-center border-2 border-dark-800">
+              <Ionicons name="people" size={10} color="#ffffff" />
             </View>
           )}
         </View>
@@ -180,27 +194,37 @@ const MessagesScreenTailwind = ({ navigation }) => {
         {/* Content */}
         <View className="flex-1">
           <View className="flex-row justify-between items-center mb-1">
-            <Text className={`text-base font-semibold ${
-              unreadCount > 0 ? 'text-white' : 'text-dark-200'
-            }`}>
+            <Text className="text-white text-base font-bold">
               {displayName}
             </Text>
-            <Text className="text-dark-400 text-xs">
+            <Text className="text-dark-400 text-sm">
               {formatTime(conversation.lastMessage?.timestamp)}
             </Text>
           </View>
+          
           <Text 
-            className={`text-sm ${
-              unreadCount > 0 ? 'text-dark-200' : 'text-dark-400'
-            }`}
+            className="text-dark-300 text-sm mb-1"
             numberOfLines={1}
           >
             {lastMessage}
           </Text>
+          
+          {/* Member count for groups */}
+          {isGroup && memberCount > 0 && (
+            <Text className="text-dark-400 text-xs">
+              {memberCount} membre{memberCount > 1 ? 's' : ''}
+            </Text>
+          )}
         </View>
         
-        {/* Arrow */}
-        <Ionicons name="chevron-forward" size={16} color="#64748b" />
+        {/* Unread Count Badge */}
+        {unreadCount > 0 && (
+          <View className="w-6 h-6 bg-lime rounded-full items-center justify-center ml-2">
+            <Text className="text-white text-xs font-bold">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </Text>
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -210,30 +234,46 @@ const MessagesScreenTailwind = ({ navigation }) => {
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       {/* Header */}
-      <LinearGradient
-        colors={['#20B2AA', '#1a9b94', '#0f172a']}
-        className="pb-4"
-      >
-        <View className="flex-row justify-between items-center px-6 pt-4">
+      <View className="bg-dark-900 px-6 pt-4 pb-4">
+        {/* Top Bar with Logo and Icons */}
+        <View className="flex-row justify-between items-center mb-4">
           <View className="flex-row items-center">
-            <Ionicons name="chatbubbles" size={24} color="#ffffff" />
-            <Text className="text-white text-xl font-bold ml-3">Messages</Text>
-            {conversations.some(c => c.unreadCount > 0) && (
-              <View className="w-6 h-6 bg-danger rounded-full items-center justify-center ml-3">
-                <Text className="text-white text-xs font-bold">
-                  {conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0)}
-                </Text>
-              </View>
-            )}
+            <View className="w-10 h-10 bg-gradient-to-br from-lime to-green-500 rounded-2xl items-center justify-center mr-3">
+              <Ionicons name="people" size={20} color="#ffffff" />
+            </View>
+            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
           </View>
-          <TouchableOpacity
-            className="w-10 h-10 bg-white/20 rounded-xl items-center justify-center"
-            onPress={() => navigation.navigate('NewConversation')}
-          >
-            <Ionicons name="add" size={20} color="#ffffff" />
-          </TouchableOpacity>
+          
+          <View className="flex-row items-center space-x-3">
+            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
+              <Ionicons name="search" size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <GlobalMenu navigation={navigation} />
+          </View>
         </View>
-      </LinearGradient>
+
+        {/* Messages Title with Back Button */}
+        <View className="flex-row items-center mb-4">
+          <TouchableOpacity 
+            className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center mr-4"
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={20} color="#ffffff" />
+          </TouchableOpacity>
+          <Text className="text-white text-2xl font-bold">Messages</Text>
+        </View>
+
+        {/* Search Bar */}
+        <View className="bg-dark-800 rounded-2xl px-4 py-3 flex-row items-center">
+          <Ionicons name="search" size={20} color="#64748b" />
+          <TextInput
+            className="text-white text-base ml-3 flex-1"
+            placeholder="Rechercher une conversation..."
+            placeholderTextColor="#64748b"
+            style={{ fontSize: 16 }}
+          />
+        </View>
+      </View>
 
       {/* Content */}
       <Animated.View className="flex-1 px-6" style={{ opacity: fadeAnim }}>

@@ -32,6 +32,7 @@
     "expo-updates": "~0.28.17",
     "ionicons": "^8.0.13",
     "nativewind": "^4.1.23",
+    "prettier-plugin-tailwindcss": "^0.5.14",
     "react": "19.0.0",
     "react-native": "0.79.5",
     "react-native-gesture-handler": "~2.24.0",

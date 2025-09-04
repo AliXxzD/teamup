@@ -7,17 +7,24 @@ module.exports = {
     "./src/components/**/*.{js,jsx,ts,tsx}",
     "./src/navigation/**/*.{js,jsx,ts,tsx}",
   ],
+  presets: [require("nativewind/preset")],
   theme: {
     extend: {
       colors: {
-        // Couleurs TeamUp personnalisées
+        // Modern Sports App Color Scheme
         primary: {
-          50: '#f0fdfa',
-          100: '#ccfbf1',
-          500: '#20B2AA', // Votre couleur principale
-          600: '#1a9b94',
-          700: '#0f766e',
-          900: '#134e4a',
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          400: '#4ade80',
+          500: '#22c55e', // Main green
+          600: '#16a34a',
+          700: '#15803d',
+          900: '#14532d',
+        },
+        accent: {
+          400: '#84cc16', // Lime accent
+          500: '#65a30d',
+          600: '#4d7c0f',
         },
         secondary: {
           500: '#3B82F6',
@@ -33,12 +40,16 @@ module.exports = {
           600: '#475569',
           700: '#334155',
           800: '#1e293b',
+          850: '#172033', // New intermediate dark
           900: '#0f172a', // Background principal
+          950: '#020617', // Deeper black
         },
-        success: '#10B981',
+        success: '#22c55e',
         danger: '#EF4444',
         warning: '#F59E0B',
         info: '#06B6D4',
+        lime: '#84cc16', // Bright accent like in the images
+        emerald: '#10b981',
       },
       fontFamily: {
         'sans': ['Inter', 'system-ui', 'sans-serif'],

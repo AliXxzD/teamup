@@ -12,11 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 
-const GlobalMenuTailwind = ({ navigation }) => {
+const GlobalMenu = ({ navigation }) => {
   const { user, logout } = useAuth();
   const [menuVisible, setMenuVisible] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(-100));
+  const [slideAnim] = useState(new Animated.Value(500));
+  const [floatAnim] = useState(new Animated.Value(0));
 
   const toggleMenu = () => {
     if (!menuVisible) {
@@ -24,12 +25,19 @@ const GlobalMenuTailwind = ({ navigation }) => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 200,
+          duration: 400,
           useNativeDriver: true,
         }),
-        Animated.timing(slideAnim, {
+        Animated.spring(slideAnim, {
           toValue: 0,
-          duration: 300,
+          tension: 80,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+        Animated.spring(floatAnim, {
+          toValue: 1,
+          tension: 120,
+          friction: 4,
           useNativeDriver: true,
         }),
       ]).start();
@@ -37,11 +45,16 @@ const GlobalMenuTailwind = ({ navigation }) => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 150,
+          duration: 250,
           useNativeDriver: true,
         }),
         Animated.timing(slideAnim, {
-          toValue: -100,
+          toValue: 500,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
           duration: 200,
           useNativeDriver: true,
         }),
@@ -49,7 +62,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     Alert.alert(
       'Déconnexion',
       'Êtes-vous sûr de vouloir vous déconnecter ?',
@@ -58,13 +71,61 @@ const GlobalMenuTailwind = ({ navigation }) => {
         { 
           text: 'Déconnexion', 
           style: 'destructive',
-          onPress: () => {
-            logout();
-            setMenuVisible(false);
+          onPress: async () => {
+            try {
+              console.log('🚪 Logging out...');
+              await logout();
+              setMenuVisible(false);
+              console.log('✅ Logout successful');
+              // Navigation will be handled automatically by AuthContext
+            } catch (error) {
+              console.error('❌ Logout error:', error);
+              Alert.alert('Erreur', 'Erreur lors de la déconnexion');
+            }
           }
         }
       ]
     );
+  };
+
+  const navigateToScreen = (screenName) => {
+    try {
+      console.log('🔍 Navigating to:', screenName);
+      console.log('🔍 Navigation object:', navigation);
+      
+      // Close menu first
+      setMenuVisible(false);
+      
+      // Use setTimeout to ensure menu is closed before navigation
+      setTimeout(() => {
+        try {
+          if (screenName === 'Profile') {
+            console.log('📍 Navigating to Profile tab');
+            // For tab navigation, we need to navigate to the tab first
+            navigation.navigate('Profile');
+          } else if (screenName === 'MyEventsStack') {
+            console.log('📍 Navigating to MyEventsStack');
+            navigation.navigate('MyEventsStack');
+          } else if (screenName === 'Stats') {
+            console.log('📍 Navigating to Stats');
+            navigation.navigate('Stats');
+          } else if (screenName === 'Messages') {
+            console.log('📍 Navigating to Messages tab');
+            navigation.navigate('Messages');
+          } else if (screenName === 'Settings') {
+            Alert.alert('Info', 'Page des paramètres en cours de développement');
+          } else if (screenName === 'Support') {
+            Alert.alert('Support', 'Contactez-nous à support@teamup.com');
+          }
+        } catch (navError) {
+          console.error('❌ Navigation error in setTimeout:', navError);
+          Alert.alert('Erreur de navigation', 'Impossible d\'accéder à cette page');
+        }
+      }, 300);
+    } catch (error) {
+      console.error('❌ Navigation error:', error);
+      Alert.alert('Erreur', 'Impossible de naviguer vers cette page');
+    }
   };
 
   const menuItems = [
@@ -73,8 +134,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
       icon: 'person-outline',
       color: '#20B2AA',
       onPress: () => {
-        navigation.navigate('Profile');
-        toggleMenu();
+        navigateToScreen('Profile');
       }
     },
     {
@@ -82,8 +142,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
       icon: 'calendar-outline',
       color: '#10B981',
       onPress: () => {
-        navigation.navigate('MyEventsStack');
-        toggleMenu();
+        navigateToScreen('MyEventsStack');
       }
     },
     {
@@ -91,8 +150,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
       icon: 'stats-chart-outline',
       color: '#3B82F6',
       onPress: () => {
-        navigation.navigate('Stats');
-        toggleMenu();
+        navigateToScreen('Stats');
       }
     },
     {
@@ -100,8 +158,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
       icon: 'chatbubbles-outline',
       color: '#F59E0B',
       onPress: () => {
-        navigation.navigate('Messages');
-        toggleMenu();
+        navigateToScreen('Messages');
       }
     },
     {
@@ -109,9 +166,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
       icon: 'settings-outline',
       color: '#64748b',
       onPress: () => {
-        // navigation.navigate('Settings');
-        Alert.alert('Info', 'Page des paramètres en cours de développement');
-        toggleMenu();
+        navigateToScreen('Settings');
       }
     },
     {
@@ -119,8 +174,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
       icon: 'help-circle-outline',
       color: '#8B5CF6',
       onPress: () => {
-        Alert.alert('Support', 'Contactez-nous à support@teamup.com');
-        toggleMenu();
+        navigateToScreen('Support');
       }
     }
   ];
@@ -129,7 +183,7 @@ const GlobalMenuTailwind = ({ navigation }) => {
     <>
       {/* Menu Button */}
       <TouchableOpacity
-        className="w-10 h-10 bg-white/10 rounded-xl items-center justify-center"
+        className="w-12 h-12 bg-dark-800 rounded-2xl items-center justify-center"
         onPress={toggleMenu}
         activeOpacity={0.8}
       >
@@ -149,88 +203,132 @@ const GlobalMenuTailwind = ({ navigation }) => {
           onPress={toggleMenu}
         >
           <Animated.View
-            className="absolute top-0 right-0 w-80 h-full bg-dark-800"
+            className="absolute bottom-0 left-0 w-full h-full bg-dark-900"
             style={{
               opacity: fadeAnim,
-              transform: [{ translateX: slideAnim }]
+              transform: [
+                { translateY: slideAnim }
+              ]
             }}
           >
+            {/* Header with Gradient */}
             <LinearGradient
-              colors={['#20B2AA', '#1a9b94', '#1E293B']}
-              className="pt-12 pb-6 px-6"
+              colors={['#84cc16', '#22c55e', '#1e293b']}
+              className="pt-12 pb-8 px-8"
             >
               {/* Header */}
-              <View className="flex-row justify-between items-center mb-6">
-                <View>
-                  <Text className="text-white text-xl font-bold">Menu</Text>
-                  <Text className="text-white/80 text-sm">TeamUp</Text>
+              <View className="flex-row items-center mb-8">
+                <View className="w-12 h-12 bg-white/20 rounded-2xl items-center justify-center mr-4">
+                  <Ionicons name="people" size={24} color="#ffffff" />
                 </View>
-                <TouchableOpacity
-                  className="w-8 h-8 bg-white/20 rounded-full items-center justify-center"
-                  onPress={toggleMenu}
-                >
-                  <Ionicons name="close" size={18} color="#ffffff" />
-                </TouchableOpacity>
+                <View>
+                  <Text className="text-white text-2xl font-bold">TEAMUP</Text>
+                  <Text className="text-white/80 text-base">Menu</Text>
+                </View>
               </View>
 
               {/* User Info */}
-              <View className="flex-row items-center bg-white/10 rounded-2xl p-4">
-                <View className="w-12 h-12 bg-white/20 rounded-full items-center justify-center mr-4">
-                  <Text className="text-white text-lg font-bold">
+              <View className="flex-row items-center bg-dark-800/60 border border-dark-600/30 rounded-3xl p-6 shadow-lg">
+                <View className="w-20 h-20 bg-lime/20 rounded-2xl items-center justify-center mr-5">
+                  <Text className="text-lime text-2xl font-bold">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </Text>
                 </View>
                 <View className="flex-1">
-                  <Text className="text-white font-semibold text-base">
+                  <Text className="text-white font-bold text-xl mb-2">
                     {user?.name || 'Utilisateur'}
                   </Text>
-                  <Text className="text-white/70 text-sm">
+                  <Text className="text-dark-300 text-base mb-2">
                     {user?.email || 'email@example.com'}
                   </Text>
+                  <View className="flex-row items-center">
+                    <Ionicons name="star" size={16} color="#84cc16" />
+                    <Text className="text-lime text-base font-medium ml-2">
+                      {user?.points || 0} points
+                    </Text>
+                  </View>
                 </View>
+                <TouchableOpacity 
+                  className="w-12 h-12 bg-dark-700/60 rounded-2xl items-center justify-center"
+                  onPress={() => navigateToScreen('Profile')}
+                >
+                  <Ionicons name="chevron-forward" size={18} color="#84cc16" />
+                </TouchableOpacity>
               </View>
             </LinearGradient>
 
             {/* Menu Items */}
-            <ScrollView className="flex-1 px-6 py-4">
-              {menuItems.map((item, index) => (
-                <TouchableOpacity
-                  key={index}
-                  className="flex-row items-center py-4 px-4 mb-2 rounded-xl bg-dark-700/50"
-                  onPress={item.onPress}
-                  activeOpacity={0.8}
-                >
-                  <View 
-                    className="w-10 h-10 rounded-xl items-center justify-center mr-4"
-                    style={{ backgroundColor: item.color + '20' }}
+            <ScrollView className="flex-1 px-8 py-6">
+              <View className="space-y-4">
+                {menuItems.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    className="flex-row items-center py-5 px-6 rounded-2xl bg-dark-800/60 border border-dark-600/30 shadow-lg"
+                    onPress={item.onPress}
+                    activeOpacity={0.8}
                   >
-                    <Ionicons name={item.icon} size={20} color={item.color} />
-                  </View>
-                  <Text className="text-white text-base font-medium flex-1">
-                    {item.title}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={16} color="#64748b" />
-                </TouchableOpacity>
-              ))}
+                    <View 
+                      className="w-14 h-14 rounded-2xl items-center justify-center mr-5"
+                      style={{ backgroundColor: '#84cc16' + '15' }}
+                    >
+                      <Ionicons name={item.icon} size={24} color="#84cc16" />
+                    </View>
+                    <Text className="text-white text-lg font-semibold flex-1">
+                      {item.title}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color="#64748b" />
+                  </TouchableOpacity>
+                ))}
+              </View>
             </ScrollView>
 
             {/* Footer */}
-            <View className="px-6 pb-6">
+            <View className="px-8 pb-8 pt-6 border-t border-dark-600/50">
               <TouchableOpacity
-                className="bg-danger/20 py-4 px-4 rounded-xl flex-row items-center justify-center"
+                className="bg-red-500/15 border border-red-500/30 py-5 px-6 rounded-2xl flex-row items-center justify-center shadow-lg"
                 onPress={handleLogout}
                 activeOpacity={0.8}
               >
-                <Ionicons name="log-out-outline" size={20} color="#EF4444" />
-                <Text className="text-danger text-base font-semibold ml-2">
+                <Ionicons name="log-out-outline" size={22} color="#EF4444" />
+                <Text className="text-red-500 text-lg font-bold ml-3">
                   Déconnexion
                 </Text>
               </TouchableOpacity>
 
-              <Text className="text-dark-400 text-xs text-center mt-4">
+              <Text className="text-dark-400 text-sm text-center mt-6 font-medium">
                 TeamUp v1.0.0
               </Text>
             </View>
+
+            {/* Floating Close Button */}
+            <Animated.View 
+              className="absolute top-16 right-8"
+              style={{
+                opacity: floatAnim,
+                transform: [
+                  { 
+                    scale: floatAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 1]
+                    })
+                  },
+                  {
+                    translateY: floatAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-50, 0]
+                    })
+                  }
+                ]
+              }}
+            >
+              <TouchableOpacity
+                className="w-14 h-14 bg-red-500 rounded-full items-center justify-center shadow-2xl"
+                onPress={toggleMenu}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={24} color="#ffffff" />
+              </TouchableOpacity>
+            </Animated.View>
           </Animated.View>
         </TouchableOpacity>
       </Modal>
@@ -238,4 +336,4 @@ const GlobalMenuTailwind = ({ navigation }) => {
   );
 };
 
-export default GlobalMenuTailwind;
+export default GlobalMenu;

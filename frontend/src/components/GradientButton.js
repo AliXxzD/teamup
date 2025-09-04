@@ -18,7 +18,11 @@ const GradientButtonTailwind = ({
   
   const variants = {
     primary: {
-      colors: ['#20B2AA', '#1a9b94'],
+      colors: ['#84cc16', '#65a30d'], // Lime green
+      textColor: 'text-white'
+    },
+    accent: {
+      colors: ['#84cc16', '#65a30d'], // Lime accent
       textColor: 'text-white'
     },
     secondary: {
@@ -26,7 +30,7 @@ const GradientButtonTailwind = ({
       textColor: 'text-white'
     },
     success: {
-      colors: ['#10B981', '#059669'],
+      colors: ['#22c55e', '#16a34a'], // Updated green
       textColor: 'text-white'
     },
     danger: {
@@ -35,6 +39,10 @@ const GradientButtonTailwind = ({
     },
     warning: {
       colors: ['#F59E0B', '#D97706'],
+      textColor: 'text-white'
+    },
+    disabled: {
+      colors: ['#475569', '#475569'],
       textColor: 'text-white'
     }
   };
@@ -66,11 +74,12 @@ const GradientButtonTailwind = ({
   const baseClasses = `
     ${currentSize.height} 
     ${currentSize.paddingX} 
-    rounded-xl 
+    rounded-lg 
     flex-row 
     items-center 
     justify-center
-    ${disabled ? 'opacity-50' : 'opacity-100'}
+    shadow-lg
+    ${disabled ? 'opacity-60' : 'opacity-100'}
   `.replace(/\s+/g, ' ').trim();
 
   return (
@@ -84,7 +93,7 @@ const GradientButtonTailwind = ({
     >
       <LinearGradient
         colors={disabled ? ['#475569', '#475569'] : currentVariant.colors}
-        className="absolute inset-0 rounded-xl"
+        className="absolute inset-0 rounded-lg"
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../styles/globalStyles';
 
 const SessionInfo = ({ visible = true, style }) => {
   const [sessionInfo, setSessionInfo] = useState(null);
@@ -60,8 +59,8 @@ const SessionInfo = ({ visible = true, style }) => {
   };
 
   const getStatusColor = (isActive, rememberMe) => {
-    if (!isActive) return colors.danger;
-    return rememberMe ? colors.success : colors.primary;
+    if (!isActive) return '#EF4444';
+    return rememberMe ? '#10B981' : '#20B2AA';
   };
 
   const getStatusIcon = (isActive, rememberMe) => {
@@ -72,74 +71,74 @@ const SessionInfo = ({ visible = true, style }) => {
   if (!visible || !sessionInfo) return null;
 
   return (
-    <View style={[styles.container, style]}>
+    <View className={`bg-dark-800 rounded-xl border border-dark-600 my-2 overflow-hidden ${style || ''}`}>
       <TouchableOpacity 
-        style={styles.header}
+        className="flex-row justify-between items-center px-4 py-3"
         onPress={() => setIsExpanded(!isExpanded)}
         activeOpacity={0.7}
       >
-        <View style={styles.headerLeft}>
+        <View className="flex-row items-center flex-1">
           <Ionicons 
             name={getStatusIcon(sessionInfo.isActive, sessionInfo.rememberMe)} 
             size={16} 
             color={getStatusColor(sessionInfo.isActive, sessionInfo.rememberMe)} 
           />
-          <Text style={[
-            styles.statusText,
-            { color: getStatusColor(sessionInfo.isActive, sessionInfo.rememberMe) }
-          ]}>
+          <Text 
+            className="text-sm font-semibold ml-2"
+            style={{ color: getStatusColor(sessionInfo.isActive, sessionInfo.rememberMe) }}
+          >
             {sessionInfo.rememberMe ? 'Session longue' : 'Session standard'}
           </Text>
         </View>
         
-        <View style={styles.headerRight}>
-          <Text style={styles.timeText}>
+        <View className="flex-row items-center">
+          <Text className="text-dark-300 text-xs mr-2 font-mono">
             {formatTimeRemaining(sessionInfo.timeRemaining)}
           </Text>
           <Ionicons 
             name={isExpanded ? 'chevron-up' : 'chevron-down'} 
             size={16} 
-            color={colors.textSecondary} 
+            color="#64748b" 
           />
         </View>
       </TouchableOpacity>
 
       {isExpanded && (
-        <View style={styles.expandedContent}>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Type de session :</Text>
-            <Text style={styles.infoValue}>
+        <View className="px-4 pb-4 border-t border-dark-600 bg-dark-700/50">
+          <View className="flex-row justify-between items-center py-1.5">
+            <Text className="text-dark-300 text-xs flex-1">Type de session :</Text>
+            <Text className="text-white text-xs font-medium flex-1 text-right">
               {sessionInfo.rememberMe ? 'Se souvenir de moi' : 'Standard'}
             </Text>
           </View>
           
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Durée totale :</Text>
-            <Text style={styles.infoValue}>{sessionInfo.duration}</Text>
+          <View className="flex-row justify-between items-center py-1.5">
+            <Text className="text-dark-300 text-xs flex-1">Durée totale :</Text>
+            <Text className="text-white text-xs font-medium flex-1 text-right">{sessionInfo.duration}</Text>
           </View>
           
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Temps restant :</Text>
-            <Text style={[
-              styles.infoValue,
-              { color: getStatusColor(sessionInfo.isActive, sessionInfo.rememberMe) }
-            ]}>
+          <View className="flex-row justify-between items-center py-1.5">
+            <Text className="text-dark-300 text-xs flex-1">Temps restant :</Text>
+            <Text 
+              className="text-xs font-medium flex-1 text-right"
+              style={{ color: getStatusColor(sessionInfo.isActive, sessionInfo.rememberMe) }}
+            >
               {formatTimeRemaining(sessionInfo.timeRemaining)}
             </Text>
           </View>
           
           {sessionInfo.expiresAt && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Expire le :</Text>
-              <Text style={styles.infoValue}>
+            <View className="flex-row justify-between items-center py-1.5">
+              <Text className="text-dark-300 text-xs flex-1">Expire le :</Text>
+              <Text className="text-white text-xs font-medium flex-1 text-right">
                 {new Date(sessionInfo.expiresAt).toLocaleString('fr-FR')}
               </Text>
             </View>
           )}
           
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Renouvellement :</Text>
-            <Text style={styles.infoValue}>
+          <View className="flex-row justify-between items-center py-1.5">
+            <Text className="text-dark-300 text-xs flex-1">Renouvellement :</Text>
+            <Text className="text-white text-xs font-medium flex-1 text-right">
               {sessionInfo.rememberMe ? 'Automatique' : 'Manuel'}
             </Text>
           </View>
@@ -149,67 +148,6 @@ const SessionInfo = ({ visible = true, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    marginVertical: 8,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  timeText: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    marginRight: 8,
-    fontFamily: 'monospace',
-  },
-  expandedContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray[200],
-    backgroundColor: colors.gray[50],
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: 13,
-    color: colors.textPrimary,
-    fontWeight: '500',
-    flex: 1,
-    textAlign: 'right',
-  },
-});
+
 
 export default SessionInfo; 

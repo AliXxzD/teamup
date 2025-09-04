@@ -4,19 +4,19 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  StatusBar
+  StatusBar,
+  SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../styles/globalStyles';
 import GlobalMenu from '../components/GlobalMenu';
+import GradientButton from '../components/GradientButton';
 
 
 const RegisterScreen = ({ navigation }) => {
@@ -57,70 +57,72 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+    <SafeAreaView className="flex-1 bg-dark-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       <KeyboardAvoidingView 
-        style={styles.keyboardView}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-                     {/* Header with Global Menu */}
-           <View style={styles.header}>
-             <View style={styles.logoContainer}>
-               <LinearGradient
-                 colors={['#20B2AA', '#17A2B8', '#0891B2']}
-                 start={{ x: 0, y: 0 }}
-                 end={{ x: 1, y: 1 }}
-                 style={styles.logoIcon}
-               >
-                 <Ionicons name="trophy-outline" size={20} color={colors.white} />
-               </LinearGradient>
-               <Text style={styles.appName}>TEAMUP</Text>
-             </View>
-             <GlobalMenu navigation={navigation} />
-           </View>
+        <ScrollView className="flex-1 px-6 pb-10" showsVerticalScrollIndicator={false}>
+          {/* Header with Global Menu */}
+          <View className="flex-row justify-between items-center pt-4 pb-5">
+            <View className="flex-row items-center">
+              <LinearGradient
+                colors={['#20B2AA', '#17A2B8', '#0891B2']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                className="w-8 h-8 rounded-2xl items-center justify-center mr-3"
+              >
+                <Ionicons name="trophy-outline" size={20} color="#ffffff" />
+              </LinearGradient>
+              <Text className="text-white text-xl font-bold">TEAMUP</Text>
+            </View>
+            <GlobalMenu navigation={navigation} />
+          </View>
 
           {/* Register Icon */}
-          <View style={styles.registerIconContainer}>
+          <View className="items-center mt-10 mb-10">
             <LinearGradient
               colors={['#20B2AA', '#17A2B8', '#0891B2']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.registerIcon}
+              className="w-20 h-20 rounded-full items-center justify-center mb-3 shadow-lg shadow-primary-500/30"
             >
-              <Ionicons name="person-add-outline" size={40} color={colors.white} />
+              <Ionicons name="person-add-outline" size={40} color="#ffffff" />
             </LinearGradient>
           </View>
 
           {/* Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.mainTitle}>Créer un compte</Text>
-            <Text style={styles.subtitle}>Rejoignez la communauté TeamUp</Text>
+          <View className="items-center mb-10">
+            <Text className="text-white text-3xl font-bold mb-2">Créer un compte</Text>
+            <Text className="text-dark-300 text-base text-center">
+              Rejoignez la communauté TeamUp
+            </Text>
           </View>
 
           {/* Form */}
-          <View style={styles.formContainer}>
+          <View className="mb-8">
             {/* Name Fields */}
-            <View style={styles.nameRow}>
-              <View style={[styles.inputContainer, styles.nameInput]}>
-                <Text style={styles.inputLabel}>Prénom</Text>
+            <View className="flex-row justify-between mb-5">
+              <View className="w-[48%]">
+                <Text className="text-dark-300 text-sm font-medium mb-2">Prénom</Text>
                 <TextInput
-                  style={styles.input}
+                  className="bg-dark-800 border border-dark-600 rounded-xl px-4 py-3 text-white text-base"
                   placeholder="Prénom"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#64748b"
                   value={firstName}
                   onChangeText={setFirstName}
                   autoCapitalize="words"
                 />
               </View>
               
-              <View style={[styles.inputContainer, styles.nameInput]}>
-                <Text style={styles.inputLabel}>Nom</Text>
+              <View className="w-[48%]">
+                <Text className="text-dark-300 text-sm font-medium mb-2">Nom</Text>
                 <TextInput
-                  style={styles.input}
+                  className="bg-dark-800 border border-dark-600 rounded-xl px-4 py-3 text-white text-base"
                   placeholder="Nom"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#64748b"
                   value={lastName}
                   onChangeText={setLastName}
                   autoCapitalize="words"
@@ -129,406 +131,142 @@ const RegisterScreen = ({ navigation }) => {
             </View>
 
             {/* Email */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Adresse email</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="votre@email.com"
-                placeholderTextColor={colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+            <View className="mb-5">
+              <Text className="text-dark-300 text-sm font-medium mb-2">Adresse email</Text>
+              <View className="flex-row items-center bg-dark-800 border border-dark-600 rounded-xl px-4 py-3">
+                <Ionicons name="mail-outline" size={20} color="#64748b" />
+                <TextInput
+                  className="flex-1 text-white text-base ml-3"
+                  placeholder="votre@email.com"
+                  placeholderTextColor="#64748b"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
             </View>
 
             {/* Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Mot de passe</Text>
-              <View style={styles.passwordContainer}>
+            <View className="mb-5">
+              <Text className="text-dark-300 text-sm font-medium mb-2">Mot de passe</Text>
+              <View className="flex-row items-center bg-dark-800 border border-dark-600 rounded-xl px-4 py-3">
+                <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
                 <TextInput
-                  style={styles.passwordInput}
+                  className="flex-1 text-white text-base ml-3"
                   placeholder="Mot de passe"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#64748b"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                 />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁️'}</Text>
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons 
+                    name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={20} 
+                    color="#64748b" 
+                  />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Confirm Password */}
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Confirmer le mot de passe</Text>
-              <View style={styles.passwordContainer}>
+            <View className="mb-5">
+              <Text className="text-dark-300 text-sm font-medium mb-2">Confirmer le mot de passe</Text>
+              <View className="flex-row items-center bg-dark-800 border border-dark-600 rounded-xl px-4 py-3">
+                <Ionicons name="lock-closed-outline" size={20} color="#64748b" />
                 <TextInput
-                  style={styles.passwordInput}
+                  className="flex-1 text-white text-base ml-3"
                   placeholder="Confirmez le mot de passe"
-                  placeholderTextColor={colors.textMuted}
+                  placeholderTextColor="#64748b"
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
                 />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  <Text style={styles.eyeText}>{showConfirmPassword ? '👁️' : '👁️'}</Text>
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                  <Ionicons 
+                    name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
+                    size={20} 
+                    color="#64748b" 
+                  />
                 </TouchableOpacity>
               </View>
             </View>
 
             {/* Terms and Conditions */}
-            <View style={styles.termsContainer}>
+            <View className="mb-5">
               <TouchableOpacity 
-                style={styles.termsCheckContainer}
+                className="flex-row items-start"
                 onPress={() => setAcceptTerms(!acceptTerms)}
               >
-                <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
-                  {acceptTerms && <Text style={styles.checkmark}>✓</Text>}
+                <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-3 mt-0.5 ${
+                  acceptTerms ? 'bg-primary-500 border-primary-500' : 'border-dark-500'
+                }`}>
+                  {acceptTerms && (
+                    <Ionicons name="checkmark" size={12} color="#ffffff" />
+                  )}
                 </View>
-                <View style={styles.termsTextContainer}>
-                  <Text style={styles.termsText}>
+                <View className="flex-1">
+                  <Text className="text-dark-300 text-sm leading-5">
                     J'accepte les{' '}
-                    <Text style={styles.termsLink}>conditions d'utilisation</Text>
+                    <Text className="text-primary-500 font-medium">conditions d'utilisation</Text>
                     {' '}et la{' '}
-                    <Text style={styles.termsLink}>politique de confidentialité</Text>
+                    <Text className="text-primary-500 font-medium">politique de confidentialité</Text>
                   </Text>
                 </View>
               </TouchableOpacity>
             </View>
 
             {/* Remember Me */}
-            <View style={styles.rememberContainer}>
+            <View className="mb-6">
               <TouchableOpacity 
-                style={styles.rememberCheckContainer}
+                className="flex-row items-center"
                 onPress={() => setRememberMe(!rememberMe)}
               >
-                <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                <View className={`w-5 h-5 rounded border-2 items-center justify-center mr-3 ${
+                  rememberMe ? 'bg-primary-500 border-primary-500' : 'border-dark-500'
+                }`}>
+                  {rememberMe && (
+                    <Ionicons name="checkmark" size={12} color="#ffffff" />
+                  )}
                 </View>
-                <Text style={styles.rememberText}>Se souvenir de moi (30 jours)</Text>
+                <Text className="text-dark-300 text-sm">Se souvenir de moi (30 jours)</Text>
               </TouchableOpacity>
             </View>
 
             {/* Register Button */}
-            <TouchableOpacity
+            <GradientButton
+              title="Créer un compte"
               onPress={handleRegister}
+              loading={isLoading}
               disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={isLoading ? ['#64748B', '#64748B'] : ['#20B2AA', '#17A2B8', '#0891B2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={colors.white} />
-                ) : (
-                  <Text style={styles.registerButtonText}>Créer un compte</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
+              variant="primary"
+              size="large"
+              icon="person-add"
+            />
 
             {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine}></View>
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine}></View>
+            <View className="flex-row items-center my-6">
+              <View className="flex-1 h-px bg-dark-600"></View>
+              <Text className="text-dark-400 text-sm mx-4">ou</Text>
+              <View className="flex-1 h-px bg-dark-600"></View>
             </View>
-
-
           </View>
 
           {/* Login Link */}
-          <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Déjà un compte ? </Text>
+          <View className="flex-row justify-center items-center">
+            <Text className="text-dark-400 text-base">Déjà un compte ? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginLink}>Se connecter</Text>
+              <Text className="text-primary-500 text-base font-semibold">Se connecter</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  logoIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
-  },
-  appName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-  },
-  
-  // Register Icon
-  registerIconContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-    marginBottom: 40,
-  },
-  registerIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  
-  // Title
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  mainTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    textAlign: 'center',
-  },
-  
-  // Form
-  formContainer: {
-    marginBottom: 30,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  nameInput: {
-    width: '48%',
-  },
-  inputContainer: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: colors.textSecondary,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: colors.surface,
-    color: colors.textPrimary,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 12,
-    backgroundColor: colors.surface,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 16,
-    fontSize: 16,
-    color: colors.textPrimary,
-  },
-  eyeButton: {
-    padding: 16,
-  },
-  eyeText: {
-    fontSize: 16,
-    color: colors.textMuted,
-  },
-  
-  // Terms
-  termsContainer: {
-    marginBottom: 24,
-  },
-  termsCheckContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1,
-    borderColor: colors.gray[600],
-    borderRadius: 3,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    marginTop: 2,
-    marginRight: 12,
-  },
-  checkboxChecked: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  checkmark: {
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  termsTextContainer: {
-    flex: 1,
-  },
-  termsText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  termsLink: {
-    color: colors.primary,
-    fontWeight: '500',
-  },
-  
-  // Register Button
-  registerButton: {
-    borderRadius: 25,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: colors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  registerButtonDisabled: {
-    opacity: 0.7,
-  },
-  registerButtonText: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  
-  // Divider
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.gray[700],
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: colors.textMuted,
-    },
 
-  // Remember Me
-  rememberContainer: {
-    marginBottom: 20,
-    paddingHorizontal: 4,
-  },
-  rememberCheckContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rememberText: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginLeft: 4,
-  },
-
-  // Google Button
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.gray[700],
-    borderRadius: 25,
-    padding: 16,
-    backgroundColor: colors.surface,
-    marginBottom: 30,
-  },
-  googleIcon: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4285F4',
-    marginRight: 12,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    fontWeight: '500',
-  },
-  
-  // Login
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginText: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  loginLink: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-});
 
 export default RegisterScreen; 

@@ -5,11 +5,9 @@ const mongoose = require('mongoose');
  */
 const connectDB = async () => {
   try {
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/teamup';
+    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://root:root@teamup.7fqehdy.mongodb.net/teamup?retryWrites=true&w=majority&appName=teamup';
     
     const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
       maxPoolSize: 10, // Maintient jusqu'à 10 connexions de socket
       serverSelectionTimeoutMS: 5000, // Garde en essayant de se connecter pendant 5 secondes
       socketTimeoutMS: 45000, // Ferme les sockets après 45 secondes d'inactivité

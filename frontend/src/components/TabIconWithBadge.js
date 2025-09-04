@@ -1,12 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../styles/globalStyles';
 
 const TabIconWithBadge = ({ 
   iconName, 
   size = 24, 
-  color = colors.textMuted, 
+  color = '#64748b', 
   badgeCount = 0,
   showBadge = true 
 }) => {
@@ -30,21 +29,22 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: -4,
-    right: -8,
-    backgroundColor: colors.danger,
-    borderRadius: 10,
-    paddingHorizontal: 6,
+    top: -6,
+    right: -10,
+    backgroundColor: '#EF4444',
+    borderRadius: 8,
+    paddingHorizontal: 4,
     paddingVertical: 2,
-    minWidth: 20,
+    minWidth: 16,
+    height: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: colors.background,
+    borderColor: '#0f172a',
   },
   badgeText: {
-    color: colors.white,
-    fontSize: 10,
+    color: '#ffffff',
+    fontSize: 9,
     fontWeight: 'bold',
   },
 });
