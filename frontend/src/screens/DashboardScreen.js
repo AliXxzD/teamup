@@ -254,31 +254,33 @@ const DashboardScreen = ({ navigation }) => {
         </View>
         
         {/* Action Button */}
-        <TouchableOpacity 
-          className={`rounded-lg py-2 px-4 self-end ${
-            isOrganizer ? 'bg-blue-500' : 'bg-lime'
-          }`}
-          onPress={() => {
-            if (isOrganizer) {
+        {isOrganizer ? (
+          <TouchableOpacity 
+            className="bg-blue-500 rounded-lg py-2 px-4 self-end"
+            onPress={() => {
               setSelectedEvent(event);
               setManagementMenuVisible(true);
-            } else {
+            }}
+          >
+            <View className="flex-row items-center">
+              <Text className="text-white font-semibold text-sm mr-1">Modifier</Text>
+              <Ionicons name="create-outline" size={16} color="#ffffff" />
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity 
+            className="bg-lime rounded-lg py-2 px-4 self-end"
+            onPress={() => {
               // Logique pour rejoindre l'événement
               console.log('Rejoindre événement:', event.id);
-            }
-          }}
-        >
-          <View className="flex-row items-center">
-            <Text className="text-white font-semibold text-sm mr-1">
-              {isOrganizer ? 'Gérer' : 'Rejoindre'}
-            </Text>
-            <Ionicons 
-              name={isOrganizer ? "settings" : "chevron-forward"} 
-              size={16} 
-              color="#ffffff" 
-            />
-          </View>
-        </TouchableOpacity>
+            }}
+          >
+            <View className="flex-row items-center">
+              <Text className="text-white font-semibold text-sm mr-1">Rejoindre</Text>
+              <Ionicons name="chevron-forward" size={16} color="#ffffff" />
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -309,7 +311,7 @@ const DashboardScreen = ({ navigation }) => {
             <TouchableOpacity className="w-12 h-12 bg-dark-800 rounded-2xl items-center justify-center">
               <Ionicons name="search" size={20} color="#ffffff" />
             </TouchableOpacity>
-            <GlobalMenu navigation={navigation} />
+            <GlobalMenu navigation={navigation} currentRoute="Dashboard" />
           </View>
         </Animated.View>
       </View>
@@ -361,53 +363,53 @@ const DashboardScreen = ({ navigation }) => {
           </Animated.View>
           </View>
 
-                                {/* Navigation Tabs */}
+        {/* Navigation Tabs */}
         <View className="mb-6">
-          <View className="flex-row bg-dark-900 rounded-2xl p-1.5 mx-6">
+          <View className="flex-row bg-dark-800/60 border border-dark-600/30 rounded-2xl p-2 mx-6">
             <TouchableOpacity 
-              className={`flex-1 flex-row items-center justify-center py-3 px-2 rounded-full ${
+              className={`flex-1 flex-row items-center justify-center py-4 px-3 rounded-xl ${
                 activeTab === 'discover' ? 'bg-lime/20' : 'bg-transparent'
               }`}
               onPress={() => setActiveTab('discover')}
             >
               <Ionicons 
                 name="search" 
-                size={16} 
+                size={20} 
                 color={activeTab === 'discover' ? '#84cc16' : '#94a3b8'} 
               />
-              <Text className={`ml-2 font-normal text-sm ${
+              <Text className={`ml-2 font-semibold text-base ${
                 activeTab === 'discover' ? 'text-lime' : 'text-slate-400'
               }`}>Découvrir</Text>
             </TouchableOpacity>
             
-              <TouchableOpacity
-              className={`flex-1 flex-row items-center justify-center py-3 px-2 rounded-full ${
+            <TouchableOpacity
+              className={`flex-1 flex-row items-center justify-center py-4 px-3 rounded-xl ${
                 activeTab === 'myEvents' ? 'bg-lime/20' : 'bg-transparent'
               }`}
               onPress={() => setActiveTab('myEvents')}
             >
               <Ionicons 
                 name="calendar" 
-                size={16} 
+                size={20} 
                 color={activeTab === 'myEvents' ? '#84cc16' : '#94a3b8'} 
               />
-              <Text className={`ml-2 font-normal text-sm ${
+              <Text className={`ml-2 font-semibold text-base ${
                 activeTab === 'myEvents' ? 'text-lime' : 'text-slate-400'
-              }`}>Mes Événements</Text>
+              }`}>Mes événements</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              className={`flex-1 flex-row items-center justify-center py-3 px-2 rounded-full ${
+              className={`flex-1 flex-row items-center justify-center py-4 px-3 rounded-xl ${
                 activeTab === 'success' ? 'bg-lime/20' : 'bg-transparent'
               }`}
               onPress={() => setActiveTab('success')}
             >
               <Ionicons 
                 name="trophy" 
-                size={16} 
+                size={20} 
                 color={activeTab === 'success' ? '#84cc16' : '#94a3b8'} 
               />
-              <Text className={`ml-2 font-normal text-sm ${
+              <Text className={`ml-2 font-semibold text-base ${
                 activeTab === 'success' ? 'text-lime' : 'text-slate-400'
               }`}>Succès</Text>
             </TouchableOpacity>
@@ -435,11 +437,11 @@ const DashboardScreen = ({ navigation }) => {
             {/* Create Event Button */}
             <View className="px-6 mb-8">
               <TouchableOpacity 
-                className="bg-lime rounded-lg p-4 shadow-lg w-full"
+                className="bg-lime rounded-xl py-4 px-6 shadow-lg w-full"
                 onPress={() => navigation.navigate('CreateEvent')}
                 activeOpacity={0.8}
               >
-                <Text className="text-white text-base font-semibold text-center">Créer un événement</Text>
+                <Text className="text-white text-lg font-bold text-center">Créer un événement</Text>
               </TouchableOpacity>
             </View>
 
@@ -482,25 +484,30 @@ const DashboardScreen = ({ navigation }) => {
               <View className="w-20 h-20 bg-dark-700/60 rounded-2xl items-center justify-center mb-4">
                 <Ionicons name="calendar" size={40} color="#84cc16" />
               </View>
-              <Text className="text-white text-2xl font-bold mb-2">Vos événements</Text>
+              <Text className="text-white text-2xl font-bold mb-2">Mes événements</Text>
               <Text className="text-dark-300 text-base text-center leading-6">
-                Gérez vos participations et créez de nouveaux événements
+                Gérez vos événements organisés et vos participations
               </Text>
-                        </View>
+            </View>
 
-            {/* My Events List */}
-            <View>
+            {/* Events Organized Section */}
+            <View className="mb-6">
+              <View className="flex-row items-center mb-4">
+                <Ionicons name="create-outline" size={20} color="#84cc16" />
+                <Text className="text-white text-lg font-bold ml-2">Événements organisés</Text>
+              </View>
+              
               {loading ? (
                 <View className="items-center py-8">
                   <Text className="text-white text-base">Chargement de vos événements...</Text>
-                        </View>
+                </View>
               ) : userEvents.length > 0 ? (
                 userEvents.map((event) => renderEventCard(formatEventData(event), true))
               ) : (
                 <View className="items-center py-8">
                   <Ionicons name="calendar-outline" size={48} color="#64748b" />
                   <Text className="text-dark-300 text-base mt-4 text-center">
-                    Vous n'avez pas encore d'événements
+                    Vous n'avez pas encore organisé d'événements
                   </Text>
                   <TouchableOpacity 
                     className="bg-lime/20 border border-lime/30 px-6 py-3 rounded-2xl mt-4"
@@ -508,11 +515,32 @@ const DashboardScreen = ({ navigation }) => {
                   >
                     <Text className="text-lime text-sm font-bold">Créer votre premier événement</Text>
                   </TouchableOpacity>
-                        </View>
+                </View>
               )}
-                      </View>
-                    </View>
-                  )}
+            </View>
+
+            {/* Events Joined Section */}
+            <View className="mb-6">
+              <View className="flex-row items-center mb-4">
+                <Ionicons name="people-outline" size={20} color="#84cc16" />
+                <Text className="text-white text-lg font-bold ml-2">Événements rejoints</Text>
+              </View>
+              
+              <View className="items-center py-8">
+                <Ionicons name="calendar-outline" size={48} color="#64748b" />
+                <Text className="text-dark-300 text-base mt-4 text-center">
+                  Aucun événement rejoint pour le moment
+                </Text>
+                <TouchableOpacity 
+                  className="bg-lime/20 border border-lime/30 px-6 py-3 rounded-2xl mt-4"
+                  onPress={() => setActiveTab('discover')}
+                >
+                  <Text className="text-lime text-sm font-bold">Découvrir des événements</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
 
         {activeTab === 'success' && (
           <View className="px-6 mb-8">

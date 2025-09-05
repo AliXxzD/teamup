@@ -13,7 +13,6 @@ import {
   Animated
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import GlobalMenu from '../components/GlobalMenu';
@@ -139,23 +138,23 @@ const DiscoverScreenTailwind = ({ navigation }) => {
     return sportImages[sport] || sportImages['Football'];
   };
 
-  const FilterChip = ({ title, isSelected, onPress, color = '#20B2AA' }) => (
+  const FilterChip = ({ title, isSelected, onPress, color = '#84cc16' }) => (
     <TouchableOpacity
-      className={`px-4 py-2 rounded-full mr-3 mb-2 flex-row items-center ${
+      className={`px-4 py-2 rounded-lg mr-3 mb-2 flex-row items-center ${
         isSelected 
-          ? 'bg-primary-500' 
+          ? 'bg-lime' 
           : 'bg-dark-700 border border-dark-600'
       }`}
       onPress={onPress}
       activeOpacity={0.8}
     >
       <Text className={`text-sm font-semibold ${
-        isSelected ? 'text-white' : 'text-dark-300'
+        isSelected ? 'text-dark-900' : 'text-dark-300'
       }`}>
         {title}
       </Text>
       {isSelected && (
-        <Ionicons name="close" size={16} color="#ffffff" className="ml-2" />
+        <Ionicons name="close" size={16} color="#0f172a" className="ml-2" />
       )}
     </TouchableOpacity>
   );
@@ -179,19 +178,16 @@ const DiscoverScreenTailwind = ({ navigation }) => {
           className="w-full h-full"
           resizeMode="cover"
         />
-        <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.7)']}
-          className="absolute inset-0"
-        />
+        <View className="absolute inset-0 bg-black/30" />
         
         {/* Badges */}
         <View className="absolute top-3 right-3 flex-col items-end">
           {event.price.isFree && (
-            <View className="bg-success px-3 py-1 rounded-full mb-2">
-              <Text className="text-white text-xs font-bold">GRATUIT</Text>
+            <View className="bg-lime px-3 py-1 rounded-lg mb-2">
+              <Text className="text-dark-900 text-xs font-bold">GRATUIT</Text>
             </View>
           )}
-          <View className="bg-black/70 px-3 py-1 rounded-full">
+          <View className="bg-black/70 px-3 py-1 rounded-lg">
             <Text className="text-white text-xs font-semibold">{event.sport}</Text>
           </View>
         </View>
@@ -238,8 +234,8 @@ const DiscoverScreenTailwind = ({ navigation }) => {
         {/* Footer */}
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center flex-1">
-            <View className="w-8 h-8 bg-primary-500 rounded-full items-center justify-center mr-3">
-              <Text className="text-white text-sm font-bold">
+            <View className="w-8 h-8 bg-lime rounded-full items-center justify-center mr-3">
+              <Text className="text-dark-900 text-sm font-bold">
                 {event.organizer?.name ? event.organizer.name.charAt(0).toUpperCase() : '?'}
               </Text>
             </View>
@@ -261,9 +257,11 @@ const DiscoverScreenTailwind = ({ navigation }) => {
             <Ionicons 
               name={event.currentParticipants >= event.maxParticipants ? "lock-closed" : "add"} 
               size={18} 
-              color="#ffffff"
+              color={event.currentParticipants >= event.maxParticipants ? "#ffffff" : "#0f172a"}
             />
-            <Text className="text-white text-base font-semibold ml-2">
+            <Text className={`text-base font-semibold ml-2 ${
+              event.currentParticipants >= event.maxParticipants ? 'text-white' : 'text-dark-900'
+            }`}>
               {event.currentParticipants >= event.maxParticipants ? 'Complet' : 'Rejoindre'}
             </Text>
           </TouchableOpacity>
@@ -277,43 +275,34 @@ const DiscoverScreenTailwind = ({ navigation }) => {
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
       {/* Header */}
-      <LinearGradient
-        colors={['#20B2AA', '#1a9b94', '#0f172a']}
-        className="pb-4"
-      >
-        <View className="flex-row justify-between items-center px-5 pt-4">
-          <View className="flex-row items-center">
-            <View className="w-10 h-10 bg-white/20 rounded-2xl items-center justify-center mr-3">
-              <Ionicons name="trophy" size={20} color="#ffffff" />
-            </View>
-            <Text className="text-white text-xl font-bold">TEAMUP</Text>
-          </View>
-          <GlobalMenu navigation={navigation} />
+      <View className="bg-dark-900 border-b border-dark-700">
+        <View className="flex-row justify-between items-center px-6 py-4">
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#ffffff" />
+          </TouchableOpacity>
+          <Text className="text-white text-lg font-bold">Découvrir</Text>
+                      <GlobalMenu navigation={navigation} currentRoute="Discover" />
         </View>
-      </LinearGradient>
+      </View>
 
-      {/* Title Section */}
+      {/* Description Section */}
       <Animated.View 
-        className="px-5 py-5 -mt-6 bg-dark-800 mx-5 rounded-2xl mb-4"
+        className="px-6 py-4"
         style={{ opacity: fadeAnim }}
       >
-        <View className="flex-row items-center mb-2">
-          <Ionicons name="search" size={28} color="#20B2AA" />
-          <Text className="text-white text-2xl font-bold ml-3">Découvrir</Text>
-        </View>
-        <Text className="text-dark-300 text-base">Trouvez votre prochaine activité sportive</Text>
-        <Text className="text-dark-400 text-xs mt-1 italic">Affiche uniquement les événements à venir</Text>
+        <Text className="text-dark-300 text-base mb-1">Trouvez votre prochaine activité sportive</Text>
+        <Text className="text-dark-400 text-sm">Découvrez des événements passionnants près de chez vous</Text>
       </Animated.View>
 
       {/* Filters */}
-      <View className="px-5 mb-4">
+      <View className="px-6 mb-4">
         <Text className="text-white text-lg font-semibold mb-3">Filtres</Text>
         
         {/* Sport Filters */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-3">
           <View className="flex-row">
             <FilterChip
-              title="Tous les sports"
+              title="Tous"
               isSelected={!filters.sport}
               onPress={() => setFilters({ ...filters, sport: '' })}
             />
@@ -331,8 +320,8 @@ const DiscoverScreenTailwind = ({ navigation }) => {
           </View>
         </ScrollView>
 
-        {/* Price and Level Filters */}
-        <View className="flex-row flex-wrap">
+        {/* Price Filters */}
+        <View className="flex-row">
           <FilterChip
             title="Gratuit"
             isSelected={filters.isFree === true}
@@ -340,7 +329,7 @@ const DiscoverScreenTailwind = ({ navigation }) => {
               ...filters, 
               isFree: filters.isFree === true ? null : true 
             })}
-            color="#10B981"
+            color="#84cc16"
           />
           <FilterChip
             title="Payant"
@@ -349,14 +338,14 @@ const DiscoverScreenTailwind = ({ navigation }) => {
               ...filters, 
               isFree: filters.isFree === false ? null : false 
             })}
-            color="#F59E0B"
+            color="#84cc16"
           />
         </View>
       </View>
 
       {/* Events List */}
       <ScrollView
-        className="flex-1 px-5"
+        className="flex-1 px-6"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -364,7 +353,7 @@ const DiscoverScreenTailwind = ({ navigation }) => {
       >
         {loading ? (
           <View className="flex-1 items-center justify-center py-20">
-            <ActivityIndicator size="large" color="#20B2AA" />
+            <ActivityIndicator size="large" color="#84cc16" />
             <Text className="text-dark-300 text-base mt-3">Chargement des événements...</Text>
           </View>
         ) : events.length === 0 ? (
@@ -375,12 +364,12 @@ const DiscoverScreenTailwind = ({ navigation }) => {
               Essayez de modifier vos filtres ou créez votre propre événement
             </Text>
             <TouchableOpacity
-              className="bg-primary-500 px-6 py-3 rounded-full flex-row items-center"
+              className="bg-lime px-6 py-3 rounded-lg flex-row items-center"
               onPress={() => navigation.navigate('CreateEvent')}
               activeOpacity={0.8}
             >
-              <Ionicons name="add" size={20} color="#ffffff" />
-              <Text className="text-white text-base font-semibold ml-2">Créer un événement</Text>
+              <Ionicons name="add" size={20} color="#0f172a" />
+              <Text className="text-dark-900 text-base font-semibold ml-2">Créer un événement</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -401,3 +390,4 @@ const DiscoverScreenTailwind = ({ navigation }) => {
 };
 
 export default DiscoverScreenTailwind;
+

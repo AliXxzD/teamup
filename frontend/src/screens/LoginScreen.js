@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,15 +10,13 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalMenu from '../components/GlobalMenu';
-import GradientButton from '../components/GradientButton';
 
-const LoginScreenTailwind = ({ navigation }) => {
+const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,23 +24,6 @@ const LoginScreenTailwind = ({ navigation }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(30));
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const validateForm = () => {
     const newErrors = {};
@@ -85,184 +66,233 @@ const LoginScreenTailwind = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-dark-900">
+    <SafeAreaView className="flex-1 bg-slate-900">
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
+      {/* Fixed Header */}
+      <View className="bg-slate-900 px-6 pt-6 pb-4 border-b border-slate-800">
+        <View className="flex-row justify-between items-center">
+          {/* Logo and App Name */}
+          <View className="flex-row items-center">
+            <LinearGradient
+              colors={['#06b6d4', '#0891b2']}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 12,
+              }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="people" size={24} color="#ffffff" />
+            </LinearGradient>
+            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
+          </View>
+          
+          {/* Menu Only */}
+          <View className="flex-row items-center">
+            <GlobalMenu navigation={navigation} currentRoute="Login" />
+          </View>
+        </View>
+      </View>
+
       <KeyboardAvoidingView 
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          {/* Header */}
-          <LinearGradient
-            colors={['#20B2AA', '#1a9b94', '#0f172a']}
-            className="pb-8"
-          >
-            <View className="flex-row justify-between items-center px-6 pt-4">
-              <View className="flex-row items-center">
-                <LinearGradient
-                  colors={['#ffffff', '#f1f5f9']}
-                  className="w-8 h-8 rounded-2xl items-center justify-center mr-3"
-                >
-                  <Text className="text-primary-500 text-lg font-bold">T</Text>
-                </LinearGradient>
-                <Text className="text-white text-xl font-bold">TEAMUP</Text>
+
+          {/* Main Content Container */}
+          <View className="flex-1 px-6 pt-8">
+            {/* Login Icon */}
+            <View className="items-center mb-8">
+              <View className="w-20 h-20 bg-cyan-500 rounded-2xl items-center justify-center">
+                <Ionicons name="log-in-outline" size={32} color="#ffffff" />
               </View>
-              <GlobalMenu navigation={navigation} />
             </View>
-          </LinearGradient>
 
-          {/* Main Content */}
-          <Animated.View 
-            className="px-6 -mt-6"
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }]
-            }}
-          >
-            {/* Login Card */}
-            <View className="bg-dark-800/95 backdrop-blur border border-dark-600/50 rounded-3xl p-8 mb-8 shadow-2xl shadow-primary-500/10">
-              {/* Icon */}
-              <View className="items-center mb-10">
-                <LinearGradient
-                  colors={['#20B2AA', '#1a9b94']}
-                  className="w-24 h-24 rounded-full items-center justify-center shadow-lg shadow-primary-500/30"
-                >
-                  <Ionicons name="log-in" size={36} color="#ffffff" />
-                </LinearGradient>
-              </View>
+            {/* Title */}
+            <View className="items-center mb-12">
+              <Text className="text-white text-3xl font-bold mb-3">Bon retour !</Text>
+              <Text className="text-slate-400 text-lg text-center leading-6">
+                Connectez-vous à votre compte TeamUp
+              </Text>
+            </View>
 
-              {/* Title */}
-              <View className="items-center mb-10">
-                <Text className="text-white text-4xl font-bold mb-3">Connexion</Text>
-                <Text className="text-dark-300 text-lg text-center leading-6">
-                  Connectez-vous à votre compte TeamUp
-                </Text>
-              </View>
-
-              {/* Form */}
-              <View className="mb-8">
-                {/* Email Input */}
-                <View className="mb-6">
-                  <Text className="text-dark-200 text-base font-semibold mb-3">Email</Text>
-                  <View className={`flex-row items-center bg-dark-700/80 rounded-2xl px-5 py-4 border-2 ${
-                    errors.email ? 'border-danger' : 'border-dark-600/50'
-                  } shadow-lg`}>
-                    <Ionicons name="mail-outline" size={22} color="#64748b" />
-                    <TextInput
-                      className="flex-1 text-white text-lg ml-4"
-                      placeholder="votre@email.com"
-                      placeholderTextColor="#64748b"
-                      value={email}
-                      onChangeText={(text) => {
-                        setEmail(text);
-                        if (errors.email) setErrors({ ...errors, email: '' });
-                      }}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </View>
-                  {errors.email && (
-                    <Text className="text-danger text-sm mt-2 ml-2">{errors.email}</Text>
-                  )}
+            {/* Form */}
+            <View className="mb-8">
+              {/* Email Input */}
+              <View className="mb-6">
+                <Text className="text-white text-base font-medium mb-3">Adresse email</Text>
+                <View className="bg-slate-800 rounded-xl">
+                  <TextInput
+                    className="text-white text-base px-4 py-4"
+                    placeholder="votre@email.com"
+                    placeholderTextColor="#64748b"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (errors.email) setErrors({ ...errors, email: '' });
+                    }}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
                 </View>
-
-                {/* Password Input */}
-                <View className="mb-6">
-                  <Text className="text-dark-200 text-base font-semibold mb-3">Mot de passe</Text>
-                  <View className={`flex-row items-center bg-dark-700/80 rounded-2xl px-5 py-4 border-2 ${
-                    errors.password ? 'border-danger' : 'border-dark-600/50'
-                  } shadow-lg`}>
-                    <Ionicons name="lock-closed-outline" size={22} color="#64748b" />
-                    <TextInput
-                      className="flex-1 text-white text-lg ml-4"
-                      placeholder="Votre mot de passe"
-                      placeholderTextColor="#64748b"
-                      value={password}
-                      onChangeText={(text) => {
-                        setPassword(text);
-                        if (errors.password) setErrors({ ...errors, password: '' });
-                      }}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                    <TouchableOpacity 
-                      className="p-2"
-                      onPress={() => setShowPassword(!showPassword)}
-                    >
-                      <Ionicons 
-                        name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                        size={22} 
-                        color="#64748b" 
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  {errors.password && (
-                    <Text className="text-danger text-sm mt-2 ml-2">{errors.password}</Text>
-                  )}
-                </View>
-
-                {/* Remember Me */}
-                <TouchableOpacity 
-                  className="flex-row items-center mb-6"
-                  onPress={() => setRememberMe(!rememberMe)}
-                >
-                  <View className={`w-6 h-6 rounded-lg border-2 items-center justify-center mr-4 ${
-                    rememberMe ? 'bg-primary-500 border-primary-500' : 'border-dark-400'
-                  }`}>
-                    {rememberMe && (
-                      <Ionicons name="checkmark" size={14} color="#ffffff" />
-                    )}
-                  </View>
-                  <Text className="text-dark-200 text-base">Se souvenir de moi</Text>
-                </TouchableOpacity>
-
-                {/* General Error */}
-                {errors.general && (
-                  <View className="bg-danger/15 border-2 border-danger/30 rounded-2xl p-4 mb-6">
-                    <Text className="text-danger text-base text-center font-medium">{errors.general}</Text>
-                  </View>
+                {errors.email && (
+                  <Text className="text-red-400 text-sm mt-2">{errors.email}</Text>
                 )}
               </View>
 
-              {/* Login Button */}
+              {/* Password Input */}
               <View className="mb-6">
-                <GradientButton
-                  title="Se connecter"
-                  onPress={handleLogin}
-                  loading={isLoading}
-                  disabled={isLoading}
-                  variant="primary"
-                  size="large"
-                  icon="log-in"
-                />
+                <Text className="text-white text-base font-medium mb-3">Mot de passe</Text>
+                <View className="bg-slate-800 rounded-xl flex-row items-center px-4 py-4">
+                  <TextInput
+                    className="flex-1 text-white text-base"
+                    placeholder="Votre mot de passe"
+                    placeholderTextColor="#64748b"
+                    value={password}
+                    onChangeText={(text) => {
+                      setPassword(text);
+                      if (errors.password) setErrors({ ...errors, password: '' });
+                    }}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  <TouchableOpacity 
+                    className="ml-3"
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Ionicons 
+                      name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                      size={20} 
+                      color="#64748b" 
+                    />
+                  </TouchableOpacity>
+                </View>
+                {errors.password && (
+                  <Text className="text-red-400 text-sm mt-2">{errors.password}</Text>
+                )}
               </View>
 
-              {/* Forgot Password */}
+              {/* Remember Me */}
+              <View className="flex-row items-center mb-8">
+                <TouchableOpacity 
+                  className="flex-row items-center"
+                  onPress={() => setRememberMe(!rememberMe)}
+                >
+                  <View className={`w-5 h-5 rounded mr-3 border-2 items-center justify-center ${
+                    rememberMe ? 'bg-cyan-500 border-cyan-500' : 'border-slate-500 bg-transparent'
+                  }`}>
+                    {rememberMe && (
+                      <Ionicons name="checkmark" size={12} color="#ffffff" />
+                    )}
+                  </View>
+                  <Text className="text-slate-300 text-base">Se souvenir de moi</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  className="ml-auto"
+                  onPress={() => navigation.navigate('ForgotPassword')}
+                >
+                  <Text className="text-cyan-400 text-base">Mot de passe oublié ?</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* General Error */}
+              {errors.general && (
+                <View className="bg-red-500/20 border border-red-500/30 rounded-xl p-4 mb-6">
+                  <Text className="text-red-400 text-base text-center">{errors.general}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Login Button */}
+            <View className="mb-8">
               <TouchableOpacity 
-                className="items-center py-3"
-                onPress={() => navigation.navigate('ForgotPassword')}
+                onPress={handleLogin}
+                disabled={isLoading}
+                style={{ opacity: isLoading ? 0.7 : 1 }}
               >
-                <Text className="text-primary-500 text-base font-semibold">
-                  Mot de passe oublié ?
-                </Text>
+                <LinearGradient
+                  colors={['#06b6d4', '#0891b2']}
+                  style={{
+                    borderRadius: 12,
+                    paddingVertical: 20,
+                    paddingHorizontal: 24,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#000',
+                    shadowOffset: {
+                      width: 0,
+                      height: 4,
+                    },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4.65,
+                    elevation: 8,
+                  }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <Text style={{
+                        color: '#ffffff',
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        marginRight: 12
+                      }}>Se connecter</Text>
+                      <Ionicons name="arrow-forward" size={22} color="#ffffff" />
+                    </>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             </View>
 
-            {/* Register Link */}
-            <View className="bg-dark-800/60 border border-dark-600/30 rounded-2xl p-6 flex-row justify-center items-center">
-              <Text className="text-dark-200 text-lg">Pas de compte ? </Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text className="text-primary-500 text-lg font-bold">S'inscrire</Text>
+            {/* Sign Up Link */}
+            <View className="items-center py-6 border-t border-slate-700 mt-4">
+              <Text className="text-slate-400 text-base mb-4">Vous n'avez pas de compte ?</Text>
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('Register')}
+                className="w-full"
+              >
+                <LinearGradient
+                  colors={['#334155', '#475569']}
+                  style={{
+                    borderRadius: 12,
+                    paddingVertical: 16,
+                    paddingHorizontal: 24,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: '#64748b',
+                  }}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Ionicons name="person-add-outline" size={20} color="#22d3ee" style={{ marginRight: 8 }} />
+                  <Text style={{
+                    color: '#22d3ee',
+                    fontSize: 16,
+                    fontWeight: '600',
+                  }}>Créer un compte</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
-          </Animated.View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
-export default LoginScreenTailwind;
+export default LoginScreen;

@@ -248,7 +248,7 @@ const MessagesScreenTailwind = ({ navigation }) => {
             <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
               <Ionicons name="search" size={20} color="#ffffff" />
             </TouchableOpacity>
-            <GlobalMenu navigation={navigation} />
+            <GlobalMenu navigation={navigation} currentRoute="Messages" />
           </View>
         </View>
 

@@ -15,11 +15,9 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import GlobalMenu from '../components/GlobalMenu';
-import GradientButton from '../components/GradientButton';
 
 const CreateEventScreenTailwind = ({ navigation, route }) => {
   const [formData, setFormData] = useState({
@@ -166,9 +164,9 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
         {sports.map((sport) => (
           <TouchableOpacity
             key={sport.name}
-            className={`flex-row items-center px-4 py-2 rounded-full mr-2 mb-2 border ${
+            className={`flex-row items-center px-4 py-2 rounded-lg mr-2 mb-2 border ${
               formData.sport === sport.name
-                ? 'bg-primary-500 border-primary-500'
+                ? 'bg-lime border-lime'
                 : 'bg-dark-700 border-dark-600'
             }`}
             onPress={() => setFormData({ ...formData, sport: sport.name })}
@@ -176,10 +174,10 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
             <Ionicons 
               name={sport.icon} 
               size={16} 
-              color={formData.sport === sport.name ? '#ffffff' : sport.color}
+              color={formData.sport === sport.name ? '#0f172a' : sport.color}
             />
             <Text className={`ml-2 text-sm font-medium ${
-              formData.sport === sport.name ? 'text-white' : 'text-dark-300'
+              formData.sport === sport.name ? 'text-dark-900' : 'text-dark-300'
             }`}>
               {sport.name}
             </Text>
@@ -199,15 +197,15 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
         {levels.map((level) => (
           <TouchableOpacity
             key={level}
-            className={`px-4 py-2 rounded-full mr-2 mb-2 border ${
+            className={`px-4 py-2 rounded-lg mr-2 mb-2 border ${
               formData.level === level
-                ? 'bg-secondary-500 border-secondary-500'
+                ? 'bg-lime border-lime'
                 : 'bg-dark-700 border-dark-600'
             }`}
             onPress={() => setFormData({ ...formData, level })}
           >
             <Text className={`text-sm font-medium ${
-              formData.level === level ? 'text-white' : 'text-dark-300'
+              formData.level === level ? 'text-dark-900' : 'text-dark-300'
             }`}>
               {level}
             </Text>
@@ -229,11 +227,8 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         {/* Header */}
-        <LinearGradient
-          colors={['#20B2AA', '#1a9b94', '#0f172a']}
-          className="pb-4"
-        >
-          <View className="flex-row justify-between items-center px-6 pt-4">
+        <View className="bg-dark-900 border-b border-dark-700">
+          <View className="flex-row justify-between items-center px-6 py-4">
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={24} color="#ffffff" />
             </TouchableOpacity>
@@ -242,7 +237,7 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
             </Text>
             <View className="w-6" />
           </View>
-        </LinearGradient>
+        </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <Animated.View 
@@ -391,26 +386,26 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
               {/* Free/Paid Toggle */}
               <View className="flex-row mb-4">
                 <TouchableOpacity
-                  className={`flex-1 py-3 px-4 rounded-l-xl border-r border-dark-600 ${
-                    formData.isFree ? 'bg-success' : 'bg-dark-700'
+                  className={`flex-1 py-3 px-4 rounded-l-lg border-r border-dark-600 ${
+                    formData.isFree ? 'bg-lime' : 'bg-dark-700'
                   }`}
                   onPress={() => setFormData({ ...formData, isFree: true, price: '' })}
                 >
                   <Text className={`text-center font-semibold ${
-                    formData.isFree ? 'text-white' : 'text-dark-300'
+                    formData.isFree ? 'text-dark-900' : 'text-dark-300'
                   }`}>
                     Gratuit
                   </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity
-                  className={`flex-1 py-3 px-4 rounded-r-xl ${
-                    !formData.isFree ? 'bg-warning' : 'bg-dark-700'
+                  className={`flex-1 py-3 px-4 rounded-r-lg ${
+                    !formData.isFree ? 'bg-lime' : 'bg-dark-700'
                   }`}
                   onPress={() => setFormData({ ...formData, isFree: false })}
                 >
                   <Text className={`text-center font-semibold ${
-                    !formData.isFree ? 'text-white' : 'text-dark-300'
+                    !formData.isFree ? 'text-dark-900' : 'text-dark-300'
                   }`}>
                     Payant
                   </Text>
@@ -438,15 +433,26 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
             </View>
 
             {/* Submit Button */}
-            <GradientButton
-              title={isEditing ? 'Modifier l\'événement' : 'Créer l\'événement'}
+            <TouchableOpacity
+              className="bg-lime rounded-lg py-4 px-6 flex-row items-center justify-center"
               onPress={handleSubmit}
-              loading={isLoading}
               disabled={isLoading}
-              variant="primary"
-              size="large"
-              icon={isEditing ? "checkmark" : "add"}
-            />
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#0f172a" />
+              ) : (
+                <>
+                  <Ionicons 
+                    name={isEditing ? "checkmark" : "add"} 
+                    size={20} 
+                    color="#0f172a" 
+                  />
+                  <Text className="text-dark-900 font-bold text-lg ml-2">
+                    {isEditing ? 'Modifier l\'événement' : 'Créer l\'événement'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </Animated.View>
         </ScrollView>
 

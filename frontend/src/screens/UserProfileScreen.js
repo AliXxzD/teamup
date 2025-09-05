@@ -511,7 +511,7 @@ const UserProfileScreen = ({ navigation, route }) => {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-dark-900">
-        <ActivityIndicator size="large" color="#20B2AA" />
+        <ActivityIndicator size="large" color="#84cc16" />
         <Text className="text-dark-300 text-base mt-4">Chargement du profil...</Text>
       </SafeAreaView>
     );
@@ -545,37 +545,9 @@ const UserProfileScreen = ({ navigation, route }) => {
                 <Ionicons name="share-outline" size={24} color="white" />
               </TouchableOpacity>
               
-              {__DEV__ && (
-                <TouchableOpacity style={styles.navButton} onPress={debugNetworkIssues}>
-                  <Ionicons name="bug-outline" size={24} color="white" />
-                </TouchableOpacity>
-              )}
-              
-              {__DEV__ && (
-                <TouchableOpacity style={styles.navButton} onPress={debugUserData}>
-                  <Ionicons name="information-circle-outline" size={24} color="white" />
-                </TouchableOpacity>
-              )}
-              
-              {isOwnProfile && (
-                <TouchableOpacity style={styles.navButton} onPress={refreshStats}>
-                  <Ionicons name="refresh-outline" size={24} color="white" />
-                </TouchableOpacity>
-              )}
-              
               <TouchableOpacity style={styles.navButton}>
                 <Ionicons name="ellipsis-vertical" size={24} color="white" />
               </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Photo de profil centrée */}
-          <View style={styles.avatarSection}>
-            <View style={styles.avatarContainer}>
-              <Image source={{ uri: userData.avatar }} style={styles.avatar} />
-              <View style={styles.levelBadge}>
-                <Text style={styles.levelText}>{userData.level}</Text>
-              </View>
             </View>
           </View>
         </LinearGradient>
@@ -588,13 +560,22 @@ const UserProfileScreen = ({ navigation, route }) => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
+            colors={['#84cc16']}
+            tintColor={'#84cc16'}
           />
         }
       >
-        {/* Informations utilisateur */}
-        <View style={styles.userInfoSection}>
+        {/* Photo de profil et informations utilisateur */}
+        <View style={styles.profileSection}>
+          {/* Photo de profil avec badge de niveau */}
+          <View style={styles.avatarContainer}>
+            <Image source={{ uri: userData.avatar }} style={styles.avatar} />
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelText}>{userData.level}</Text>
+            </View>
+          </View>
+
+          {/* Nom et bouton éditer */}
           <View style={styles.nameSection}>
             <Text style={styles.name}>{userData.name}</Text>
             {isOwnProfile && (
@@ -606,22 +587,25 @@ const UserProfileScreen = ({ navigation, route }) => {
                   [{ text: 'OK', style: 'default' }]
                 )}
               >
-                <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+                <Ionicons name="create-outline" size={16} color="#94a3b8" />
                 <Text style={styles.editButtonText}>Éditer</Text>
               </TouchableOpacity>
             )}
           </View>
           
+          {/* Username */}
           <Text style={styles.username}>@{userData.username}</Text>
           
+          {/* Localisation et date d'inscription */}
           <View style={styles.locationContainer}>
-            <Ionicons name="location-outline" size={16} color={colors.textSecondary} />
+            <Ionicons name="location-outline" size={16} color="#94a3b8" />
             <Text style={styles.locationText}>
               {formatLocation(userData.location)}
             </Text>
             <Text style={styles.joinDate}>Depuis {userData.joinDate}</Text>
           </View>
           
+          {/* Bio */}
           <Text style={styles.bio}>{userData.bio}</Text>
 
           {/* Bouton s'abonner pour les autres profils */}
@@ -636,7 +620,7 @@ const UserProfileScreen = ({ navigation, route }) => {
               <LinearGradient
                 colors={userData.isFollowing ? 
                   ['#64748B', '#475569'] : 
-                  ['#20B2AA', '#17A2B8']
+                  ['#84cc16', '#65a30d']
                 }
                 style={styles.followButtonGradient}
               >
@@ -690,25 +674,25 @@ const UserProfileScreen = ({ navigation, route }) => {
               icon="calendar"
               value={userData.stats?.eventsOrganized || 0}
               label="Événements organisés"
-              color="#20B2AA"
+              color="#84cc16"
             />
             <StatCard
               icon="people"
               value={userData.stats?.eventsJoined || 0}
               label="Événements rejoints"
-              color="#3B82F6"
+              color="#84cc16"
             />
             <StatCard
               icon="star"
               value={userData.stats?.averageRating ? userData.stats.averageRating.toFixed(1) : '0.0'}
               label="Note moyenne"
-              color="#F59730"
+              color="#84cc16"
             />
             <StatCard
               icon="trophy"
               value={userData.favoritesSports ? userData.favoritesSports.length : 0}
               label="Sports pratiqués"
-              color="#8B5CF6"
+              color="#84cc16"
             />
           </View>
           
@@ -732,7 +716,6 @@ const UserProfileScreen = ({ navigation, route }) => {
         {/* Sports pratiqués */}
         {userData.favoritesSports && userData.favoritesSports.length > 0 && (
           <View style={styles.sportsSection}>
-            <Text style={styles.sectionTitle}>Sports pratiqués</Text>
             <View style={styles.sportsContainer}>
               {userData.favoritesSports.map((sport, index) => (
                 <SportTag key={index} sport={sport} />
@@ -753,57 +736,68 @@ const UserProfileScreen = ({ navigation, route }) => {
           </View>
         )}
 
-        {/* Boutons d'action */}
-        <View style={styles.actionsSection}>
-          {!isOwnProfile && (
-            <TouchableOpacity 
+        {/* Navigation tabs */}
+        <View style={styles.tabsSection}>
+          <View style={styles.tabButtons}>
+            <TouchableOpacity
               style={[
-                styles.followButton,
-                userData.isFollowing && styles.followingButton
+                styles.tabButton,
+                activeTab === 'stats' && styles.activeTabButton
               ]}
-              onPress={handleFollow}
-            >
-              <LinearGradient
-                colors={userData.isFollowing ? 
-                  [colors.gray[400], colors.gray[500]] : 
-                  ['#20B2AA', '#17A2B8']
-                }
-                style={styles.followButtonGradient}
-              >
-                <Ionicons 
-                  name={userData.isFollowing ? 'checkmark' : 'person-add'} 
-                  size={20} 
-                  color={colors.white} 
-                />
-                <Text style={styles.followButtonText}>
-                  {userData.isFollowing ? 'Abonné' : 'S\'abonner'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-          
-          <View style={styles.actionButtons}>
-            <ActionButton
-              icon="bar-chart"
-              label="Stats"
-              active={activeTab === 'stats'}
               onPress={() => setActiveTab('stats')}
-              color="#20B2AA"
-            />
-            <ActionButton
-              icon="star"
-              label="Avis"
-              active={activeTab === 'reviews'}
+            >
+              <Ionicons 
+                name="trophy" 
+                size={20} 
+                color={activeTab === 'stats' ? '#84cc16' : '#94a3b8'} 
+              />
+              <Text style={[
+                styles.tabButtonText,
+                activeTab === 'stats' && styles.activeTabButtonText
+              ]}>
+                Stats
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'reviews' && styles.activeTabButton
+              ]}
               onPress={() => setActiveTab('reviews')}
-              color="#FFC107"
-            />
-            <ActionButton
-              icon="trophy"
-              label="Succès"
-              active={activeTab === 'achievements'}
+            >
+              <Ionicons 
+                name="star" 
+                size={20} 
+                color={activeTab === 'reviews' ? '#84cc16' : '#94a3b8'} 
+              />
+              <Text style={[
+                styles.tabButtonText,
+                activeTab === 'reviews' && styles.activeTabButtonText
+              ]}>
+                Avis
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[
+                styles.tabButton,
+                activeTab === 'achievements' && styles.activeTabButton
+              ]}
               onPress={() => setActiveTab('achievements')}
-              color="#FF6B6B"
-            />
+            >
+              <Ionicons 
+                name="ribbon" 
+                size={20} 
+                color={activeTab === 'achievements' ? '#84cc16' : '#94a3b8'} 
+              />
+              <Text style={[
+                styles.tabButtonText,
+                activeTab === 'achievements' && styles.activeTabButtonText
+              ]}>
+                Succès
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -814,25 +808,25 @@ const UserProfileScreen = ({ navigation, route }) => {
               <Text style={styles.sectionTitle}>Statistiques sportives</Text>
               <View style={styles.statsGrid}>
                 <View style={styles.statCard}>
-                  <Ionicons name="calendar" size={32} color="#20B2AA" />
+                  <Ionicons name="calendar" size={32} color="#84cc16" />
                   <Text style={styles.statCardValue}>{userData.stats?.eventsOrganized || 0}</Text>
                   <Text style={styles.statCardLabel}>Événements organisés</Text>
                 </View>
                 
                 <View style={styles.statCard}>
-                  <Ionicons name="people" size={32} color="#17A2B8" />
+                  <Ionicons name="people" size={32} color="#84cc16" />
                   <Text style={styles.statCardValue}>{userData.stats?.eventsJoined || 0}</Text>
                   <Text style={styles.statCardLabel}>Événements rejoints</Text>
                 </View>
                 
                 <View style={styles.statCard}>
-                  <Ionicons name="star" size={32} color="#FFC107" />
+                  <Ionicons name="star" size={32} color="#84cc16" />
                   <Text style={styles.statCardValue}>{userData.stats?.averageRating || 0}</Text>
                   <Text style={styles.statCardLabel}>Note moyenne</Text>
                 </View>
                 
                 <View style={styles.statCard}>
-                  <Ionicons name="trophy" size={32} color="#FF6B6B" />
+                  <Ionicons name="trophy" size={32} color="#84cc16" />
                   <Text style={styles.statCardValue}>{userData.favoritesSports ? userData.favoritesSports.length : 0}</Text>
                   <Text style={styles.statCardLabel}>Sports pratiqués</Text>
                 </View>
@@ -864,13 +858,13 @@ const UserProfileScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#0f172a', // dark-900
   },
   
   // Header Background
   headerBackground: {
     width: width,
-    height: 280,
+    height: 200,
   },
   headerBackgroundImage: {
     resizeMode: 'cover',
@@ -887,7 +881,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 50,
-    paddingBottom: 10,
+    paddingBottom: 20,
   },
   navButton: {
     width: 40,
@@ -902,55 +896,50 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  // Avatar Section
-  avatarSection: {
-    alignItems: 'center',
+  // Profile Section
+  profileSection: {
+    backgroundColor: '#0f172a', // dark-900
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    paddingTop: 20,
+    paddingHorizontal: 20,
     paddingBottom: 20,
+    marginTop: -30,
   },
   avatarContainer: {
     position: 'relative',
+    alignSelf: 'flex-start',
+    marginBottom: 20,
   },
   avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 4,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
     borderColor: 'white',
   },
   levelBadge: {
     position: 'absolute',
     bottom: 5,
     right: 5,
-    backgroundColor: '#20B2AA',
-    borderRadius: 16,
-    width: 32,
-    height: 32,
+    backgroundColor: '#84cc16',
+    borderRadius: 12,
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     borderColor: 'white',
   },
   levelText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
   },
 
   // ScrollView
   scrollView: {
     flex: 1,
-    marginTop: -40, // Overlap avec le header
-  },
-
-  // User Info Section
-  userInfoSection: {
-    backgroundColor: colors.background,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 30,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    minHeight: 200,
   },
   nameSection: {
     flexDirection: 'row',
@@ -959,9 +948,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   name: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: '#ffffff', // white
   },
   editButton: {
     flexDirection: 'row',
@@ -969,19 +958,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
-    backgroundColor: colors.surface,
+    backgroundColor: '#1e293b', // dark-800
     borderWidth: 1,
-    borderColor: colors.gray[300],
+    borderColor: '#334155', // dark-700
   },
   editButtonText: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#94a3b8', // dark-400
     marginLeft: 4,
     fontWeight: '500',
   },
   username: {
-    fontSize: 16,
-    color: colors.textSecondary,
+    fontSize: 14,
+    color: '#94a3b8', // dark-400
     marginBottom: 12,
   },
   locationContainer: {
@@ -991,18 +980,18 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
     marginLeft: 4,
     marginRight: 8,
   },
   joinDate: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
   },
   bio: {
-    fontSize: 16,
-    color: colors.textPrimary,
-    lineHeight: 24,
+    fontSize: 14,
+    color: '#ffffff', // white
+    lineHeight: 20,
     marginBottom: 20,
   },
   
@@ -1029,7 +1018,7 @@ const styles = StyleSheet.create({
   mainStatsSection: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: colors.background,
+    backgroundColor: '#0f172a', // dark-900
     marginBottom: 10,
   },
   statsHeader: {
@@ -1044,13 +1033,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 15,
-    backgroundColor: colors.surface,
+    backgroundColor: '#1e293b', // dark-800
     borderWidth: 1,
-    borderColor: colors.gray[300],
+    borderColor: '#334155', // dark-700
   },
   refreshStatsText: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
     marginLeft: 4,
     fontWeight: '500',
   },
@@ -1062,12 +1051,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '47%',
-    backgroundColor: colors.surface,
+    backgroundColor: '#1e293b', // dark-800
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.gray[200],
+    borderColor: '#334155', // dark-700
     marginBottom: 10,
   },
   statIcon: {
@@ -1087,7 +1076,7 @@ const styles = StyleSheet.create({
   additionalStatsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: '#ffffff', // white
     marginBottom: 12,
   },
   additionalStatsRow: {
@@ -1100,12 +1089,12 @@ const styles = StyleSheet.create({
   additionalStatValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: '#ffffff', // white
     marginTop: 4,
   },
   additionalStatLabel: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
   },
 
   // Social Stats
@@ -1113,54 +1102,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     paddingHorizontal: 20,
-    paddingVertical: 25,
-    backgroundColor: colors.background,
+    paddingVertical: 20,
+    backgroundColor: '#0f172a', // dark-900
     marginBottom: 0,
   },
   statItem: {
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: '#ffffff', // white
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    fontSize: 12,
+    color: '#94a3b8', // dark-400
   },
 
   // Sports Section
   sportsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: colors.background,
-    marginBottom: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: colors.textPrimary,
-    marginBottom: 16,
+    paddingVertical: 15,
+    backgroundColor: '#0f172a', // dark-900
+    marginBottom: 0,
   },
   sportsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
   },
   sportTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 25,
-    marginBottom: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 8,
   },
   sportTagText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 6,
     color: 'white',
   },
 
@@ -1168,7 +1151,7 @@ const styles = StyleSheet.create({
   eventsSection: {
     paddingHorizontal: 20,
     paddingVertical: 20,
-    backgroundColor: colors.background,
+    backgroundColor: '#0f172a', // dark-900
     marginBottom: 20,
   },
   eventsContainer: {
@@ -1177,11 +1160,11 @@ const styles = StyleSheet.create({
   eventCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: '#1e293b', // dark-800
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: colors.gray[200],
+    borderColor: '#334155', // dark-700
   },
   eventIcon: {
     width: 48,
@@ -1197,7 +1180,7 @@ const styles = StyleSheet.create({
   eventTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.textPrimary,
+    color: '#ffffff', // white
     marginBottom: 4,
   },
   eventMeta: {
@@ -1206,41 +1189,45 @@ const styles = StyleSheet.create({
   },
   eventTime: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
   },
   eventRole: {
     fontSize: 14,
-    color: colors.primary,
+    color: '#84cc16', // lime
     fontWeight: '500',
   },
 
-  // Actions Section
-  actionsSection: {
+  // Tabs Section
+  tabsSection: {
     paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: colors.background,
+    paddingVertical: 15,
+    backgroundColor: '#0f172a', // dark-900
     marginBottom: 0,
   },
-  actionButtons: {
+  tabButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
   },
-  actionButton: {
-    flexDirection: 'row',
+  tabButton: {
+    flexDirection: 'column',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.gray[200],
-    minWidth: 100,
+    minWidth: 80,
     justifyContent: 'center',
   },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
+  activeTabButton: {
+    backgroundColor: 'rgba(132, 204, 22, 0.1)', // lime/10
+  },
+  tabButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 4,
+    color: '#94a3b8', // dark-400
+  },
+  activeTabButtonText: {
+    color: '#84cc16', // lime
   },
 
   // Tab Content
@@ -1256,30 +1243,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statCard: {
-    backgroundColor: colors.surface,
+    backgroundColor: '#1e293b', // dark-800
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     width: (width - 60) / 2,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: colors.gray[200],
+    borderColor: '#334155', // dark-700
   },
   statCardValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.textPrimary,
+    color: '#ffffff', // white
     marginVertical: 8,
   },
   statCardLabel: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
     textAlign: 'center',
   },
   
   comingSoon: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 40,
@@ -1294,12 +1281,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: '#0f172a', // dark-900
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: colors.textSecondary,
+    color: '#94a3b8', // dark-400
   },
 });
 

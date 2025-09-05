@@ -50,6 +50,19 @@ module.exports = {
         info: '#06B6D4',
         lime: '#84cc16', // Bright accent like in the images
         emerald: '#10b981',
+        // Teal colors for login screen and branding
+        teal: {
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf', // Main teal used in login
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+        },
       },
       fontFamily: {
         'sans': ['Inter', 'system-ui', 'sans-serif'],
@@ -57,6 +70,14 @@ module.exports = {
       spacing: {
         '18': '4.5rem',
         '88': '22rem',
+      },
+      gap: {
+        '3': '0.75rem',
+        '4': '1rem',
+        '6': '1.5rem',
+        '8': '2rem',
+        '12': '3rem',
+        '16': '4rem',
       },
       borderRadius: {
         'xl': '1rem',
