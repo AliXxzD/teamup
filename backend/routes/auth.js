@@ -385,7 +385,7 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     res.json({
       message: 'Profil utilisateur récupéré avec succès',
-      user: req.user.getPublicProfile()
+      user: await req.user.getPublicProfileWithRealStats()
     });
   } catch (error) {
     console.error('Erreur lors de la récupération du profil:', error);

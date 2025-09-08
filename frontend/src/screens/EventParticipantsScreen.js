@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../config/api';
+import buttonService from '../services/buttonService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EventParticipantsScreen = ({ route, navigation }) => {
@@ -28,10 +29,7 @@ const EventParticipantsScreen = ({ route, navigation }) => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/participants`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(token),
       });
 
       if (response.ok) {
@@ -50,23 +48,23 @@ const EventParticipantsScreen = ({ route, navigation }) => {
 
   const removeParticipant = async (participantId) => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/participants/${participantId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
+      console.log('🔄 EventParticipantsScreen - Début removeParticipant via ButtonService');
+      const result = await buttonService.removeParticipant(
+        eventId,
+        participantId,
+        (successResult) => {
+          console.log('✅ Callback succès removeParticipant:', successResult);
+          Alert.alert('Succès', successResult.message);
+          loadParticipants(); // Recharger la liste
         },
-      });
-
-      if (response.ok) {
-        Alert.alert('Succès', 'Participant retiré de l\'événement');
-        loadParticipants(); // Recharger la liste
-      } else {
-        Alert.alert('Erreur', 'Impossible de retirer le participant');
-      }
+        (errorResult) => {
+          console.log('❌ Callback erreur removeParticipant:', errorResult);
+          Alert.alert('Erreur', errorResult.error);
+        }
+      );
+      console.log('✅ Fin removeParticipant:', result);
     } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
+      console.error('❌ Erreur removeParticipant:', error);
       Alert.alert('Erreur', 'Une erreur est survenue');
     }
   };

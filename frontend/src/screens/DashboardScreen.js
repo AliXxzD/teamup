@@ -21,7 +21,7 @@ import EventManagementMenu from '../components/EventManagementMenu';
 import SimplifiedUserCard from '../components/SimplifiedUserCard';
 import { AchievementsList } from '../components/AchievementCard';
 import pointsService from '../services/pointsService';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../config/api';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -35,6 +35,8 @@ const DashboardScreen = ({ navigation }) => {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [userProgression, setUserProgression] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [joinedEvents, setJoinedEvents] = useState([]);
+  const [loadingJoinedEvents, setLoadingJoinedEvents] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -65,6 +67,13 @@ const DashboardScreen = ({ navigation }) => {
     return unsubscribe;
   }, [navigation]);
 
+  // Charger les événements rejoints quand l'onglet activity est sélectionné
+  useEffect(() => {
+    if (activeTab === 'activity') {
+      loadJoinedEvents();
+    }
+  }, [activeTab]);
+
   const loadUserProgression = async () => {
     try {
       setLoadingStats(true);
@@ -91,6 +100,38 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
+  const loadJoinedEvents = async () => {
+    try {
+      setLoadingJoinedEvents(true);
+      console.log('📅 Chargement des événements rejoints...');
+      
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) {
+        console.log('⚠️ Pas de token, impossible de charger les événements rejoints');
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/api/events/my/joined`, {
+        headers: getAuthHeaders(token)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Événements rejoints chargés:', data.data?.length || 0);
+        console.log('🔍 Debug - Premier événement rejoint:', data.data?.[0]);
+        setJoinedEvents(data.data || []);
+      } else {
+        console.error('❌ Erreur chargement événements rejoints:', response.status);
+        setJoinedEvents([]);
+      }
+    } catch (error) {
+      console.error('❌ Erreur loadJoinedEvents:', error);
+      setJoinedEvents([]);
+    } finally {
+      setLoadingJoinedEvents(false);
+    }
+  };
+
   const loadEvents = async () => {
     // Récupérer le token depuis AsyncStorage
     const token = await AsyncStorage.getItem('accessToken');
@@ -113,10 +154,7 @@ const DashboardScreen = ({ navigation }) => {
       // Charger les événements organisés par l'utilisateur
       console.log('📡 Appel API:', `${API_BASE_URL}/api/events/my/organized`);
       const userEventsResponse = await fetch(`${API_BASE_URL}/api/events/my/organized`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(token),
       });
       
       console.log('📊 Status réponse événements utilisateur:', userEventsResponse.status);
@@ -134,10 +172,7 @@ const DashboardScreen = ({ navigation }) => {
       // Charger les événements à proximité (tous les événements actifs)
       console.log('📡 Appel API:', `${API_BASE_URL}/api/events`);
       const nearbyEventsResponse = await fetch(`${API_BASE_URL}/api/events`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(token),
       });
       
       console.log('📊 Status réponse événements à proximité:', nearbyEventsResponse.status);
@@ -409,13 +444,13 @@ const DashboardScreen = ({ navigation }) => {
               onPress={() => setActiveTab('activity')}
             >
               <Ionicons 
-                name="pulse" 
+                name="people" 
                 size={20} 
                 color={activeTab === 'activity' ? '#84cc16' : '#94a3b8'} 
               />
               <Text className={`ml-2 font-semibold text-base ${
                 activeTab === 'activity' ? 'text-lime' : 'text-slate-400'
-              }`}>Activité</Text>
+              }`}>Événements rejoints</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -547,105 +582,129 @@ const DashboardScreen = ({ navigation }) => {
         )}
 
         {activeTab === 'activity' && (
-          <View style={activityStyles.container}>
-            {/* Activity Header */}
-            <View style={activityStyles.header}>
-              <LinearGradient
-                colors={['#06b6d4', '#0891b2']}
-                style={activityStyles.headerIcon}
-              >
-                <Ionicons name="pulse" size={40} color="#ffffff" />
-              </LinearGradient>
-              <Text style={activityStyles.headerTitle}>Votre Activité</Text>
-              <Text style={activityStyles.headerSubtitle}>
-                Résumé de votre progression sur TeamUp
-              </Text>
+          <View className="flex-1 px-6">
+            {/* Header */}
+            <View className="mb-6">
+              <View className="flex-row items-center mb-2">
+                <View className="w-12 h-12 bg-lime/20 rounded-xl items-center justify-center mr-4">
+                  <Ionicons name="people" size={24} color="#84cc16" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-xl font-bold">Événements rejoints</Text>
+                  <Text className="text-slate-400 text-sm">
+                    {joinedEvents.length} événement{joinedEvents.length > 1 ? 's' : ''} rejoint{joinedEvents.length > 1 ? 's' : ''}
+                  </Text>
+                </View>
+              </View>
             </View>
             
-            {/* Activity Summary */}
-            {userProgression ? (
-              <View>
-                {/* Quick Overview */}
-                <View style={activityStyles.summaryCard}>
-                  <Text style={activityStyles.summaryTitle}>📊 Résumé</Text>
-                  
-                  <View style={activityStyles.summaryStats}>
-                    <View style={activityStyles.statRow}>
-                      <Text style={activityStyles.statLabel}>Événements organisés</Text>
-                      <Text style={activityStyles.statValue}>{userProgression.stats.eventsOrganized}</Text>
-                    </View>
-                    
-                    <View style={activityStyles.statRow}>
-                      <Text style={activityStyles.statLabel}>Événements rejoints</Text>
-                      <Text style={activityStyles.statValue}>{userProgression.stats.eventsJoined}</Text>
-                    </View>
-                    
-                    <View style={activityStyles.statRow}>
-                      <Text style={activityStyles.statLabel}>Points totaux</Text>
-                      <Text style={[activityStyles.statValue, { color: '#f59e0b' }]}>
-                        {userProgression.points}
-                      </Text>
-                    </View>
-                  </View>
+            {/* Liste des événements rejoints */}
+            {loadingJoinedEvents ? (
+              <View className="flex-1 items-center justify-center py-20">
+                <View className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin mb-4" />
+                <Text className="text-slate-400 text-base">Chargement des événements...</Text>
+              </View>
+            ) : joinedEvents.length === 0 ? (
+              <View className="flex-1 items-center justify-center py-20">
+                <View className="w-20 h-20 bg-slate-800 rounded-full items-center justify-center mb-6">
+                  <Ionicons name="calendar-outline" size={40} color="#64748b" />
                 </View>
-
-                {/* Recent Achievement (if any) */}
-                {userProgression.achievements.unlocked.length > 0 && (
-                  <View style={activityStyles.achievementCard}>
-                    <Text style={activityStyles.achievementTitle}>🏆 Dernier Succès</Text>
-                    <View style={activityStyles.achievementContent}>
-                      <View style={[
-                        activityStyles.achievementIcon, 
-                        { backgroundColor: userProgression.achievements.unlocked[0].color }
-                      ]}>
-                        <Ionicons 
-                          name={userProgression.achievements.unlocked[0].icon} 
-                          size={20} 
-                          color="#ffffff" 
-                        />
-                      </View>
-                      <View style={activityStyles.achievementInfo}>
-                        <Text style={activityStyles.achievementName}>
-                          {userProgression.achievements.unlocked[0].title}
-                        </Text>
-                        <Text style={activityStyles.achievementDescription}>
-                          +{userProgression.achievements.unlocked[0].points} points
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-
-                {/* Call to Action */}
-                <View style={activityStyles.ctaCard}>
-                  <Text style={activityStyles.ctaTitle}>🎯 Continuez votre progression</Text>
-                  <Text style={activityStyles.ctaDescription}>
-                    Organisez plus d'événements ou rejoignez-en d'autres pour gagner plus de points !
-                  </Text>
-                  
-                  <View style={activityStyles.ctaButtons}>
-                    <TouchableOpacity 
-                      style={activityStyles.ctaButton}
-                      onPress={() => navigation.navigate('CreateEvent')}
-                    >
-                      <Ionicons name="add" size={18} color="#ffffff" />
-                      <Text style={activityStyles.ctaButtonText}>Créer</Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity 
-                      style={[activityStyles.ctaButton, { backgroundColor: '#374151' }]}
-                      onPress={() => navigation.navigate('Discover')}
-                    >
-                      <Ionicons name="search" size={18} color="#ffffff" />
-                      <Text style={activityStyles.ctaButtonText}>Découvrir</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <Text className="text-white text-xl font-bold mb-2">Aucun événement rejoint</Text>
+                <Text className="text-slate-400 text-center text-base mb-8 leading-6">
+                  Vous n'avez pas encore rejoint d'événements.{'\n'}
+                  Découvrez des événements près de chez vous !
+                </Text>
+                <TouchableOpacity 
+                  className="bg-lime rounded-xl py-4 px-8"
+                  onPress={() => setActiveTab('discover')}
+                  activeOpacity={0.8}
+                >
+                  <Text className="text-white text-lg font-bold">Découvrir des événements</Text>
+                </TouchableOpacity>
               </View>
             ) : (
-              <View style={activityStyles.loadingState}>
-                <Text style={activityStyles.loadingText}>Chargement de l'activité...</Text>
-              </View>
+              <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                <View className="space-y-4">
+                  {joinedEvents.map((event, index) => {
+                    // Debug: Log des propriétés de l'événement
+                    console.log(`🔍 Debug - Événement ${index}:`, {
+                      id: event._id,
+                      title: event.title,
+                      sport: event.sport,
+                      date: event.date,
+                      time: event.time,
+                      location: event.location,
+                      address: event.location?.address,
+                      currentParticipants: event.currentParticipants,
+                      maxParticipants: event.maxParticipants,
+                      status: event.status
+                    });
+                    
+                    return (
+                    <TouchableOpacity
+                      key={event._id || index}
+                      className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6"
+                      onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
+                      activeOpacity={0.8}
+                    >
+                      {/* Header de l'événement */}
+                      <View className="flex-row justify-between items-start mb-4">
+                        <View className="flex-1">
+                          <Text className="text-white text-lg font-bold mb-1" numberOfLines={2}>
+                            {event.title}
+                          </Text>
+                          <Text className="text-slate-400 text-sm" numberOfLines={1}>
+                            {event.sport} • {event.location?.address || 'Lieu non spécifié'}
+                          </Text>
+                        </View>
+                        <View className="ml-4">
+                          <View className={`px-3 py-1 rounded-full ${
+                            event.status === 'active' ? 'bg-green-500/20' : 'bg-slate-500/20'
+                          }`}>
+                            <Text className={`text-xs font-medium ${
+                              event.status === 'active' ? 'text-green-400' : 'text-slate-400'
+                            }`}>
+                              {event.status === 'active' ? 'Actif' : event.status}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      {/* Détails de l'événement */}
+                      <View className="flex-row items-center justify-between mb-4">
+                        <View className="flex-row items-center">
+                          <Ionicons name="calendar" size={16} color="#64748b" />
+                          <Text className="text-slate-400 text-sm ml-2">
+                            {new Date(event.date).toLocaleDateString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </Text>
+                        </View>
+                        <View className="flex-row items-center">
+                          <Ionicons name="time" size={16} color="#64748b" />
+                          <Text className="text-slate-400 text-sm ml-2">{event.time}</Text>
+                        </View>
+                      </View>
+
+                      {/* Participants */}
+                      <View className="flex-row items-center justify-between">
+                        <View className="flex-row items-center">
+                          <Ionicons name="people" size={16} color="#64748b" />
+                          <Text className="text-slate-400 text-sm ml-2">
+                            {event.currentParticipants || 0}/{event.maxParticipants} participants
+                          </Text>
+                        </View>
+                        <View className="flex-row items-center">
+                          <Ionicons name="chevron-forward" size={16} color="#64748b" />
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
             )}
           </View>
         )}

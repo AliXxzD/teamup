@@ -320,25 +320,6 @@ const MessagesScreenTailwind = ({ navigation }) => {
             <ActivityIndicator size="large" color="#20B2AA" />
             <Text className="text-dark-300 text-base mt-3">Chargement des conversations...</Text>
           </View>
-        ) : conversations.length === 0 ? (
-          <View className="flex-1 items-center justify-center px-8">
-            <View className="w-24 h-24 bg-dark-700 rounded-full items-center justify-center mb-6">
-              <Ionicons name="chatbubbles-outline" size={40} color="#64748b" />
-            </View>
-            <Text className="text-white text-xl font-bold mb-2 text-center">
-              Aucune conversation
-            </Text>
-            <Text className="text-dark-300 text-center text-base mb-8 leading-6">
-              Commencez à échanger avec d'autres sportifs en rejoignant des événements
-            </Text>
-            <TouchableOpacity
-              className="bg-primary-500 px-6 py-3 rounded-xl flex-row items-center"
-              onPress={() => navigation.navigate('Discover')}
-            >
-              <Ionicons name="search" size={20} color="#ffffff" />
-              <Text className="text-white font-semibold ml-2">Découvrir des événements</Text>
-            </TouchableOpacity>
-          </View>
         ) : (
           <FlatList
             data={conversations}

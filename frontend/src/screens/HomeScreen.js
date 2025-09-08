@@ -484,7 +484,7 @@ const HomeScreen = ({ navigation }) => {
                               activeOpacity={0.8}
                             >
                               <Text className="text-white/70 text-xs mr-1">
-                                par {String(event.organizer?.name || 'Club FC Local')}
+                                par {getOrganizerName(event)}
                               </Text>
                               <Ionicons name="person-outline" size={12} color="#ffffff" />
                             </TouchableOpacity>

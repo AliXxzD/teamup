@@ -198,6 +198,33 @@ class SocketService {
   }
 
   /**
+   * Attendre l'authentification et rejoindre une conversation
+   */
+  async joinConversationWhenReady(conversationId, maxWaitTime = 10000) {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      
+      const checkAuth = () => {
+        if (this.isConnected && this.isAuthenticated) {
+          const success = this.joinConversation(conversationId);
+          resolve(success);
+          return;
+        }
+        
+        if (Date.now() - startTime > maxWaitTime) {
+          console.warn('⚠️ Timeout en attente de l\'authentification socket');
+          reject(new Error('Timeout authentification socket'));
+          return;
+        }
+        
+        setTimeout(checkAuth, 200);
+      };
+      
+      checkAuth();
+    });
+  }
+
+  /**
    * Quitter une conversation
    */
   leaveConversation(conversationId) {

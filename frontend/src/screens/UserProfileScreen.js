@@ -24,6 +24,7 @@ import UserStatsCard from '../components/UserStatsCard';
 import { AchievementsList } from '../components/AchievementCard';
 import pointsService from '../services/pointsService';
 import { LevelBadge, XPProgressBar, AchievementCard } from '../components/LevelingSystem';
+import Avatar from '../components/Avatar';
 import { 
   calculateLevel, 
   getAllAchievementsWithStatus, 
@@ -50,7 +51,6 @@ const UserProfileScreen = ({ navigation, route }) => {
   useEffect(() => {
     // Initialiser les données utilisateur
     loadUserData();
-    loadUserProgression();
     
     // Animations
     Animated.parallel([
@@ -73,29 +73,101 @@ const UserProfileScreen = ({ navigation, route }) => {
     ]).start();
   }, [user, userId]); // Recharger quand l'utilisateur ou l'userId change
 
+  // Charger les statistiques quand userData change
+  useEffect(() => {
+    if (userData) {
+      loadUserProgression();
+    }
+  }, [userData]);
+
   const loadUserProgression = async () => {
     try {
       setLoadingStats(true);
       console.log('📊 Chargement des statistiques utilisateur pour le profil...');
       
-      const result = await pointsService.calculateUserProgression();
-      
-      if (result.success) {
-        setUserProgression(result.data);
-        console.log('✅ Statistiques profil chargées:', result.data);
-      } else {
-        // Ne pas afficher d'erreur si l'utilisateur est déconnecté
-        if (!result.isLoggedOut) {
-          console.error('❌ Erreur chargement statistiques profil:', result.error);
+      if (isOwnProfile) {
+        // Pour l'utilisateur connecté, utiliser le service normal
+        const result = await pointsService.calculateUserProgression();
+        
+        if (result.success) {
+          setUserProgression(result.data);
+          console.log('✅ Statistiques profil chargées:', result.data);
         } else {
-          console.log('ℹ️ Utilisateur déconnecté, arrêt du chargement de stats');
-          setUserProgression(null);
+          // Ne pas afficher d'erreur si l'utilisateur est déconnecté
+          if (!result.isLoggedOut) {
+            console.error('❌ Erreur chargement statistiques profil:', result.error);
+          } else {
+            console.log('ℹ️ Utilisateur déconnecté, arrêt du chargement de stats');
+            setUserProgression(null);
+          }
         }
+      } else if (userId && userData) {
+        // Pour les autres utilisateurs, calculer les statistiques à partir des données récupérées
+        console.log('📊 Calcul des statistiques pour un autre utilisateur:', userId);
+        
+        const otherUserProgression = await calculateOtherUserProgression(userData);
+        setUserProgression(otherUserProgression);
+        console.log('✅ Statistiques autre utilisateur calculées:', otherUserProgression);
       }
     } catch (error) {
       console.error('❌ Erreur loadUserProgression profil:', error);
     } finally {
       setLoadingStats(false);
+    }
+  };
+
+  /**
+   * Calcule les statistiques de progression pour un autre utilisateur
+   */
+  const calculateOtherUserProgression = async (otherUserData) => {
+    try {
+      console.log('📊 Calcul des statistiques pour autre utilisateur:', otherUserData);
+      
+      // Utiliser la même logique que calculateUserProgression
+      const stats = otherUserData.userStats || {};
+      
+      // Calculer les points
+      const points = pointsService.calculatePoints(stats);
+      
+      // Calculer le niveau
+      const level = pointsService.calculateLevel(points);
+      
+      // Points pour le prochain niveau (même logique que calculateUserProgression)
+      const nextLevelPoints = pointsService.getPointsForNextLevel(level);
+      const currentLevelPoints = level > 1 ? pointsService.getPointsForNextLevel(level - 1) : 0;
+      const progressPoints = points - currentLevelPoints;
+      const neededPoints = nextLevelPoints - currentLevelPoints;
+      const progressPercentage = Math.min((progressPoints / neededPoints) * 100, 100);
+
+      // Calculer les achievements
+      const achievements = pointsService.calculateAchievements(stats);
+      
+      const progression = {
+        points,
+        level,
+        nextLevelPoints,
+        progressPercentage: Math.round(progressPercentage),
+        achievements,
+        stats: {
+          eventsOrganized: stats.eventsOrganized || 0,
+          eventsJoined: stats.eventsJoined || 0,
+          averageRating: stats.averageRating || 0,
+          totalRatings: stats.totalRatings || 0,
+          isEmailVerified: otherUserData.stats?.isEmailVerified || false,
+          registrationDate: stats.registrationDate || otherUserData.joinDate
+        }
+      };
+      
+      console.log('✅ Progression calculée pour autre utilisateur:', {
+        points: progression.points,
+        level: progression.level,
+        achievements: progression.achievements.unlocked.length
+      });
+      
+      return progression;
+    } catch (error) {
+      console.error('❌ Erreur calculateOtherUserProgression:', error);
+      return null;
     }
   };
 
@@ -207,34 +279,147 @@ const UserProfileScreen = ({ navigation, route }) => {
         setUserData(defaultUserData);
       } else if (userId) {
         // Pour un autre utilisateur, charger depuis l'API
-        // TODO: Implémenter l'appel API pour charger le profil d'un autre utilisateur
         console.log('Chargement du profil utilisateur:', userId);
-        // Pour l'instant, utiliser des données par défaut
-        setUserData({
-          name: 'Utilisateur',
-          username: '@utilisateur',
-          location: 'France',
-          joinDate: 'Récemment',
-          bio: 'Profil utilisateur',
-          stats: { followers: 0, following: 0, points: 0 },
-          sports: ['Football'],
-          xp: 0,
-          level: 1,
-          userStats: {
-            eventsOrganized: 0,
-            eventsJoined: 0,
-            averageRating: 0,
-            totalReviews: 0,
-            followers: 0,
-            sportEvents: { football: 0, basketball: 0, tennis: 0, volleyball: 0 },
-            earlyEvents: 0,
-            weekendEvents: 0,
-            monthlyRank: 0,
-            maxStreak: 0
-          },
-          profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-          backgroundImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
-        });
+        
+        try {
+          const accessToken = await AsyncStorage.getItem('accessToken');
+          if (accessToken) {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000'}/api/users/${userId}`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              }
+            });
+            
+            if (response.ok) {
+              const userResponse = await response.json();
+              const otherUser = userResponse.data || userResponse;
+              
+              console.log('📊 Profil autre utilisateur récupéré:', otherUser);
+              
+              const otherUserData = {
+                name: otherUser.name || 'Utilisateur',
+                username: otherUser.email ? `@${otherUser.email.split('@')[0]}` : '@utilisateur',
+                location: typeof otherUser.location === 'string' ? otherUser.location : (otherUser.location?.address || otherUser.location?.city || 'France'),
+                joinDate: otherUser.createdAt ? `Depuis ${new Date(otherUser.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}` : 'Récemment',
+                bio: otherUser.bio || otherUser.profile?.bio || 'Passionné de sport !',
+                stats: {
+                  followers: otherUser.followers || 0,
+                  following: otherUser.following || 0,
+                  points: otherUser.points || otherUser.profile?.points || 0
+                },
+                sports: otherUser.sports || otherUser.profile?.favoritesSports || ['Football'],
+                xp: otherUser.xp || otherUser.profile?.xp || 0,
+                level: calculateLevel(otherUser.xp || otherUser.profile?.xp || 0),
+                userStats: {
+                  eventsOrganized: otherUser.profile?.stats?.eventsOrganized || otherUser.eventsOrganized || 0,
+                  eventsJoined: otherUser.profile?.stats?.eventsJoined || otherUser.eventsJoined || 0,
+                  averageRating: otherUser.profile?.stats?.averageRating || otherUser.averageRating || 0,
+                  totalReviews: otherUser.profile?.stats?.totalRatings || otherUser.totalReviews || 0,
+                  followers: otherUser.followers || 0,
+                  sportEvents: otherUser.sportEvents || {
+                    football: 0,
+                    basketball: 0,
+                    tennis: 0,
+                    volleyball: 0
+                  },
+                  earlyEvents: otherUser.earlyEvents || 0,
+                  weekendEvents: otherUser.weekendEvents || 0,
+                  monthlyRank: otherUser.monthlyRank || 0,
+                  maxStreak: otherUser.maxStreak || 0
+                },
+                profileImage: otherUser.profile?.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                backgroundImage: otherUser.profile?.backgroundImage || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+              };
+              
+              setUserData(otherUserData);
+            } else {
+              console.error('❌ Erreur API pour récupérer le profil utilisateur:', response.status);
+              // Fallback vers des données par défaut
+              setUserData({
+                name: 'Utilisateur',
+                username: '@utilisateur',
+                location: 'France',
+                joinDate: 'Récemment',
+                bio: 'Profil utilisateur',
+                stats: { followers: 0, following: 0, points: 0 },
+                sports: ['Football'],
+                xp: 0,
+                level: 1,
+                userStats: {
+                  eventsOrganized: 0,
+                  eventsJoined: 0,
+                  averageRating: 0,
+                  totalReviews: 0,
+                  followers: 0,
+                  sportEvents: { football: 0, basketball: 0, tennis: 0, volleyball: 0 },
+                  earlyEvents: 0,
+                  weekendEvents: 0,
+                  monthlyRank: 0,
+                  maxStreak: 0
+                },
+                profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                backgroundImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+              });
+            }
+          } else {
+            console.error('❌ Pas de token d\'accès pour récupérer le profil utilisateur');
+            // Fallback vers des données par défaut
+            setUserData({
+              name: 'Utilisateur',
+              username: '@utilisateur',
+              location: 'France',
+              joinDate: 'Récemment',
+              bio: 'Profil utilisateur',
+              stats: { followers: 0, following: 0, points: 0 },
+              sports: ['Football'],
+              xp: 0,
+              level: 1,
+              userStats: {
+                eventsOrganized: 0,
+                eventsJoined: 0,
+                averageRating: 0,
+                totalReviews: 0,
+                followers: 0,
+                sportEvents: { football: 0, basketball: 0, tennis: 0, volleyball: 0 },
+                earlyEvents: 0,
+                weekendEvents: 0,
+                monthlyRank: 0,
+                maxStreak: 0
+              },
+              profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+              backgroundImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+            });
+          }
+        } catch (apiError) {
+          console.error('❌ Erreur lors de la récupération du profil utilisateur:', apiError);
+          // Fallback vers des données par défaut
+          setUserData({
+            name: 'Utilisateur',
+            username: '@utilisateur',
+            location: 'France',
+            joinDate: 'Récemment',
+            bio: 'Profil utilisateur',
+            stats: { followers: 0, following: 0, points: 0 },
+            sports: ['Football'],
+            xp: 0,
+            level: 1,
+            userStats: {
+              eventsOrganized: 0,
+              eventsJoined: 0,
+              averageRating: 0,
+              totalReviews: 0,
+              followers: 0,
+              sportEvents: { football: 0, basketball: 0, tennis: 0, volleyball: 0 },
+              earlyEvents: 0,
+              weekendEvents: 0,
+              monthlyRank: 0,
+              maxStreak: 0
+            },
+            profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+            backgroundImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+          });
+        }
       }
     } catch (error) {
       console.error('Erreur lors du chargement des données utilisateur:', error);
@@ -421,14 +606,13 @@ const UserProfileScreen = ({ navigation, route }) => {
               }}
             >
               <TouchableOpacity activeOpacity={0.9}>
-                <Image
-                  source={{ uri: userData.profileImage }}
+                <Avatar
+                  name={userData.name}
+                  size={96}
+                  showBorder={true}
+                  borderColor="#ffffff"
+                  borderWidth={4}
                   style={{
-                    width: 96,
-                    height: 96,
-                    borderRadius: 48,
-                    borderWidth: 4,
-                    borderColor: '#ffffff',
                     shadowColor: '#000',
                     shadowOffset: { width: 0, height: 8 },
                     shadowOpacity: 0.4,

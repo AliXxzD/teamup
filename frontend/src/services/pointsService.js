@@ -234,7 +234,13 @@ class PointsService {
           };
         }
         
-        throw new Error(errorData.message || 'Erreur lors de la récupération du profil');
+        // Pour les autres erreurs, retourner un objet d'erreur au lieu de lancer une exception
+        return {
+          success: false,
+          error: errorData.message || 'Erreur lors de la récupération du profil',
+          stats: null,
+          isLoggedOut: false
+        };
       }
 
       const data = await response.json();
@@ -245,9 +251,15 @@ class PointsService {
       };
 
     } catch (error) {
-      // Log uniquement si ce n'est pas un problème de déconnexion
-      if (!error.message.includes('Token d\'authentification manquant')) {
-        console.error('Erreur getUserStats:', error);
+      // Log uniquement les erreurs inattendues (pas les erreurs de déconnexion/réseau)
+      const isExpectedError = error.message.includes('Token') || 
+                             error.message.includes('401') || 
+                             error.message.includes('fetch') ||
+                             error.message.includes('Network') ||
+                             error.message.includes('Failed to fetch');
+      
+      if (!isExpectedError) {
+        console.error('Erreur getUserStats inattendue:', error);
       }
       
       return {
@@ -284,8 +296,15 @@ class PointsService {
 
       const userStats = statsResult.stats;
       
+      // Debug: Vérifier la structure des données
+      console.log('🔍 Debug getUserStats - userStats:', userStats);
+      console.log('🔍 Debug getUserStats - userStats.stats:', userStats.stats);
+      
+      // Les statistiques sont maintenant dans userStats.stats (depuis getPublicProfileWithRealStats)
+      const stats = userStats.stats || {};
+      
       // Calculer les points
-      const points = this.calculatePoints(userStats.stats || userStats);
+      const points = this.calculatePoints(stats);
       
       // Calculer le niveau
       const level = this.calculateLevel(points);
@@ -298,7 +317,7 @@ class PointsService {
       const progressPercentage = Math.min((progressPoints / neededPoints) * 100, 100);
 
       // Calculer les achievements
-      const achievements = this.calculateAchievements(userStats.stats || userStats);
+      const achievements = this.calculateAchievements(stats);
 
       return {
         success: true,
@@ -309,12 +328,12 @@ class PointsService {
           progressPercentage: Math.round(progressPercentage),
           achievements,
           stats: {
-            eventsOrganized: userStats.stats?.eventsOrganized || 0,
-            eventsJoined: userStats.stats?.eventsJoined || 0,
-            averageRating: userStats.stats?.averageRating || 0,
-            totalRatings: userStats.stats?.totalRatings || 0,
+            eventsOrganized: stats.eventsOrganized || 0,
+            eventsJoined: stats.eventsJoined || 0,
+            averageRating: stats.averageRating || 0,
+            totalRatings: stats.totalRatings || 0,
             isEmailVerified: userStats.isEmailVerified || false,
-            registrationDate: userStats.stats?.registrationDate || userStats.createdAt
+            registrationDate: stats.registrationDate || userStats.createdAt
           }
         }
       };

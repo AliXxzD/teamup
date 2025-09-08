@@ -97,7 +97,7 @@ const SimplifiedUserCard = ({
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressLabel}>
-                Niveau {level + 1}
+                Niveau {level}
               </Text>
               <Text style={styles.progressPercentage}>
                 {progressPercentage}%

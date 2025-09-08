@@ -8,6 +8,7 @@ import {
   getLevelProgress, 
   getXPForNextLevel 
 } from '../utils/levelingSystem';
+import Avatar from './Avatar';
 
 export const LevelBadge = ({ xp, size = 'medium', showProgress = false }) => {
   const level = calculateLevel(xp);
@@ -252,20 +253,12 @@ export const RankingCard = ({ rank, user, currentUserId }) => {
 
         {/* User Info */}
         <View className="flex-1 flex-row items-center">
-          <View className="w-12 h-12 rounded-full overflow-hidden mr-3">
-            {user.avatar ? (
-              <Image source={{ uri: user.avatar }} className="w-full h-full" />
-            ) : (
-              <View 
-                className="w-full h-full items-center justify-center"
-                style={{ backgroundColor: tier.color + '40' }}
-              >
-                <Text className="text-white text-lg font-bold">
-                  {user.name?.charAt(0)?.toUpperCase() || 'U'}
-                </Text>
-              </View>
-            )}
-          </View>
+          <Avatar
+            name={user.name}
+            imageUri={user.avatar}
+            size={48}
+            style={{ marginRight: 12 }}
+          />
           
           <View className="flex-1">
             <Text className={`text-base font-bold ${

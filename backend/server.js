@@ -11,6 +11,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
 const messageRoutes = require('./routes/messages');
+const userRoutes = require('./routes/users');
 const socketService = require('./services/socketService');
 
 // const passport = require('./config/passport');
@@ -201,6 +202,9 @@ app.use('/api/events', require('./routes/events-stats'));
 
 // Routes de messagerie
 app.use('/api/messages', messageRoutes);
+
+// Routes des utilisateurs
+app.use('/api/users', userRoutes);
 
 // Initialiser Socket.io après la configuration CORS
 socketService.initialize(io);

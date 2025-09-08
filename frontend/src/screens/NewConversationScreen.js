@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/globalStyles';
 import { useAuth } from '../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuthHeaders } from '../config/api';
 
 const NewConversationScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -51,10 +52,7 @@ const NewConversationScreen = ({ navigation }) => {
       const accessToken = await AsyncStorage.getItem('accessToken');
       
       const response = await fetch(`${API_BASE_URL}/api/messages/users`, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        }
+        headers: getAuthHeaders(accessToken)
       });
 
       if (response.ok) {
@@ -77,10 +75,7 @@ const NewConversationScreen = ({ navigation }) => {
       
       const response = await fetch(`${API_BASE_URL}/api/messages/conversations`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(accessToken),
         body: JSON.stringify({
           type: 'private',
           participants: [selectedUser._id || selectedUser.id]

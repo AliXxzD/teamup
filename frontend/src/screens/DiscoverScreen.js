@@ -18,9 +18,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import GlobalMenu from '../components/GlobalMenu';
 import EventMap from '../components/EventMap';
+import { getOrganizerName, getOrganizerInitial } from '../utils/eventUtils';
 import { navigateToEventDetails } from '../utils/navigationUtils';
 import eventsService from '../services/eventsService';
 import locationService from '../services/locationService';
+import { useAuth } from '../contexts/AuthContext';
 
 const DiscoverScreenTailwind = ({ navigation }) => {
   const [events, setEvents] = useState([]);
@@ -101,6 +103,13 @@ const DiscoverScreenTailwind = ({ navigation }) => {
 
       if (result.success) {
         console.log(`✅ ${result.events.length} événements chargés`);
+        // Debug: Vérifier la structure des données de l'organisateur
+        if (result.events.length > 0) {
+          console.log('🔍 Debug - Premier événement:', result.events[0]);
+          console.log('🔍 Debug - Organizer:', result.events[0].organizer);
+          console.log('🔍 Debug - Organizer name:', getOrganizerName(result.events[0]));
+          console.log('🔍 Debug - Organizer initial:', getOrganizerInitial(result.events[0]));
+        }
         setEvents(result.events);
       } else {
         console.error('❌ Erreur:', result.error);
@@ -286,35 +295,68 @@ const DiscoverScreenTailwind = ({ navigation }) => {
           <View className="flex-row items-center flex-1">
             <View className="w-8 h-8 bg-lime rounded-full items-center justify-center mr-3">
               <Text className="text-dark-900 text-sm font-bold">
-                {event.organizer?.name ? event.organizer.name.charAt(0).toUpperCase() : '?'}
+                {getOrganizerInitial(event)}
               </Text>
             </View>
             <Text className="text-dark-300 text-sm flex-1">
-              Par {event.organizer?.name || 'Organisateur inconnu'}
+              Par {getOrganizerName(event)}
             </Text>
           </View>
 
-          <TouchableOpacity
-            className={`px-6 py-3 rounded-lg flex-row items-center ${
-              event.currentParticipants >= event.maxParticipants 
-                ? 'bg-dark-600' 
-                : 'bg-lime'
-            }`}
-            onPress={() => joinEvent(event._id)}
-            disabled={event.currentParticipants >= event.maxParticipants}
-            activeOpacity={0.8}
-          >
-            <Ionicons 
-              name={event.currentParticipants >= event.maxParticipants ? "lock-closed" : "add"} 
-              size={18} 
-              color={event.currentParticipants >= event.maxParticipants ? "#ffffff" : "#0f172a"}
-            />
-            <Text className={`text-base font-semibold ml-2 ${
-              event.currentParticipants >= event.maxParticipants ? 'text-white' : 'text-dark-900'
-            }`}>
-              {event.currentParticipants >= event.maxParticipants ? 'Complet' : 'Rejoindre'}
-            </Text>
-          </TouchableOpacity>
+          {(() => {
+            // Vérifier si l'utilisateur est déjà participant
+            const { user } = useAuth();
+            const userId = user?._id || user?.id;
+            const isParticipant = event.participants?.some(
+              participant => {
+                const participantId = participant.user?._id || participant.user?.id || participant.user;
+                return participantId?.toString() === userId?.toString();
+              }
+            );
+            
+            const isFull = event.currentParticipants >= event.maxParticipants;
+            const isDisabled = isFull || isParticipant;
+            
+            let buttonClass, iconName, iconColor, textColor, buttonText;
+            
+            if (isParticipant) {
+              buttonClass = 'bg-gray-500';
+              iconName = 'checkmark';
+              iconColor = '#ffffff';
+              textColor = 'text-white';
+              buttonText = 'Inscrit';
+            } else if (isFull) {
+              buttonClass = 'bg-dark-600';
+              iconName = 'lock-closed';
+              iconColor = '#ffffff';
+              textColor = 'text-white';
+              buttonText = 'Complet';
+            } else {
+              buttonClass = 'bg-lime';
+              iconName = 'add';
+              iconColor = '#0f172a';
+              textColor = 'text-dark-900';
+              buttonText = 'Rejoindre';
+            }
+            
+            return (
+              <TouchableOpacity
+                className={`px-6 py-3 rounded-lg flex-row items-center ${buttonClass}`}
+                onPress={isDisabled ? null : () => joinEvent(event._id)}
+                disabled={isDisabled}
+                activeOpacity={0.8}
+              >
+                <Ionicons 
+                  name={iconName} 
+                  size={18} 
+                  color={iconColor}
+                />
+                <Text className={`text-base font-semibold ml-2 ${textColor}`}>
+                  {buttonText}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()}
         </View>
       </View>
     </TouchableOpacity>

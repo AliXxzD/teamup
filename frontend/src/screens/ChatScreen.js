@@ -28,17 +28,9 @@ const ChatScreenTailwind = ({ route, navigation }) => {
   if (!conversation) {
     console.log('❌ ChatScreen: conversation undefined dans route.params');
     console.log('🔍 route.params:', route.params);
-    return (
-      <SafeAreaView className="flex-1 bg-dark-900 items-center justify-center">
-        <Text className="text-white text-lg">Erreur: Conversation non trouvée</Text>
-        <TouchableOpacity 
-          className="mt-4 px-6 py-3 bg-cyan-500 rounded-lg"
-          onPress={() => navigation.goBack()}
-        >
-          <Text className="text-white font-semibold">Retour</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    );
+    // Rediriger automatiquement vers MessagesScreen au lieu d'afficher une erreur
+    navigation.navigate('Messages');
+    return null;
   }
 
   // Conversation prête pour l'envoi direct
@@ -124,8 +116,14 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       return;
     }
     
-    // Rejoindre la conversation
-    socketService.joinConversation(conversationId);
+    // Attendre que le socket soit authentifié avant de rejoindre
+    socketService.joinConversationWhenReady(conversationId)
+      .then(() => {
+        console.log('✅ Conversation rejointe avec succès');
+      })
+      .catch((error) => {
+        console.warn('⚠️ Impossible de rejoindre la conversation:', error.message);
+      });
     
     // Écouter les nouveaux messages
     socketService.onMessage(conversationId, (message) => {
@@ -205,7 +203,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       
       if (!conversation) {
         console.error('❌ Pas de données de conversation');
-        Alert.alert('Erreur', 'Conversation non trouvée');
+        navigation.navigate('Messages');
         return;
       }
       
@@ -226,7 +224,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       
       if (!conversationId) {
         console.error('❌ ID de conversation manquant');
-        Alert.alert('Erreur', 'ID de conversation invalide');
+        navigation.navigate('Messages');
         return;
       }
       
@@ -318,7 +316,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
     const messageContent = newMessage.trim();
     
     if (!conversation) {
-      Alert.alert('Erreur', 'Conversation non trouvée');
+      navigation.navigate('Messages');
       return;
     }
     
@@ -328,7 +326,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
     console.log('📤 Envoi direct autorisé');
     
     if (!conversationId) {
-      Alert.alert('Erreur', 'ID de conversation manquant');
+      navigation.navigate('Messages');
       return;
     }
     

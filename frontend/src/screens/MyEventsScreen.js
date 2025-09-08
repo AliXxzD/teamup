@@ -35,31 +35,49 @@ const MyEventsScreenTailwind = ({ navigation }) => {
 
   const loadEvents = async () => {
     try {
+      console.log('🔄 MyEventsScreen.loadEvents - Début');
       setLoading(true);
       const accessToken = await AsyncStorage.getItem('accessToken');
       
       if (!accessToken) {
+        console.log('❌ Pas de token d\'accès');
         Alert.alert('Erreur', 'Session expirée');
         navigation.navigate('Login');
         return;
       }
 
+      console.log('✅ Token d\'accès trouvé');
       const headers = getAuthHeaders(accessToken);
+      console.log('📡 Headers:', headers);
 
       // Charger les événements organisés
-      const organizedResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EVENTS.MY_ORGANIZED}`, { headers });
+      const organizedUrl = `${API_BASE_URL}${API_ENDPOINTS.EVENTS.MY_ORGANIZED}`;
+      console.log('📅 URL événements organisés:', organizedUrl);
+      const organizedResponse = await fetch(organizedUrl, { headers });
+      console.log('📊 Statut organisés:', organizedResponse.status);
       
       // Charger les événements rejoints
-      const joinedResponse = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EVENTS.MY_JOINED}`, { headers });
+      const joinedUrl = `${API_BASE_URL}${API_ENDPOINTS.EVENTS.MY_JOINED}`;
+      console.log('👥 URL événements rejoints:', joinedUrl);
+      const joinedResponse = await fetch(joinedUrl, { headers });
+      console.log('📊 Statut rejoints:', joinedResponse.status);
 
       if (organizedResponse.ok) {
         const organizedData = await organizedResponse.json();
+        console.log('📅 Données organisés:', organizedData);
         setOrganizedEvents(organizedData.data || []);
+        console.log('✅ Événements organisés chargés:', organizedData.data?.length || 0);
+      } else {
+        console.log('❌ Erreur organisés:', organizedResponse.status, organizedResponse.statusText);
       }
 
       if (joinedResponse.ok) {
         const joinedData = await joinedResponse.json();
+        console.log('👥 Données rejoints:', joinedData);
         setJoinedEvents(joinedData.data || []);
+        console.log('✅ Événements rejoints chargés:', joinedData.data?.length || 0);
+      } else {
+        console.log('❌ Erreur rejoints:', joinedResponse.status, joinedResponse.statusText);
       }
 
     } catch (error) {
@@ -68,6 +86,7 @@ const MyEventsScreenTailwind = ({ navigation }) => {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      console.log('🏁 MyEventsScreen.loadEvents - Fin');
     }
   };
 
@@ -286,13 +305,7 @@ const MyEventsScreenTailwind = ({ navigation }) => {
               <EventCard 
                 key={event._id} 
                 event={event} 
-                navigation={navigation}
                 showManageButton={activeTab === 'organized'}
-                onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
-                onManage={() => {
-                  // Handle event management
-                  Alert.alert('Gérer', `Gérer l'événement: ${event.title}`);
-                }}
               />
             ))}
             

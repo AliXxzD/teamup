@@ -9,8 +9,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import Avatar from './Avatar';
+import buttonService from '../services/buttonService';
+import eventService from '../services/eventService';
+import { getOrganizerName, getOrganizerInitial } from '../utils/eventUtils';
 
-const EventCard = ({ event, onPress, showManageButton = false, onManage, navigation }) => {
+const EventCard = ({ event, onPress, showManageButton = false, onManage, navigation, currentUserId }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return '#22c55e';
@@ -61,6 +65,65 @@ const EventCard = ({ event, onPress, showManageButton = false, onManage, navigat
       running: 'https://images.unsplash.com/photo-1544717297-fa95b6ee9643?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
     };
     return images[sport?.toLowerCase()] || images.football;
+  };
+
+  const handleJoinEvent = async () => {
+    if (!event) {
+      Alert.alert('Erreur', 'Données de l\'événement non disponibles');
+      return;
+    }
+
+    const eventId = event._id || event.id;
+    if (!eventId) {
+      Alert.alert('Erreur', 'ID de l\'événement non trouvé');
+      return;
+    }
+
+    // Vérifier si l'utilisateur peut rejoindre
+    const joinStatus = eventService.canUserJoinEvent(event, currentUserId);
+    
+    if (!joinStatus.canJoin) {
+      Alert.alert('Impossible de rejoindre', joinStatus.reason);
+      return;
+    }
+
+    // Demander confirmation
+    Alert.alert(
+      'Rejoindre l\'événement',
+      `Voulez-vous vraiment rejoindre "${event.title}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Rejoindre', 
+          onPress: async () => {
+            try {
+              console.log('🔄 EventCard - Début de l\'appel API joinEvent via ButtonService');
+              const result = await buttonService.joinEvent(
+                eventId,
+                (successResult) => {
+                  console.log('✅ EventCard - Callback succès:', successResult);
+                  Alert.alert('Succès', successResult.message);
+                  // Appeler onPress pour recharger les données
+                  if (onPress) onPress();
+                },
+                (errorResult) => {
+                  console.log('❌ EventCard - Callback erreur:', errorResult);
+                  if (errorResult.isLoggedOut) {
+                    Alert.alert('Connexion requise', 'Vous devez être connecté pour rejoindre un événement');
+                  } else {
+                    Alert.alert('Erreur', errorResult.error);
+                  }
+                }
+              );
+              console.log('✅ EventCard - Fin de l\'appel API joinEvent:', result);
+            } catch (error) {
+              console.error('❌ EventCard - Erreur handleJoinEvent:', error);
+              Alert.alert('Erreur', 'Une erreur est survenue: ' + error.message);
+            }
+          }
+        }
+      ]
+    );
   };
 
   return (
@@ -225,17 +288,18 @@ const EventCard = ({ event, onPress, showManageButton = false, onManage, navigat
               }}
               activeOpacity={0.8}
             >
-              <Image
-                source={{ 
-                  uri: event.organizer?.avatar || event.organizer?.profile?.avatar || 
-                  'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'
-                }}
-                className="w-10 h-10 rounded-full mr-3 border border-slate-600"
+              <Avatar
+                name={getOrganizerName(event)}
+                size={40}
+                showBorder={true}
+                borderColor="#475569"
+                borderWidth={1}
+                style={{ marginRight: 12 }}
               />
               <View className="flex-1">
                 <View className="flex-row items-center">
                   <Text className="text-white text-sm font-medium" numberOfLines={1}>
-                    {event.organizer?.name || event.organizerName || 'Alex Martin'}
+                    {getOrganizerName(event)}
                   </Text>
                   <Ionicons name="chevron-forward" size={14} color="#64748b" style={{ marginLeft: 4 }} />
                 </View>
@@ -265,8 +329,8 @@ const EventCard = ({ event, onPress, showManageButton = false, onManage, navigat
                         conversationId: `${organizerId}_${eventId}`,
                         otherUser: {
                           id: organizerId,
-                          name: event.organizer.name || 'Organisateur',
-                          avatar: event.organizer.profile?.avatar || event.organizer.avatar || null
+                          name: getOrganizerName(event),
+                          avatar: event.organizer?.profile?.avatar || event.organizer?.avatar || null
                         }
                       });
                     } else {
@@ -297,8 +361,7 @@ const EventCard = ({ event, onPress, showManageButton = false, onManage, navigat
                   className="bg-cyan-500 rounded-lg px-3 py-2"
                   onPress={(e) => {
                     e.stopPropagation();
-                    // Handle join event
-                    if (onPress) onPress();
+                    handleJoinEvent();
                   }}
                   activeOpacity={0.8}
                 >

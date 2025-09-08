@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import GlobalMenu from '../components/GlobalMenu';
 import { RankingCard, LevelBadge } from '../components/LevelingSystem';
 import { calculateLevel, getLevelTier } from '../utils/levelingSystem';
+import Avatar from '../components/Avatar';
 
 const RankingScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -201,12 +202,12 @@ const RankingScreen = ({ navigation }) => {
             <View className="flex-row items-end justify-center mb-6" style={{ gap: 12 }}>
               {/* 2nd Place */}
               <View className="items-center flex-1">
-                <View className="w-16 h-16 rounded-full overflow-hidden mb-2">
-                  <Image 
-                    source={{ uri: rankingData[1]?.avatar }} 
-                    className="w-full h-full"
-                  />
-                </View>
+                <Avatar
+                  name={rankingData[1]?.name}
+                  imageUri={rankingData[1]?.avatar}
+                  size={64}
+                  style={{ marginBottom: 8 }}
+                />
                 <View className="w-12 h-16 bg-slate-600 rounded-t-xl items-center justify-center">
                   <Ionicons name="medal" size={20} color="#c0c0c0" />
                   <Text className="text-white text-xs font-bold">2</Text>
@@ -221,12 +222,15 @@ const RankingScreen = ({ navigation }) => {
 
               {/* 1st Place */}
               <View className="items-center flex-1">
-                <View className="w-20 h-20 rounded-full overflow-hidden mb-2 border-2 border-yellow-400">
-                  <Image 
-                    source={{ uri: rankingData[0]?.avatar }} 
-                    className="w-full h-full"
-                  />
-                </View>
+                <Avatar
+                  name={rankingData[0]?.name}
+                  imageUri={rankingData[0]?.avatar}
+                  size={80}
+                  showBorder={true}
+                  borderColor="#fbbf24"
+                  borderWidth={2}
+                  style={{ marginBottom: 8 }}
+                />
                 <View className="w-16 h-20 bg-yellow-500 rounded-t-xl items-center justify-center">
                   <Ionicons name="trophy" size={24} color="#ffffff" />
                   <Text className="text-white text-sm font-bold">1</Text>
@@ -241,12 +245,12 @@ const RankingScreen = ({ navigation }) => {
 
               {/* 3rd Place */}
               <View className="items-center flex-1">
-                <View className="w-16 h-16 rounded-full overflow-hidden mb-2">
-                  <Image 
-                    source={{ uri: rankingData[2]?.avatar }} 
-                    className="w-full h-full"
-                  />
-                </View>
+                <Avatar
+                  name={rankingData[2]?.name}
+                  imageUri={rankingData[2]?.avatar}
+                  size={64}
+                  style={{ marginBottom: 8 }}
+                />
                 <View className="w-12 h-12 bg-orange-600 rounded-t-xl items-center justify-center">
                   <Ionicons name="medal" size={18} color="#cd7f32" />
                   <Text className="text-white text-xs font-bold">3</Text>

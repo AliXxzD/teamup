@@ -59,19 +59,43 @@ export function getEventDescription(event) {
  * Extrait le nom de l'organisateur de manière sécurisée
  */
 export function getOrganizerName(event) {
-  if (!event || !event.organizer) {
+  if (!event) {
     return 'Organisateur';
+  }
+  
+  // Essayer différentes sources pour le nom
+  if (event.organizer?.name) {
+    return event.organizer.name;
+  }
+  
+  if (event.organizerName) {
+    return event.organizerName;
+  }
+  
+  if (event.organizer?.email) {
+    // Extraire le nom de l'email si pas de nom
+    const emailName = event.organizer.email.split('@')[0];
+    return emailName.charAt(0).toUpperCase() + emailName.slice(1);
   }
   
   if (typeof event.organizer === 'string') {
     return event.organizer;
   }
   
-  if (typeof event.organizer === 'object' && event.organizer !== null) {
-    return String(event.organizer.name || 'Organisateur');
+  return 'Organisateur';
+}
+
+/**
+ * Extrait l'initiale de l'organisateur d'un événement de manière sécurisée
+ */
+export function getOrganizerInitial(event) {
+  const name = getOrganizerName(event);
+  
+  if (name === 'Organisateur') {
+    return 'O';
   }
   
-  return 'Organisateur';
+  return name.charAt(0).toUpperCase();
 }
 
 /**

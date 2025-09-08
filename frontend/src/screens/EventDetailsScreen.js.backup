@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker } from 'react-native-maps';
 import { useAuth } from '../contexts/AuthContext';
-import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import { API_BASE_URL, getAuthHeaders } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getId, getOrganizerId, getEventId, getUserId, safeNavigate } from '../utils/idUtils';
 import organizerMessageService from '../services/organizerMessageService';
@@ -33,6 +33,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mapCoordinates, setMapCoordinates] = useState(null);
+  const [isProcessingAction, setIsProcessingAction] = useState(false); // Protection contre les clics multiples
   const { eventId } = route.params || {};
   
   const geocodeAddress = async (address) => {
@@ -326,35 +327,171 @@ const EventDetailsScreen = ({ navigation, route }) => {
     Alert.alert('Partager', 'Fonctionnalité de partage en cours de développement');
   };
 
-  const joinEvent = async (eventId) => {
-    try {
-      console.log('🔄 Tentative de rejoindre l\'événement:', eventId);
-      
-      const token = await AsyncStorage.getItem('accessToken');
-      
-      if (!token) {
-        Alert.alert('Connexion requise', 'Vous devez être connecté pour rejoindre un événement');
-        return;
-      }
-
-      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.EVENTS.JOIN(eventId)}`, {
-        method: 'POST',
-        headers: getAuthHeaders(token)
-      });
-      
-      console.log('📊 Statut de participation:', response.status);
-      const data = await response.json();
-
-      if (data.success) {
-        Alert.alert('Succès !', 'Vous avez rejoint l\'événement avec succès');
-        fetchEventDetails(); // Recharger les données
-      } else {
-        Alert.alert('Erreur', data.message || 'Impossible de rejoindre l\'événement');
-      }
-    } catch (error) {
-      console.error('❌ Erreur lors de l\'inscription:', error);
-      Alert.alert('Erreur', 'Impossible de rejoindre l\'événement');
+  const handleJoinEvent = async () => {
+    console.log('🔍 EventDetailsScreen.handleJoinEvent - Début');
+    console.log('   - eventData:', eventData);
+    console.log('   - user:', user);
+    console.log('   - user.id:', user?.id);
+    console.log('   - user._id:', user?._id);
+    console.log('   - eventId:', eventId);
+    console.log('   - eventData.participants:', eventData?.participants);
+    console.log('   - eventData.organizer:', eventData?.organizer);
+    console.log('   - isProcessingAction:', isProcessingAction);
+    
+    // Protection contre les clics multiples
+    if (isProcessingAction) {
+      console.log('⚠️ Action déjà en cours, clic ignoré');
+      return;
     }
+    
+    // Obtenir l'ID de l'utilisateur de manière cohérente
+    const userId = user?._id || user?.id;
+    console.log('   - userId final:', userId);
+    
+    // Déterminer l'action à effectuer
+    const buttonState = eventService.getJoinButtonState(eventData, userId);
+    console.log('   - buttonState:', buttonState);
+    console.log('   - action:', buttonState.action);
+    
+    if (!eventData) {
+      console.log('❌ Pas de eventData');
+      Alert.alert('Erreur', 'Données de l\'événement non disponibles');
+      return;
+    }
+
+    const eventId = getEventId(eventData);
+    console.log('   - eventId:', eventId);
+    
+    if (!eventId) {
+      console.log('❌ Pas d\'eventId');
+      Alert.alert('Erreur', 'ID de l\'événement non trouvé');
+      return;
+    }
+
+    // Vérifier si l'utilisateur peut rejoindre
+    const joinStatus = eventService.canUserJoinEvent(eventData, user?.id);
+    console.log('   - joinStatus:', joinStatus);
+    
+    if (!joinStatus.canJoin) {
+      console.log('❌ Ne peut pas rejoindre:', joinStatus.reason);
+      Alert.alert('Impossible de rejoindre', joinStatus.reason);
+      return;
+    }
+
+    // Déterminer le texte de confirmation selon l'action
+    const isLeaveAction = buttonState.action === 'leave';
+    const confirmTitle = isLeaveAction ? 'Quitter l\'événement' : 'Rejoindre l\'événement';
+    const confirmMessage = isLeaveAction 
+      ? `Voulez-vous vraiment quitter "${getEventTitle(eventData)}" ?`
+      : `Voulez-vous vraiment rejoindre "${getEventTitle(eventData)}" ?`;
+    const confirmButtonText = isLeaveAction ? 'Quitter' : 'Rejoindre';
+    
+    console.log('   - isLeaveAction:', isLeaveAction);
+    console.log('   - confirmTitle:', confirmTitle);
+    console.log('   - confirmMessage:', confirmMessage);
+    console.log('   - confirmButtonText:', confirmButtonText);
+    
+    // Demander confirmation
+    Alert.alert(
+      confirmTitle,
+      confirmMessage,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: confirmButtonText, 
+          onPress: async () => {
+            try {
+              console.log('🔄 DÉBUT DE L\'APPEL API via ButtonService');
+              console.log('   - eventId:', eventId);
+              console.log('   - action:', isLeaveAction ? 'LEAVE' : 'JOIN');
+              console.log('   - Timestamp:', new Date().toISOString());
+              
+              // Marquer l'action comme en cours
+              setIsProcessingAction(true);
+              console.log('   - isProcessingAction mis à true');
+              
+              // Appeler la bonne fonction selon l'action
+              const result = isLeaveAction 
+                ? await buttonService.leaveEvent(
+                    eventId,
+                    (successResult) => {
+                      console.log('✅ CALLBACK SUCCÈS LEAVE EXÉCUTÉ !');
+                      console.log('   - successResult:', successResult);
+                      console.log('   - Message:', successResult.message);
+                      console.log('   - Timestamp:', new Date().toISOString());
+                      
+                      Alert.alert('Succès', successResult.message);
+                      console.log('   - Alert affiché, rechargement des données...');
+                      console.log('   - Appel de fetchEventDetails()...');
+                      fetchEventDetails(); // Recharger les données
+                      setIsProcessingAction(false); // Réinitialiser l'état
+                      console.log('   - isProcessingAction remis à false (LEAVE)');
+                    },
+                    (errorResult) => {
+                      console.log('❌ CALLBACK ERREUR LEAVE EXÉCUTÉ !');
+                      console.log('   - errorResult:', errorResult);
+                      console.log('   - isLoggedOut:', errorResult.isLoggedOut);
+                      console.log('   - Timestamp:', new Date().toISOString());
+                      
+                      if (errorResult.isLoggedOut) {
+                        console.log('   - Redirection vers Login...');
+                        Alert.alert('Connexion requise', 'Vous devez être connecté pour quitter un événement');
+                      } else {
+                        console.log('   - Affichage de l\'alerte d\'erreur...');
+                        Alert.alert('Erreur', errorResult.error);
+                      }
+                      setIsProcessingAction(false); // Réinitialiser l'état
+                      console.log('   - isProcessingAction remis à false (LEAVE ERROR)');
+                    }
+                  )
+                : await buttonService.joinEvent(
+                    eventId,
+                    (successResult) => {
+                      console.log('✅ CALLBACK SUCCÈS JOIN EXÉCUTÉ !');
+                      console.log('   - successResult:', successResult);
+                      console.log('   - Message:', successResult.message);
+                      console.log('   - Timestamp:', new Date().toISOString());
+                      
+                      Alert.alert('Succès', successResult.message);
+                      console.log('   - Alert affiché, rechargement des données...');
+                      console.log('   - Appel de fetchEventDetails()...');
+                      fetchEventDetails(); // Recharger les données
+                      setIsProcessingAction(false); // Réinitialiser l'état
+                      console.log('   - isProcessingAction remis à false (JOIN)');
+                    },
+                    (errorResult) => {
+                      console.log('❌ CALLBACK ERREUR JOIN EXÉCUTÉ !');
+                      console.log('   - errorResult:', errorResult);
+                      console.log('   - isLoggedOut:', errorResult.isLoggedOut);
+                      console.log('   - Timestamp:', new Date().toISOString());
+                      
+                      if (errorResult.isLoggedOut) {
+                        console.log('   - Redirection vers Login...');
+                        Alert.alert('Connexion requise', 'Vous devez être connecté pour rejoindre un événement');
+                      } else {
+                        console.log('   - Affichage de l\'alerte d\'erreur...');
+                        Alert.alert('Erreur', errorResult.error);
+                      }
+                      setIsProcessingAction(false); // Réinitialiser l'état
+                      console.log('   - isProcessingAction remis à false (JOIN ERROR)');
+                    }
+                  );
+              console.log('✅ FIN DE L\'APPEL API joinEvent:');
+              console.log('   - result:', result);
+              console.log('   - Timestamp:', new Date().toISOString());
+            } catch (error) {
+              console.error('❌ ERREUR CRITIQUE handleJoinEvent:', error);
+              console.log('   - Type d\'erreur:', error.constructor.name);
+              console.log('   - Message:', error.message);
+              console.log('   - Stack:', error.stack);
+              Alert.alert('Erreur', 'Une erreur est survenue: ' + error.message);
+              setIsProcessingAction(false); // Réinitialiser l'état en cas d'erreur
+              console.log('   - isProcessingAction remis à false (CATCH ERROR)');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleViewProfile = () => {
@@ -405,7 +542,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
         return;
       }
       
-    const organizerId = getOrganizerId(eventData);
+      const organizerId = getOrganizerId(eventData);
       const organizerName = eventData.organizer.name || 'l\'organisateur';
       
       console.log('🔍 organizerId:', organizerId);
@@ -415,8 +552,8 @@ const EventDetailsScreen = ({ navigation, route }) => {
       console.log('🔍 Debug EventDetailsScreen - eventData:', eventData);
       console.log('🔍 Debug EventDetailsScreen - organizer:', eventData.organizer);
       console.log('🔍 Debug EventDetailsScreen - organizer name:', getOrganizerName(eventData));
-    
-    if (!organizerId) {
+      
+      if (!organizerId) {
         console.log('❌ organizerId est undefined');
         console.log('🔍 eventData.organizer structure:', {
           _id: eventData.organizer._id,
@@ -424,10 +561,10 @@ const EventDetailsScreen = ({ navigation, route }) => {
           name: eventData.organizer.name,
           keys: Object.keys(eventData.organizer)
         });
-      debugEventData();
-      Alert.alert('Erreur', 'Impossible d\'identifier l\'organisateur');
-      return;
-    }
+        debugEventData();
+        Alert.alert('Erreur', 'Impossible d\'identifier l\'organisateur');
+        return;
+      }
 
       // Utiliser le nouveau système de messagerie avec l'organisateur
       console.log('✅ Appel handleMessageOrganizer');
@@ -853,59 +990,54 @@ const EventDetailsScreen = ({ navigation, route }) => {
             </View>
               </View>
 
-           {/* Join Button */}
-           <View className="mb-8">
-             {(() => {
-               const userId = user?._id || user?.id;
-               const isParticipant = eventData?.participants?.some(
-                 participant => {
-                   const participantId = participant.user?._id || participant.user?.id || participant.user;
-                   return participantId?.toString() === userId?.toString();
-                 }
-               );
-               
-               console.log('🔍 EventDetailsScreen - isParticipant:', isParticipant);
-               
-               return (
-                 <TouchableOpacity 
-                   onPress={isParticipant ? null : () => joinEvent(eventId)}
-                   disabled={isParticipant}
-                   style={{
-                     shadowColor: isParticipant ? '#64748b' : '#22c55e',
-                     shadowOffset: { width: 0, height: 4 },
-                     shadowOpacity: 0.3,
-                     shadowRadius: 8,
-                     elevation: 8,
-                     opacity: isParticipant ? 0.6 : 1,
-                   }}
-                 >
-                   <LinearGradient
-                     colors={isParticipant ? ['#64748b', '#64748bCC'] : ['#22c55e', '#22c55eCC']}
-                     style={{
-                       borderRadius: 12,
-                       paddingVertical: 20,
-                       paddingHorizontal: 24,
-                       flexDirection: 'row',
-                       alignItems: 'center',
-                       justifyContent: 'center',
-                     }}
-                     start={{ x: 0, y: 0 }}
-                     end={{ x: 1, y: 1 }}
-                   >
-                     <Ionicons 
-                       name={isParticipant ? "checkmark-circle" : "add-circle-outline"} 
-                       size={22} 
-                       color="#ffffff" 
-                       style={{ marginRight: 12 }} 
-                     />
-                     <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 'bold' }}>
-                       {isParticipant ? 'Inscrit' : 'Rejoindre'}
-                     </Text>
-                   </LinearGradient>
-                 </TouchableOpacity>
-               );
-             })()}
-           </View>
+          {/* Join Button */}
+          <View className="mb-8">
+            {(() => {
+              const userId = user?._id || user?.id;
+              const buttonState = eventService.getJoinButtonState(eventData, userId);
+              console.log('🔍 EventDetailsScreen - buttonState:', buttonState);
+              console.log('🔍 EventDetailsScreen - userId utilisé:', userId);
+              
+              return (
+                <TouchableOpacity 
+                  onPress={buttonState.disabled || isProcessingAction ? null : handleJoinEvent}
+                  disabled={buttonState.disabled || isProcessingAction}
+                  style={{
+                    shadowColor: buttonState.color,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 8,
+                    opacity: buttonState.disabled || isProcessingAction ? 0.6 : 1,
+                  }}
+                >
+                  <LinearGradient
+                    colors={buttonState.disabled || isProcessingAction ? ['#64748b', '#475569'] : [buttonState.color, buttonState.color + 'CC']}
+                    style={{
+                      borderRadius: 12,
+                      paddingVertical: 20,
+                      paddingHorizontal: 24,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <Ionicons 
+                      name={buttonState.action === 'leave' ? 'remove-circle-outline' : 'add-circle-outline'} 
+                      size={22} 
+                      color="#ffffff" 
+                      style={{ marginRight: 12 }} 
+                    />
+                    <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 'bold' }}>
+                      {isProcessingAction ? 'Traitement...' : buttonState.text}
+                    </Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })()}
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
