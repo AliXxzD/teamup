@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../styles/globalStyles';
 import GlobalMenu from '../components/GlobalMenu';
+import { API_BASE_URL } from '../config/api';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import GradientButton from '../components/GradientButton';
@@ -26,8 +27,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   
   const { alertConfig, showSuccessAlert, showErrorAlert } = useCustomAlert();
 
-  // Configuration de l'API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+  // Import API configuration
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

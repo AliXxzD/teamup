@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import GlobalMenu from '../components/GlobalMenu';
+import { API_BASE_URL } from '../config/api';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import GradientButton from '../components/GradientButton';
@@ -73,8 +74,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
     }
   };
 
-  // Configuration de l'API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+  // Import API configuration
 
   const validatePassword = (password) => {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;

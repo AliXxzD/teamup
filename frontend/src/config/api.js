@@ -12,9 +12,8 @@ export const API_BASE_URL = (() => {
     return process.env.EXPO_PUBLIC_API_URL;
   }
   
-  // URL par défaut si aucune variable d'environnement n'est définie
-  // URL locale pour le développement
-  return 'http://192.168.1.205:5000';
+  // URL par défaut pour la production - Render backend
+  return 'https://teamup-oa5q.onrender.com';
 })();
 
 // Configuration des timeouts

@@ -1,9 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import socketService from '../services/socketService';
-
-// Configuration de l'API
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+import { API_BASE_URL } from '../config/api';
 
 const AuthContext = createContext({});
 

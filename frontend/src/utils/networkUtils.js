@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Configuration de l'API
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+import { API_BASE_URL } from '../config/api';
 
 /**
  * Vérifie la connectivité réseau et l'état du serveur

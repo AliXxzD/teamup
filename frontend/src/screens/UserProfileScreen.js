@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalMenu from '../components/GlobalMenu';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/api';
 import UserStatsCard from '../components/UserStatsCard';
 import { AchievementsList } from '../components/AchievementCard';
 import pointsService from '../services/pointsService';
@@ -180,7 +181,7 @@ const UserProfileScreen = ({ navigation, route }) => {
         try {
           const accessToken = await AsyncStorage.getItem('accessToken');
           if (accessToken) {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000'}/api/auth/profile`, {
+            const response = await fetch(`${API_BASE_URL}/api/auth/profile`, {
               headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
@@ -284,7 +285,7 @@ const UserProfileScreen = ({ navigation, route }) => {
         try {
           const accessToken = await AsyncStorage.getItem('accessToken');
           if (accessToken) {
-            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000'}/api/users/${userId}`, {
+            const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
               headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',

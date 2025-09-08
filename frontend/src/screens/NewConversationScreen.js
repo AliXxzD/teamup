@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../styles/globalStyles';
 import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAuthHeaders } from '../config/api';
 
@@ -23,7 +24,6 @@ const NewConversationScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
 
   useEffect(() => {
     navigation.setOptions({
