@@ -28,6 +28,9 @@ import VerifyCodeScreen from '../screens/VerifyCodeScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import StatsScreen from '../screens/StatsScreen';
 import EventParticipantsScreen from '../screens/EventParticipantsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
+import RankingScreen from '../screens/RankingScreen';
 
 // Custom Components
 import CreateTabButton from '../components/CreateTabButton';
@@ -236,6 +239,38 @@ const RootStackNavigator = () => {
           <Stack.Screen 
             name="EventParticipants" 
             component={EventParticipantsScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="Settings" 
+            component={SettingsScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="Notifications" 
+            component={NotificationsScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="Ranking" 
+            component={RankingScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="UserProfile" 
+            component={UserProfileScreen}
             options={{
               presentation: 'card',
               gestureEnabled: true,

@@ -48,6 +48,7 @@ export const API_ENDPOINTS = {
     LEAVE: (id) => `/api/events/${id}/leave`,
     MY_ORGANIZED: '/api/events/my/organized',
     MY_JOINED: '/api/events/my/joined',
+    NEARBY: '/api/events/nearby',
   },
   
   // Messages
@@ -57,6 +58,7 @@ export const API_ENDPOINTS = {
     CONVERSATION_MESSAGES: (id) => `/api/messages/conversations/${id}/messages`,
     SEND_MESSAGE: (id) => `/api/messages/conversations/${id}/messages`,
     USERS: '/api/messages/users',
+    WITH_ORGANIZER: '/api/messages/conversations/with-organizer',
   },
   
   // Health

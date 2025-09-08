@@ -435,4 +435,72 @@ router.get('/users', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * @route   POST /api/messages/conversations/with-organizer
+ * @desc    Créer ou trouver une conversation avec l'organisateur d'un événement
+ * @access  Private
+ */
+router.post('/conversations/with-organizer', authMiddleware, async (req, res) => {
+  try {
+    const { eventId } = req.body;
+    const userId = req.user.id;
+    
+    if (!eventId) {
+      return res.status(400).json({
+        error: 'ID d\'événement requis',
+        message: 'Veuillez fournir l\'ID de l\'événement'
+      });
+    }
+    
+    // Vérifier que l'événement existe
+    const Event = require('../models/Event');
+    const event = await Event.findById(eventId).populate('organizer', 'name email profile.avatar');
+    
+    if (!event) {
+      return res.status(404).json({
+        error: 'Événement non trouvé',
+        message: 'L\'événement demandé n\'existe pas'
+      });
+    }
+    
+    const organizerId = event.organizer._id.toString();
+    
+    // Vérifier que l'utilisateur n'est pas l'organisateur lui-même
+    if (organizerId === userId) {
+      return res.status(400).json({
+        error: 'Action non autorisée',
+        message: 'Vous ne pouvez pas vous envoyer un message à vous-même'
+      });
+    }
+    
+    // Chercher ou créer une conversation privée entre l'utilisateur et l'organisateur
+    let conversation = await Conversation.findOrCreatePrivate(userId, organizerId);
+    
+    // Populer les informations des participants
+    await conversation.populate('participants', 'name email profile.avatar');
+    
+    res.json({
+      success: true,
+      message: 'Conversation trouvée ou créée avec succès',
+      conversation: conversation.getPublicInfo(userId),
+      event: {
+        id: event._id,
+        title: event.title,
+        organizer: {
+          id: event.organizer._id,
+          name: event.organizer.name,
+          avatar: event.organizer.profile?.avatar
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la création/recherche de conversation:', error);
+    res.status(500).json({
+      error: 'Erreur interne du serveur',
+      message: 'Impossible de créer la conversation avec l\'organisateur'
+    });
+  }
+});
+
 module.exports = router; 

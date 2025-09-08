@@ -9,16 +9,23 @@ import {
   Animated,
   Dimensions,
   ImageBackground,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import GlobalMenu from '../components/GlobalMenu';
+import EventCard from '../components/EventCard';
+import LoginPromptModal from '../components/LoginPromptModal';
+import { getAllEvents } from '../data/eventsData';
+import { getEventAddress, getEventTitle, getEventPrice, getEventParticipants, getEventTime, getOrganizerName } from '../utils/eventUtils';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = ({ navigation }) => {
   const [fadeAnim] = useState(new Animated.Value(0));
   const [slideAnim] = useState(new Animated.Value(50));
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     Animated.parallel([
@@ -35,31 +42,27 @@ const HomeScreen = ({ navigation }) => {
     ]).start();
   }, []);
 
-  const EventCard = ({ title, date, isFree = false, image }) => (
-    <View className="mb-4 rounded-2xl overflow-hidden">
-      <View className="h-48 bg-slate-700 relative">
-        <ImageBackground
-          source={{ uri: image || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3' }}
-          className="flex-1 justify-between p-4"
-          imageStyle={{ borderRadius: 16 }}
-        >
-          <LinearGradient
-            colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-            className="absolute inset-0 rounded-2xl"
-          />
-          {isFree && (
-            <View className="bg-cyan-500 px-3 py-1 rounded-full self-start">
-              <Text className="text-white text-sm font-bold">GRATUIT</Text>
-            </View>
-          )}
-          <View>
-            <Text className="text-white text-2xl font-bold mb-2">{title}</Text>
-            <Text className="text-white text-base opacity-90">{date}</Text>
-          </View>
-        </ImageBackground>
-      </View>
-    </View>
-  );
+  // Get events from database - each with unique details
+  const sampleEvents = getAllEvents().slice(0, 3); // Show first 3 events
+
+  // Handle event click for non-authenticated users
+  const handleEventClick = (event) => {
+    setSelectedEvent(event);
+    setShowLoginModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowLoginModal(false);
+    setSelectedEvent(null);
+  };
+
+  const handleLogin = () => {
+    navigation.navigate('Login');
+  };
+
+  const handleRegister = () => {
+    navigation.navigate('Register');
+  };
 
   const StatItem = ({ number, label }) => (
     <View className="items-center">
@@ -328,103 +331,190 @@ const HomeScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Events Cards */}
-            <View style={{ gap: 16 }}>
-              {/* Session Football Card */}
-              <TouchableOpacity 
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 6,
-                }}
-              >
-                <View style={{ height: 200, position: 'relative' }}>
-                  <ImageBackground
-                    source={{ uri: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80' }}
-                    style={{ flex: 1, justifyContent: 'space-between', padding: 16 }}
-                    imageStyle={{ borderRadius: 16 }}
-                  >
-                    <LinearGradient
-                      colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-                      style={{ position: 'absolute', inset: 0, borderRadius: 16 }}
-                    />
-                    
-                    {/* GRATUIT Badge */}
-                    <View style={{
-                      backgroundColor: '#06b6d4',
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 20,
-                      alignSelf: 'flex-start',
-                      zIndex: 1
-                    }}>
-                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: 'bold' }}>GRATUIT</Text>
-                    </View>
-                    
-                    {/* Event Info */}
-                    <View style={{ zIndex: 1 }}>
-                      <Text style={{ color: '#ffffff', fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
-                        Session Football
-                      </Text>
-                      <Text style={{ color: '#ffffff', fontSize: 16, opacity: 0.9 }}>
-                        Jusqu'au 31 déc.
-                      </Text>
-                    </View>
-                  </ImageBackground>
+            {/* Call to Action Banner */}
+            <TouchableOpacity
+              onPress={() => setShowLoginModal(true)}
+              activeOpacity={0.8}
+              style={{
+                backgroundColor: '#1e293b',
+                borderRadius: 16,
+                padding: 20,
+                marginBottom: 24,
+                borderWidth: 1,
+                borderColor: '#334155',
+                shadowColor: '#3b82f6',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                elevation: 4
+              }}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <LinearGradient
+                  colors={['#3b82f6', '#2563eb']}
+                  style={{
+                    borderRadius: 20,
+                    width: 40,
+                    height: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 16
+                  }}
+                >
+                  <Ionicons name="star" size={20} color="#ffffff" />
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text className="text-white text-lg font-bold mb-1">
+                    Découvrez plus d'événements
+                  </Text>
+                  <Text className="text-slate-400 text-sm">
+                    Créez un compte pour accéder à tous les événements
+                  </Text>
                 </View>
-              </TouchableOpacity>
+                <View style={{
+                  backgroundColor: '#3b82f6',
+                  borderRadius: 12,
+                  width: 24,
+                  height: 24,
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Ionicons name="chevron-forward" size={14} color="#ffffff" />
+                </View>
+              </View>
+            </TouchableOpacity>
 
-              {/* Tournoi Basketball Card */}
-              <TouchableOpacity 
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 6,
-                }}
-              >
-                <View style={{ height: 200, position: 'relative' }}>
-                  <ImageBackground
-                    source={{ uri: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80' }}
-                    style={{ flex: 1, justifyContent: 'space-between', padding: 16 }}
-                    imageStyle={{ borderRadius: 16 }}
-                  >
-                    <LinearGradient
-                      colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-                      style={{ position: 'absolute', inset: 0, borderRadius: 16 }}
-                    />
-                    
-                    {/* BIENTÔT Badge */}
-                    <View style={{
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      borderWidth: 1,
-                      borderColor: 'rgba(255, 255, 255, 0.3)',
-                      paddingHorizontal: 12,
-                      paddingVertical: 4,
-                      borderRadius: 20,
-                      alignSelf: 'flex-start',
-                      zIndex: 1
-                    }}>
-                      <Text style={{ color: '#ffffff', fontSize: 12, fontWeight: 'bold' }}>BIENTÔT</Text>
+            {/* Enhanced Event Cards */}
+            <View style={{ gap: 16 }}>
+              {sampleEvents.map((event) => (
+                <TouchableOpacity
+                  key={event._id || event.id}
+                  onPress={() => handleEventClick(event)}
+                  activeOpacity={0.9}
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 6,
+                  }}
+                >
+                  <View className="rounded-2xl overflow-hidden">
+                    <View style={{ height: 160, position: 'relative' }}>
+                      <ImageBackground
+                        source={{ uri: event.image }}
+                        style={{ flex: 1, justifyContent: 'space-between', padding: 16 }}
+                        imageStyle={{ borderRadius: 16 }}
+                      >
+                        <LinearGradient
+                          colors={['rgba(0,0,0,0.2)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+                          style={{ position: 'absolute', inset: 0, borderRadius: 16 }}
+                        />
+                        
+                        {/* Top Section - Badge */}
+                        <View style={{ zIndex: 1 }}>
+                          {event.isFree ? (
+                            <View className="bg-teal-500 rounded-full px-3 py-1 self-start">
+                              <Text className="text-white text-xs font-bold">Gratuit</Text>
+                            </View>
+                          ) : (
+                            <View className="bg-orange-500 rounded-full px-3 py-1 self-start">
+                              <Text className="text-white text-xs font-bold">€{String(event.price?.amount || 10)}</Text>
+                            </View>
+                          )}
+                        </View>
+
+                        {/* Middle Section - Title */}
+                        <View style={{ zIndex: 1, flex: 1, justifyContent: 'center' }}>
+                          <Text className="text-white text-2xl font-bold mb-2">
+                            {getEventTitle(event)}
+                          </Text>
+                        </View>
+
+                        {/* Bottom Section - Info and Organizer */}
+                        <View style={{ zIndex: 1 }}>
+                          <View className="flex-row items-center justify-between mb-3">
+                            {/* Left side - Time and Participants */}
+                            <View>
+                              <View className="flex-row items-center mb-1">
+                                <Ionicons name="time-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                                <Text className="text-white text-sm font-medium">
+                                  Aujourd'hui {getEventTime(event)}
+                                </Text>
+                              </View>
+                              
+                              <View className="flex-row items-center">
+                                <Ionicons name="people-outline" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                                <Text className="text-white text-sm font-medium">
+                                  {event.participants || 0}/{event.maxParticipants || 0}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Right side - Join Button */}
+                            <TouchableOpacity 
+                              className="bg-teal-500 rounded-xl px-4 py-2 flex-row items-center"
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleEventClick(event);
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Text className="text-white text-sm font-bold mr-2">Rejoindre</Text>
+                              <Ionicons name="chevron-forward" size={16} color="#ffffff" />
+                            </TouchableOpacity>
+                          </View>
+                          
+                          {/* Location and Organizer */}
+                          <View className="flex-row items-center justify-between">
+                            <View className="flex-row items-center flex-1">
+                              <Ionicons name="location-outline" size={14} color="#ffffff" style={{ marginRight: 6 }} />
+                              <Text className="text-white text-sm opacity-90" numberOfLines={1}>
+                                {getEventAddress(event)}
+                              </Text>
+                            </View>
+                            
+                            {/* Clickable Organizer */}
+                            <TouchableOpacity
+                              className="flex-row items-center ml-2"
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                handleEventClick(event);
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Text className="text-white/70 text-xs mr-1">
+                                par {String(event.organizer?.name || 'Club FC Local')}
+                              </Text>
+                              <Ionicons name="person-outline" size={12} color="#ffffff" />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        {/* Login Required Overlay */}
+                        <View style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: 'rgba(59, 130, 246, 0.95)',
+                          padding: 12,
+                          borderBottomLeftRadius: 16,
+                          borderBottomRightRadius: 16,
+                          zIndex: 2
+                        }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="lock-closed" size={16} color="#ffffff" style={{ marginRight: 8 }} />
+                            <Text className="text-white text-sm font-semibold">
+                              Connexion requise pour rejoindre
+                            </Text>
+                          </View>
+                        </View>
+                      </ImageBackground>
                     </View>
-                    
-                    {/* Event Info */}
-                    <View style={{ zIndex: 1 }}>
-                      <Text style={{ color: '#ffffff', fontSize: 24, fontWeight: 'bold', marginBottom: 8 }}>
-                        Tournoi Basketball
-                      </Text>
-                      <Text style={{ color: '#ffffff', fontSize: 16, opacity: 0.9 }}>
-                        Démarre le 15 jan.
-                      </Text>
-                    </View>
-                  </ImageBackground>
-                </View>
-              </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
@@ -551,6 +641,15 @@ const HomeScreen = ({ navigation }) => {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+
+      {/* Login Prompt Modal */}
+      <LoginPromptModal
+        visible={showLoginModal}
+        onClose={handleCloseModal}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        event={selectedEvent}
+      />
     </SafeAreaView>
   );
 };

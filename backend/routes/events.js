@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult, query } = require('express-validator');
 const Event = require('../models/Event');
 const { authMiddleware } = require('../middleware/auth');
+const geocodingService = require('../services/geocodingService');
 
 const router = express.Router();
 
@@ -41,6 +42,21 @@ const createEventValidation = [
     .isLength({ min: 5, max: 200 })
     .withMessage('L\'adresse doit contenir entre 5 et 200 caractères'),
   
+  body('coordinates')
+    .optional()
+    .isObject()
+    .withMessage('Les coordonnées doivent être un objet'),
+  
+  body('coordinates.latitude')
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude invalide'),
+  
+  body('coordinates.longitude')
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude invalide'),
+  
   body('maxParticipants')
     .isInt({ min: 2, max: 1000 })
     .withMessage('Le nombre de participants doit être entre 2 et 1000'),
@@ -61,6 +77,21 @@ const createEventValidation = [
 
 // Validation pour la recherche d'événements
 const searchEventsValidation = [
+  query('sport').optional().isIn(['Football', 'Basketball', 'Tennis', 'Running', 'Yoga', 'Natation', 
+                                   'Volleyball', 'Badminton', 'Cyclisme', 'Fitness', 'Rugby', 'Handball']),
+  query('level').optional().isIn(['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux']),
+  query('isFree').optional().isBoolean(),
+  query('dateFrom').optional().isISO8601(),
+  query('dateTo').optional().isISO8601(),
+  query('page').optional().isInt({ min: 1 }),
+  query('limit').optional().isInt({ min: 1, max: 50 })
+];
+
+// Validation pour la recherche par proximité
+const proximitySearchValidation = [
+  query('latitude').isFloat({ min: -90, max: 90 }).withMessage('Latitude invalide'),
+  query('longitude').isFloat({ min: -180, max: 180 }).withMessage('Longitude invalide'),
+  query('radius').optional().isInt({ min: 100, max: 100000 }).withMessage('Rayon invalide (100m - 100km)'),
   query('sport').optional().isIn(['Football', 'Basketball', 'Tennis', 'Running', 'Yoga', 'Natation', 
                                    'Volleyball', 'Badminton', 'Cyclisme', 'Fitness', 'Rugby', 'Handball']),
   query('level').optional().isIn(['Débutant', 'Intermédiaire', 'Avancé', 'Tous niveaux']),
@@ -138,6 +169,86 @@ router.get('/', searchEventsValidation, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des événements'
+    });
+  }
+});
+
+// GET /api/events/nearby - Rechercher des événements par proximité
+router.get('/nearby', proximitySearchValidation, async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const {
+      latitude,
+      longitude,
+      radius = 10000, // 10km par défaut
+      sport,
+      level,
+      isFree,
+      dateFrom,
+      dateTo,
+      page = 1,
+      limit = 10
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Construction des filtres
+    const filters = {};
+    if (sport) filters.sport = sport;
+    if (level) filters.level = level;
+    if (isFree !== undefined) filters.isFree = isFree === 'true';
+    if (dateFrom) filters.dateFrom = dateFrom;
+    if (dateTo) filters.dateTo = dateTo;
+
+    // Recherche avec calcul de distance
+    const eventsWithDistance = await Event.findWithDistance(
+      parseFloat(longitude),
+      parseFloat(latitude),
+      parseInt(radius),
+      filters
+    );
+
+    // Pagination manuelle pour l'agrégation
+    const total = eventsWithDistance.length;
+    const events = eventsWithDistance.slice(skip, skip + parseInt(limit));
+
+    // Calculer les métadonnées de pagination
+    const totalPages = Math.ceil(total / parseInt(limit));
+    const hasNextPage = parseInt(page) < totalPages;
+    const hasPrevPage = parseInt(page) > 1;
+
+    res.json({
+      success: true,
+      data: events,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages,
+        totalEvents: total,
+        hasNextPage,
+        hasPrevPage,
+        eventsPerPage: parseInt(limit)
+      },
+      searchInfo: {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude),
+        radius: parseInt(radius),
+        radiusKm: parseInt(radius) / 1000,
+        filters: filters
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la recherche par proximité:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la recherche par proximité'
     });
   }
 });
@@ -237,11 +348,49 @@ router.post('/', authMiddleware, createEventValidation, async (req, res) => {
       date,
       time,
       location,
+      coordinates,
       maxParticipants,
       level,
       price,
       isFree
     } = req.body;
+
+    // Construire l'objet location
+    const eventLocation = {
+      address: location
+    };
+
+    // Ajouter les coordonnées si fournies manuellement
+    if (coordinates && coordinates.latitude && coordinates.longitude) {
+      eventLocation.coordinates = {
+        type: 'Point',
+        coordinates: [parseFloat(coordinates.longitude), parseFloat(coordinates.latitude)] // [lng, lat]
+      };
+      console.log('✅ Coordonnées fournies manuellement:', eventLocation.coordinates);
+    } else {
+      // Essayer le géocodage automatique de l'adresse
+      console.log('🗺️ Tentative de géocodage automatique pour:', location);
+      try {
+        const geocodeResult = await geocodingService.geocode(location);
+        if (geocodeResult) {
+          eventLocation.coordinates = {
+            type: 'Point',
+            coordinates: [geocodeResult.longitude, geocodeResult.latitude] // [lng, lat]
+          };
+          console.log('✅ Géocodage réussi:', eventLocation.coordinates);
+          
+          // Optionnel: améliorer l'adresse avec le résultat du géocodage
+          if (geocodeResult.formattedAddress && geocodeResult.confidence > 0.7) {
+            console.log('📍 Adresse améliorée disponible:', geocodeResult.formattedAddress);
+          }
+        } else {
+          console.log('⚠️ Géocodage échoué pour l\'adresse:', location);
+        }
+      } catch (geocodeError) {
+        console.error('❌ Erreur lors du géocodage:', geocodeError.message);
+        // On continue sans coordonnées plutôt que de faire échouer la création
+      }
+    }
 
     const event = new Event({
       title,
@@ -249,9 +398,7 @@ router.post('/', authMiddleware, createEventValidation, async (req, res) => {
       sport,
       date: new Date(date),
       time,
-      location: {
-        address: location
-      },
+      location: eventLocation,
       maxParticipants: parseInt(maxParticipants),
       level,
       price: {

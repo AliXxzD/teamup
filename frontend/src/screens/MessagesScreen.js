@@ -35,6 +35,22 @@ const MessagesScreenTailwind = ({ navigation }) => {
     }).start();
   }, []);
 
+  // Écouter les changements de route pour rafraîchir si nécessaire
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Vérifier si on doit rafraîchir (paramètre refresh dans route)
+      const routeParams = navigation.getState()?.routes?.find(route => route.name === 'Messages')?.params;
+      if (routeParams?.refresh) {
+        console.log('🔄 Rafraîchissement automatique des conversations');
+        loadConversations();
+        // Nettoyer le paramètre refresh
+        navigation.setParams({ refresh: undefined });
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation]);
+
   const loadConversations = async () => {
     try {
       setLoading(true);
@@ -91,25 +107,37 @@ const MessagesScreenTailwind = ({ navigation }) => {
   };
 
   const getDisplayName = (conversation, currentUser) => {
-    if (conversation.type === 'group' || conversation.type === 'event') {
+    if (!conversation) {
+      return 'Conversation';
+    }
+    
+    const conversationType = conversation.type || 'private';
+    
+    if (conversationType === 'group' || conversationType === 'event') {
       return conversation.name || 'Groupe';
     }
     
     const otherParticipant = conversation.participants?.find(
-      p => p._id !== currentUser?.id && p._id !== currentUser?._id
+      p => p._id !== (currentUser?._id || currentUser?.id) && p._id !== (currentUser?._id || currentUser?.id)
     );
     
     return otherParticipant?.name || 'Utilisateur inconnu';
   };
 
   const getDisplayAvatar = (conversation, currentUser) => {
+    if (!conversation) {
+      return null;
+    }
+    
     if (conversation.avatar) {
       return conversation.avatar;
     }
     
-    if (conversation.type === 'private') {
+    const conversationType = conversation.type || 'private';
+    
+    if (conversationType === 'private') {
       const otherParticipant = conversation.participants?.find(
-        p => p._id !== currentUser?.id && p._id !== currentUser?._id
+        p => p._id !== (currentUser?._id || currentUser?.id) && p._id !== (currentUser?._id || currentUser?.id)
       );
       return otherParticipant?.profile?.avatar;
     }
@@ -118,9 +146,14 @@ const MessagesScreenTailwind = ({ navigation }) => {
   };
 
   const handleConversationPress = (conversation) => {
+    if (!conversation) {
+      console.log('❌ Conversation undefined dans handleConversationPress');
+      return;
+    }
+    
     console.log('🔍 Navigation vers Chat:', {
-      conversationId: conversation.id,
-      conversationType: conversation.type,
+      conversationId: conversation._id || conversation.id,
+      conversationType: conversation.type || 'private',
       participants: conversation.participants?.length
     });
     navigation.navigate('Chat', { conversation });
@@ -149,11 +182,16 @@ const MessagesScreenTailwind = ({ navigation }) => {
   };
 
   const ConversationItem = ({ conversation }) => {
+    if (!conversation) {
+      return null;
+    }
+    
     const displayName = conversation.displayName || conversation.name || 'Conversation';
     const lastMessage = conversation.lastMessage?.content || 'Aucun message';
     const unreadCount = conversation.unreadCount || 0;
     const avatar = conversation.displayAvatar || conversation.avatar;
-    const isGroup = conversation.type === 'group' || conversation.type === 'event';
+    const conversationType = conversation.type || 'private';
+    const isGroup = conversationType === 'group' || conversationType === 'event';
     const memberCount = conversation.participants?.length || 0;
     
     return (
@@ -304,7 +342,7 @@ const MessagesScreenTailwind = ({ navigation }) => {
         ) : (
           <FlatList
             data={conversations}
-            keyExtractor={(item) => item.id || item._id}
+            keyExtractor={(item) => item._id || item.id}
             renderItem={({ item }) => <ConversationItem conversation={item} />}
             showsVerticalScrollIndicator={false}
             refreshControl={

@@ -3,17 +3,21 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { createServer } = require('http');
+const { Server } = require('socket.io');
 // const session = require('express-session');
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
 const eventRoutes = require('./routes/events');
 const messageRoutes = require('./routes/messages');
+const socketService = require('./services/socketService');
 
 // const passport = require('./config/passport');
 const { connectDB, initializeIndexes, cleanupDatabase } = require('./config/database');
 
 const app = express();
+const server = createServer(app);
 
 // Configuration des variables d'environnement
 const PORT = process.env.PORT || 5000;
@@ -76,6 +80,37 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
+// Configuration Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: function (origin, callback) {
+      // Même logique CORS que pour Express
+      if (!origin) return callback(null, true);
+      
+      if (origin.includes('expo.dev') || 
+          origin.includes('exp.host') || 
+          origin.includes('snack.expo.io') ||
+          origin.startsWith('exp://')) {
+        return callback(null, true);
+      }
+      
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        if (process.env.NODE_ENV === 'production') {
+          return callback(null, true);
+        }
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST']
+  },
+  transports: ['websocket', 'polling'],
+  pingTimeout: 60000,
+  pingInterval: 25000
+});
 
 // Rate limiting - Augmenté pour le développement
 const limiter = rateLimit({
@@ -167,6 +202,9 @@ app.use('/api/events', require('./routes/events-stats'));
 // Routes de messagerie
 app.use('/api/messages', messageRoutes);
 
+// Initialiser Socket.io après la configuration CORS
+socketService.initialize(io);
+
 // Middleware de gestion d'erreurs
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -223,7 +261,7 @@ const startServer = async () => {
       await cleanupDatabase();
     }, 2000);
     
-    app.listen(PORT, '0.0.0.0', () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 TeamUp API démarré sur Render!`);
       console.log(`📍 Port: ${PORT}`);
       console.log(`🌍 Host: 0.0.0.0 (Render compatible)`);
@@ -231,6 +269,7 @@ const startServer = async () => {
       console.log(`🔐 Auth API: /api/auth`);
       console.log(`⚽ Events API: /api/events`);
       console.log(`💬 Messages API: /api/messages`);
+      console.log(`🔌 Socket.io: Messagerie temps réel activée`);
       console.log(`🌟 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 CORS: Expo EAS Build compatible`);
       console.log(`💾 Database: MongoDB Atlas`);

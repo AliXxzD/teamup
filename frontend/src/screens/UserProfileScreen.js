@@ -13,1281 +13,1025 @@ import {
   RefreshControl,
   ActivityIndicator,
   SafeAreaView,
-  StyleSheet
+  Animated,
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
-import { colors } from '../styles/globalStyles';
+import GlobalMenu from '../components/GlobalMenu';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logNetworkInfo, generateNetworkReport } from '../utils/networkUtils';
-import { navigateToEventDetails } from '../utils/navigationUtils';
-import GradientButton from '../components/GradientButton';
+import UserStatsCard from '../components/UserStatsCard';
+import { AchievementsList } from '../components/AchievementCard';
+import pointsService from '../services/pointsService';
+import { LevelBadge, XPProgressBar, AchievementCard } from '../components/LevelingSystem';
+import { 
+  calculateLevel, 
+  getAllAchievementsWithStatus, 
+  getLevelTier 
+} from '../utils/levelingSystem';
 
 const { width } = Dimensions.get('window');
 
 const UserProfileScreen = ({ navigation, route }) => {
   const { user } = useAuth();
   const { userId } = route.params || {};
-  const isOwnProfile = !userId || userId === user?.id;
+  const isOwnProfile = !userId || userId === (user?._id || user?.id);
   
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState('Stats');
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
+  const [scaleAnim] = useState(new Animated.Value(0.9));
+  const [userData, setUserData] = useState(null);
+  const [userProgression, setUserProgression] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(true);
 
-  // Fonctions API
-  const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
-  
-  const fetchProfile = async (targetUserId = null) => {
+  useEffect(() => {
+    // Initialiser les données utilisateur
+    loadUserData();
+    loadUserProgression();
+    
+    // Animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [user, userId]); // Recharger quand l'utilisateur ou l'userId change
+
+  const loadUserProgression = async () => {
     try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) {
-        console.log('❌ Token non trouvé - Redirection vers la connexion');
-        // Rediriger vers la connexion si pas de token
-        navigation.replace('Login');
-        return null;
-      }
-
-      const url = targetUserId 
-        ? `${API_BASE_URL}/api/auth/profile/${targetUserId}`
-        : `${API_BASE_URL}/api/auth/profile`;
+      setLoadingStats(true);
+      console.log('📊 Chargement des statistiques utilisateur pour le profil...');
       
-      console.log('🔍 Fetching profile from:', url);
-      console.log('🔑 Token présent:', token ? 'Oui' : 'Non');
+      const result = await pointsService.calculateUserProgression();
       
-      // Créer un AbortController pour gérer le timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 secondes timeout
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      console.log('📡 Profile response status:', response.status);
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.log('❌ Token invalide - Redirection vers la connexion');
-          // Token invalide, rediriger vers la connexion
-          await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
-          navigation.replace('Login');
-          return null;
-        }
-        throw new Error(data.message || `Erreur ${response.status}: ${response.statusText}`);
-      }
-
-      return data.profile;
-    } catch (error) {
-      console.error('❌ Erreur fetchProfile:', error);
-      
-      if (error.name === 'AbortError') {
-        throw new Error('Délai d\'attente dépassé. Vérifiez votre connexion internet.');
-      }
-      
-      if (error.name === 'TypeError' && error.message.includes('Network request failed')) {
-        throw new Error('Erreur de connexion réseau. Vérifiez votre connexion internet.');
-      }
-      
-      throw error;
-    }
-  };
-
-  const fetchRecentEvents = async () => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) {
-        return [];
-      }
-
-      // Créer un AbortController pour gérer le timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 secondes timeout
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/profile/events/recent?limit=3`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        return data.events;
-      }
-      
-      return [];
-    } catch (error) {
-      console.error('❌ Erreur fetchRecentEvents:', error);
-      if (error.name === 'AbortError') {
-        console.log('Timeout lors de la récupération des événements récents');
-      }
-      return [];
-    }
-  };
-
-  const followUser = async (targetUserId) => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('Token non trouvé');
-      }
-
-      // Créer un AbortController pour gérer le timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 secondes timeout
-
-      const response = await fetch(`${API_BASE_URL}/api/auth/profile/${targetUserId}/follow`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Erreur lors du follow/unfollow');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('❌ Erreur followUser:', error);
-      if (error.name === 'AbortError') {
-        throw new Error('Délai d\'attente dépassé. Vérifiez votre connexion internet.');
-      }
-      throw error;
-    }
-  };
-  
-  const [userData, setUserData] = useState({
-    id: null,
-    name: '',
-    username: '',
-    avatar: null,
-    backgroundImage: 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&h=400&fit=crop',
-    location: '',
-    joinDate: '',
-    bio: '',
-    followers: 0,
-    following: 0,
-    points: 0,
-    level: 1,
-    favoritesSports: [],
-    isFollowing: false,
-    stats: {
-      eventsOrganized: 0,
-      eventsJoined: 0,
-      averageRating: 0,
-      totalRatings: 0
-    },
-    recentEvents: []
-  });
-
-  const [activeTab, setActiveTab] = useState('stats');
-
-  // Fonction utilitaire pour formater l'affichage de la localisation
-  const formatLocation = (location) => {
-    if (!location) return 'Localisation non spécifiée';
-    
-    if (typeof location === 'string') return location;
-    
-    if (typeof location === 'object') {
-      const city = location.city;
-      const country = location.country;
-      
-      if (city && country) {
-        return `${city}, ${country}`;
-      } else if (city) {
-        return city;
-      } else if (country) {
-        return country;
-      }
-    }
-    
-    return 'Localisation non spécifiée';
-  };
-
-  // Fonction pour diagnostiquer les problèmes réseau
-  const debugNetworkIssues = async () => {
-    console.log('🔧 Démarrage du diagnostic réseau...');
-    logNetworkInfo();
-    
-    const report = await generateNetworkReport();
-    console.log('📊 Rapport de diagnostic:', JSON.stringify(report, null, 2));
-    
-    // Afficher une alerte avec les informations de diagnostic
-    Alert.alert(
-      'Diagnostic Réseau',
-      `Serveur accessible: ${report.networkStatus.serverReachable ? '✅' : '❌'}\n` +
-      `Token valide: ${report.networkStatus.tokenValid ? '✅' : '❌'}\n` +
-      `URL API: ${report.environment.apiUrl}\n` +
-      `Erreur: ${report.networkStatus.error || 'Aucune'}`,
-      [
-        { text: 'OK', style: 'default' },
-        { 
-          text: 'Copier le rapport', 
-          onPress: () => {
-            // Copier le rapport dans le presse-papiers (si disponible)
-            console.log('📋 Rapport copié dans la console');
-          }
-        }
-      ]
-    );
-  };
-
-  // Fonction pour rafraîchir les statistiques
-  const refreshStats = async () => {
-    try {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('Token non trouvé');
-      }
-
-      console.log('🔄 Rafraîchissement des statistiques...');
-      
-      const response = await fetch(`${API_BASE_URL}/api/auth/profile/stats/update`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        console.log('✅ Statistiques mises à jour:', data.stats);
-        
-        // Recharger les données du profil
-        await loadData();
-        
-        Alert.alert('Succès', 'Statistiques mises à jour !');
+      if (result.success) {
+        setUserProgression(result.data);
+        console.log('✅ Statistiques profil chargées:', result.data);
       } else {
-        throw new Error(data.message || 'Erreur lors de la mise à jour des statistiques');
+        // Ne pas afficher d'erreur si l'utilisateur est déconnecté
+        if (!result.isLoggedOut) {
+          console.error('❌ Erreur chargement statistiques profil:', result.error);
+        } else {
+          console.log('ℹ️ Utilisateur déconnecté, arrêt du chargement de stats');
+          setUserProgression(null);
+        }
       }
     } catch (error) {
-      console.error('❌ Erreur lors du rafraîchissement des statistiques:', error);
-      Alert.alert('Erreur', error.message || 'Impossible de rafraîchir les statistiques');
+      console.error('❌ Erreur loadUserProgression profil:', error);
+    } finally {
+      setLoadingStats(false);
     }
   };
 
-  // Fonction pour diagnostiquer les données utilisateur
-  const debugUserData = () => {
-    console.log('🔍 Diagnostic des données utilisateur:');
-    console.log('userData:', JSON.stringify(userData, null, 2));
-    
-    // Vérifier les types de données
-    console.log('Types de données:');
-    console.log('- location:', typeof userData.location, userData.location);
-    console.log('- stats:', typeof userData.stats, userData.stats);
-    console.log('- favoritesSports:', typeof userData.favoritesSports, userData.favoritesSports);
-    
-    Alert.alert(
-      'Diagnostic Données',
-      `Location: ${typeof userData.location}\n` +
-      `Stats: ${typeof userData.stats}\n` +
-      `Sports: ${typeof userData.favoritesSports}\n` +
-      `Voir la console pour plus de détails`,
-      [{ text: 'OK', style: 'default' }]
-    );
-  };
-
-  // Fonction pour charger les données
-  const loadData = async () => {
+  const loadUserData = async () => {
     try {
       setLoading(true);
       
-      // Charger le profil
-      const profile = await fetchProfile(userId);
-      
-      // Charger les événements récents (seulement pour son propre profil)
-      let recentEvents = [];
-      if (isOwnProfile) {
-        recentEvents = await fetchRecentEvents();
+      if (isOwnProfile && user) {
+        // Récupérer les statistiques à jour depuis l'API
+        try {
+          const accessToken = await AsyncStorage.getItem('accessToken');
+          if (accessToken) {
+            const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000'}/api/auth/profile`, {
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              }
+            });
+            
+            if (response.ok) {
+              const profileData = await response.json();
+              console.log('📊 Données profil récupérées:', profileData);
+              
+              // Utiliser les données à jour du backend
+              const updatedUser = profileData.data || user;
+              
+              const defaultUserData = {
+                name: updatedUser.name || 'Utilisateur',
+                username: updatedUser.email ? `@${updatedUser.email.split('@')[0]}` : '@utilisateur',
+                location: typeof updatedUser.location === 'string' ? updatedUser.location : (updatedUser.location?.address || updatedUser.location?.city || 'France'),
+                joinDate: updatedUser.createdAt ? `Depuis ${new Date(updatedUser.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}` : 'Récemment',
+                bio: updatedUser.bio || updatedUser.profile?.bio || 'Passionné de sport depuis toujours ! J\'organise régulièrement des événements sportifs et j\'adore découvrir de nouveaux sports. Toujours partant pour une bonne session ! ⚽ 🏀 🏸',
+                stats: {
+                  followers: updatedUser.followers || 0,
+                  following: updatedUser.following || 0,
+                  points: updatedUser.points || updatedUser.profile?.points || 0
+                },
+                sports: updatedUser.sports || updatedUser.profile?.favoritesSports || ['Football', 'Basketball', 'Tennis'],
+                // Leveling system data
+                xp: updatedUser.xp || updatedUser.profile?.xp || 0,
+                level: calculateLevel(updatedUser.xp || updatedUser.profile?.xp || 0),
+                userStats: {
+                  eventsOrganized: updatedUser.profile?.stats?.eventsOrganized || updatedUser.eventsOrganized || 0,
+                  eventsJoined: updatedUser.profile?.stats?.eventsJoined || updatedUser.eventsJoined || 0,
+                  averageRating: updatedUser.profile?.stats?.averageRating || updatedUser.averageRating || 0,
+                  totalReviews: updatedUser.profile?.stats?.totalRatings || updatedUser.totalReviews || 0,
+                  followers: updatedUser.followers || 0,
+                  sportEvents: updatedUser.sportEvents || {
+                    football: 0,
+                    basketball: 0,
+                    tennis: 0,
+                    volleyball: 0
+                  },
+                  earlyEvents: updatedUser.earlyEvents || 0,
+                  weekendEvents: updatedUser.weekendEvents || 0,
+                  monthlyRank: updatedUser.monthlyRank || 0,
+                  maxStreak: updatedUser.maxStreak || 0
+                },
+                profileImage: updatedUser.profile?.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+                backgroundImage: updatedUser.profile?.backgroundImage || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+              };
+              
+              setUserData(defaultUserData);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (apiError) {
+          console.log('⚠️ Erreur API, utilisation des données locales:', apiError);
+        }
+        
+        // Fallback vers les données du contexte si l'API échoue
+        const defaultUserData = {
+          name: user.name || 'Utilisateur',
+          username: user.email ? `@${user.email.split('@')[0]}` : '@utilisateur',
+          location: typeof user.location === 'string' ? user.location : (user.location?.address || user.location?.city || 'France'),
+          joinDate: user.createdAt ? `Depuis ${new Date(user.createdAt).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}` : 'Récemment',
+          bio: user.bio || 'Passionné de sport depuis toujours ! J\'organise régulièrement des événements sportifs et j\'adore découvrir de nouveaux sports. Toujours partant pour une bonne session ! ⚽ 🏀 🏸',
+          stats: {
+            followers: user.followers || 0,
+            following: user.following || 0,
+            points: user.points || 0
+          },
+          sports: user.sports || ['Football', 'Basketball', 'Tennis'],
+          // Leveling system data
+          xp: user.xp || 0,
+          level: calculateLevel(user.xp || 0),
+          userStats: {
+            eventsOrganized: user.profile?.stats?.eventsOrganized || user.eventsOrganized || 0,
+            eventsJoined: user.profile?.stats?.eventsJoined || user.eventsJoined || 0,
+            averageRating: user.profile?.stats?.averageRating || user.averageRating || 0,
+            totalReviews: user.profile?.stats?.totalRatings || user.totalReviews || 0,
+            followers: user.followers || 0,
+            sportEvents: user.sportEvents || {
+              football: 0,
+              basketball: 0,
+              tennis: 0,
+              volleyball: 0
+            },
+            earlyEvents: user.earlyEvents || 0,
+            weekendEvents: user.weekendEvents || 0,
+            monthlyRank: user.monthlyRank || 0,
+            maxStreak: user.maxStreak || 0
+          },
+          profileImage: user.profile?.avatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+          backgroundImage: user.profile?.backgroundImage || 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+        };
+        
+        setUserData(defaultUserData);
+      } else if (userId) {
+        // Pour un autre utilisateur, charger depuis l'API
+        // TODO: Implémenter l'appel API pour charger le profil d'un autre utilisateur
+        console.log('Chargement du profil utilisateur:', userId);
+        // Pour l'instant, utiliser des données par défaut
+        setUserData({
+          name: 'Utilisateur',
+          username: '@utilisateur',
+          location: 'France',
+          joinDate: 'Récemment',
+          bio: 'Profil utilisateur',
+          stats: { followers: 0, following: 0, points: 0 },
+          sports: ['Football'],
+          xp: 0,
+          level: 1,
+          userStats: {
+            eventsOrganized: 0,
+            eventsJoined: 0,
+            averageRating: 0,
+            totalReviews: 0,
+            followers: 0,
+            sportEvents: { football: 0, basketball: 0, tennis: 0, volleyball: 0 },
+            earlyEvents: 0,
+            weekendEvents: 0,
+            monthlyRank: 0,
+            maxStreak: 0
+          },
+          profileImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
+          backgroundImage: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80'
+        });
       }
-      
-      // Formatter la date de création
-      const joinDate = profile.joinDate 
-        ? new Date(profile.joinDate).toLocaleDateString('fr-FR', { 
-            year: 'numeric', 
-            month: 'long' 
-          })
-        : '';
-
-      // Mettre à jour les données
-      setUserData({
-        id: profile.id,
-        name: profile.name || 'Utilisateur',
-        username: profile.username || profile.email?.split('@')[0] || 'utilisateur',
-        avatar: profile.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-        backgroundImage: profile.backgroundImage || 'https://images.unsplash.com/photo-1459865264687-595d652de67e?w=800&h=400&fit=crop',
-        location: profile.location || null, // Garder l'objet location pour l'affichage conditionnel
-        joinDate: joinDate,
-        bio: profile.bio || (isOwnProfile ? 'Ajoutez une description à votre profil !' : ''),
-        followers: profile.followers || 0,
-        following: profile.following || 0,
-        points: profile.points || 0,
-        level: profile.level || 1,
-        favoritesSports: profile.favoritesSports || [],
-        isFollowing: profile.isFollowing || false,
-        stats: profile.stats || {
-          eventsOrganized: 0,
-          eventsJoined: 0,
-          averageRating: 0,
-          totalRatings: 0
-        },
-        recentEvents: recentEvents
-      });
-      
     } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-      Alert.alert(
-        'Erreur',
-        'Impossible de charger les données du profil. Veuillez réessayer.',
-        [
-          { text: 'Réessayer', onPress: loadData },
-          { text: 'Annuler', style: 'cancel' }
-        ]
-      );
+      console.error('Erreur lors du chargement des données utilisateur:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fonction pour rafraîchir les données
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
-  };
-
-  useEffect(() => {
-    // Vérifier l'authentification avant de charger les données
-    const checkAuthAndLoadData = async () => {
-      try {
-        const token = await AsyncStorage.getItem('accessToken');
-        if (!token) {
-          console.log('❌ Pas de token - Redirection vers Login');
-          navigation.replace('Login');
-          return;
-        }
-        
-        // Vérifier la validité du token
-        const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        
-        if (!response.ok) {
-          console.log('❌ Token invalide - Redirection vers Login');
-          await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
-          navigation.replace('Login');
-          return;
-        }
-        
-        // Token valide, charger les données
-        await loadData();
-      } catch (error) {
-        console.error('❌ Erreur lors de la vérification d\'authentification:', error);
-        navigation.replace('Login');
-      }
-    };
-    
-    checkAuthAndLoadData();
-  }, [userId, isOwnProfile]);
-
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Découvrez le profil de ${userData.name} sur TeamUp !`,
-        url: `teamup://profile/${userData.id}`
+        message: `Découvrez le profil de ${userData?.name || 'un utilisateur'} sur TeamUp !`,
       });
     } catch (error) {
-      console.error('Erreur partage:', error);
+      console.error('Erreur lors du partage:', error);
     }
   };
 
-  const handleFollow = async () => {
-    try {
-      const result = await followUser(userData.id);
-      
-      setUserData(prev => ({
-        ...prev,
-        isFollowing: result.isFollowing,
-        followers: result.isFollowing ? prev.followers + 1 : prev.followers - 1
-      }));
-      
-      Alert.alert('Succès', result.message);
-    } catch (error) {
-      Alert.alert('Erreur', error.message || 'Impossible d\'effectuer cette action');
-    }
+  const handleTabPress = (tab) => {
+    setActiveTab(tab);
   };
 
-  const SportTag = ({ sport }) => (
-    <View style={[styles.sportTag, { backgroundColor: sport.color }]}>
-      <MaterialIcons name={sport.icon} size={16} color="white" />
-      <Text style={styles.sportTagText}>
-        {sport.name}
-      </Text>
+  const StatItem = ({ number, label }) => (
+    <View className="items-center">
+      <Text className="text-white text-2xl font-bold">{number}</Text>
+      <Text className="text-slate-400 text-sm">{label}</Text>
     </View>
   );
 
-  const StatCard = ({ icon, value, label, color = colors.primary }) => (
-    <View style={styles.statCard}>
-      <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon} size={24} color={color} />
-      </View>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </View>
-  );
-
-  const EventCard = ({ event }) => (
+  const SportTag = ({ sport, index }) => (
     <TouchableOpacity 
-      style={styles.eventCard}
-      onPress={() => navigateToEventDetails(navigation, event.id)}
+      className="bg-cyan-500/20 border border-cyan-400/30 rounded-xl px-4 py-2 mr-3 mb-3"
+      style={{
+        shadowColor: '#06b6d4',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+      }}
+      activeOpacity={0.8}
+      onPress={() => Alert.alert('Sport', `Voir les événements de ${sport}`)}
     >
-      <View style={[styles.eventIcon, { backgroundColor: event.color }]}>
-        <MaterialIcons name={event.icon} size={24} color="white" />
-      </View>
-      <View style={styles.eventInfo}>
-        <Text style={styles.eventTitle}>{event.title}</Text>
-        <View style={styles.eventMeta}>
-          <Text style={styles.eventTime}>{event.time}</Text>
-          <Text style={styles.eventRole}>• {event.role}</Text>
-        </View>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+      <Text className="text-cyan-400 text-sm font-medium">{sport}</Text>
     </TouchableOpacity>
   );
 
-  const ActionButton = ({ icon, label, active, onPress, color = colors.primary }) => (
-    <TouchableOpacity 
-      style={[
-        styles.actionButton, 
-        active && { backgroundColor: color + '20' }
-      ]}
-      onPress={onPress}
-    >
-      <Ionicons 
-        name={icon} 
-        size={20} 
-        color={active ? color : colors.textSecondary} 
-      />
-      <Text style={[
-        styles.actionButtonText,
-        { color: active ? color : colors.textSecondary }
-      ]}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
-  const StatItem = ({ value, label }) => (
-    <View style={styles.statItem}>
-      <Text style={styles.statItemValue}>{value}</Text>
-      <Text style={styles.statItemLabel}>{label}</Text>
-    </View>
-  );
-
-  // Affichage du chargement
-  if (loading) {
+  if (loading || !userData) {
     return (
-      <SafeAreaView className="flex-1 justify-center items-center bg-dark-900">
-        <ActivityIndicator size="large" color="#84cc16" />
-        <Text className="text-dark-300 text-base mt-4">Chargement du profil...</Text>
+      <SafeAreaView className="flex-1 bg-slate-900 items-center justify-center">
+        <ActivityIndicator size="large" color="#06b6d4" />
+        <Text className="text-white mt-4">Chargement du profil...</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-dark-900">
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
+    <SafeAreaView className="flex-1 bg-slate-900">
+      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
-      {/* Header avec image de fond */}
+      {/* Fixed Header */}
+      <View className="bg-slate-900 px-6 pt-6 pb-4 border-b border-slate-800">
+        <View className="flex-row justify-between items-center">
+          {/* Logo and App Name */}
+          <View className="flex-row items-center">
+            <LinearGradient
+              colors={['#06b6d4', '#0891b2']}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 12,
+              }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name="people" size={24} color="#ffffff" />
+            </LinearGradient>
+            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
+          </View>
+          
+          {/* Menu and Actions */}
+          <View className="flex-row items-center" style={{ gap: 12 }}>
+            <TouchableOpacity className="w-11 h-11 bg-slate-800 border border-slate-700/50 rounded-xl items-center justify-center">
+              <Ionicons name="search" size={20} color="#ffffff" />
+            </TouchableOpacity>
+            <GlobalMenu navigation={navigation} currentRoute="Profile" />
+          </View>
+        </View>
+      </View>
+
+      <ScrollView 
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={async () => {
+              setRefreshing(true);
+              await Promise.all([
+                loadUserData(),
+                loadUserProgression()
+              ]);
+              setRefreshing(false);
+            }} 
+          />
+        }
+      >
+        {/* Header with Background Image - Smaller */}
+        <View style={{ height: 200, position: 'relative' }}>
       <ImageBackground 
         source={{ uri: userData.backgroundImage }}
-        style={styles.headerBackground}
-        imageStyle={styles.headerBackgroundImage}
+            style={{ flex: 1 }}
+            imageStyle={{ opacity: 0.8 }}
       >
         <LinearGradient
-          colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)']}
-          style={styles.headerOverlay}
+              colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+              style={{ flex: 1, justifyContent: 'flex-start', padding: 24 }}
         >
-          {/* Navigation Header */}
-          <View style={styles.navigationHeader}>
+              {/* Navigation Buttons */}
+              <View className="flex-row items-center justify-between">
             <TouchableOpacity 
-              style={styles.navButton}
+                  className="w-11 h-11 bg-black/30 rounded-xl items-center justify-center"
               onPress={() => navigation.goBack()}
-            >
-              <Ionicons name="arrow-back" size={24} color="white" />
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 4,
+                    elevation: 5,
+                  }}
+                >
+                  <Ionicons name="arrow-back" size={20} color="white" />
             </TouchableOpacity>
             
-            <View style={styles.headerActions}>
-              <TouchableOpacity style={styles.navButton} onPress={handleShare}>
-                <Ionicons name="share-outline" size={24} color="white" />
+                <View className="flex-row items-center" style={{ gap: 12 }}>
+                  <TouchableOpacity 
+                    className="w-11 h-11 bg-black/30 rounded-xl items-center justify-center"
+                    onPress={handleShare}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      elevation: 5,
+                    }}
+                  >
+                    <Ionicons name="share-outline" size={20} color="white" />
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.navButton}>
-                <Ionicons name="ellipsis-vertical" size={24} color="white" />
+                  <TouchableOpacity 
+                    className="w-11 h-11 bg-black/30 rounded-xl items-center justify-center"
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      elevation: 5,
+                    }}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={20} color="white" />
               </TouchableOpacity>
             </View>
           </View>
         </LinearGradient>
       </ImageBackground>
+        </View>
 
-      <ScrollView 
-        style={styles.scrollView} 
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={['#84cc16']}
-            tintColor={'#84cc16'}
-          />
-        }
-      >
-        {/* Photo de profil et informations utilisateur */}
-        <View style={styles.profileSection}>
-          {/* Photo de profil avec badge de niveau */}
-          <View style={styles.avatarContainer}>
-            <Image source={{ uri: userData.avatar }} style={styles.avatar} />
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelText}>{userData.level}</Text>
-            </View>
-          </View>
-
-          {/* Nom et bouton éditer */}
-          <View style={styles.nameSection}>
-            <Text style={styles.name}>{userData.name}</Text>
-            {isOwnProfile && (
-              <TouchableOpacity 
-                style={styles.editButton}
-                onPress={() => Alert.alert(
-                  'Édition du profil',
-                  'Cette fonctionnalité sera bientôt disponible !',
-                  [{ text: 'OK', style: 'default' }]
-                )}
-              >
-                <Ionicons name="create-outline" size={16} color="#94a3b8" />
-                <Text style={styles.editButtonText}>Éditer</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-          
-          {/* Username */}
-          <Text style={styles.username}>@{userData.username}</Text>
-          
-          {/* Localisation et date d'inscription */}
-          <View style={styles.locationContainer}>
-            <Ionicons name="location-outline" size={16} color="#94a3b8" />
-            <Text style={styles.locationText}>
-              {formatLocation(userData.location)}
-            </Text>
-            <Text style={styles.joinDate}>Depuis {userData.joinDate}</Text>
-          </View>
-          
-          {/* Bio */}
-          <Text style={styles.bio}>{userData.bio}</Text>
-
-          {/* Bouton s'abonner pour les autres profils */}
-          {!isOwnProfile && (
-            <TouchableOpacity 
-              style={[
-                styles.followButton,
-                userData.isFollowing && styles.followingButton
-              ]}
-              onPress={handleFollow}
+        {/* Profile Image Section - Between background and content */}
+        <Animated.View 
+          className="bg-slate-900 px-6 pt-6 pb-4 relative"
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
+          <View className="flex-row items-end justify-between">
+            {/* Profile Image */}
+            <Animated.View 
+              className="relative -mt-12"
+              style={{
+                transform: [{ scale: scaleAnim }]
+              }}
             >
-              <LinearGradient
-                colors={userData.isFollowing ? 
-                  ['#64748B', '#475569'] : 
-                  ['#84cc16', '#65a30d']
-                }
-                style={styles.followButtonGradient}
-              >
-                <Ionicons 
-                  name={userData.isFollowing ? 'checkmark' : 'person-add'} 
-                  size={20} 
-                  color="white" 
+              <TouchableOpacity activeOpacity={0.9}>
+                <Image
+                  source={{ uri: userData.profileImage }}
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 48,
+                    borderWidth: 4,
+                    borderColor: '#ffffff',
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 12,
+                    elevation: 15,
+                  }}
                 />
-                <Text style={styles.followButtonText}>
-                  {userData.isFollowing ? 'Abonné' : 'S\'abonner'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Statistiques sociales */}
-        <View style={styles.socialStats}>
-          <TouchableOpacity style={styles.statItem}>
-            <Text style={styles.statValue}>{userData.followers}</Text>
-            <Text style={styles.statLabel}>Abonnés</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.statItem}>
-            <Text style={styles.statValue}>{userData.following}</Text>
-            <Text style={styles.statLabel}>Abonnements</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.statItem}>
-            <Text style={styles.statValue}>{userData.points}</Text>
-            <Text style={styles.statLabel}>Points</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Cartes de statistiques détaillées */}
-        <View style={styles.mainStatsSection}>
-          <View style={styles.statsHeader}>
-            <Text style={styles.sectionTitle}>Statistiques détaillées</Text>
-            {isOwnProfile && (
-              <TouchableOpacity 
-                style={styles.refreshStatsButton}
-                onPress={refreshStats}
-              >
-                <Ionicons name="refresh" size={16} color={colors.primary} />
-                <Text style={styles.refreshStatsText}>Actualiser</Text>
               </TouchableOpacity>
-            )}
-          </View>
-          <View style={styles.statsGrid}>
-            <StatCard
-              icon="calendar"
-              value={userData.stats?.eventsOrganized || 0}
-              label="Événements organisés"
-              color="#84cc16"
-            />
-            <StatCard
-              icon="people"
-              value={userData.stats?.eventsJoined || 0}
-              label="Événements rejoints"
-              color="#84cc16"
-            />
-            <StatCard
-              icon="star"
-              value={userData.stats?.averageRating ? userData.stats.averageRating.toFixed(1) : '0.0'}
-              label="Note moyenne"
-              color="#84cc16"
-            />
-            <StatCard
-              icon="trophy"
-              value={userData.favoritesSports ? userData.favoritesSports.length : 0}
-              label="Sports pratiqués"
-              color="#84cc16"
-            />
+              <Animated.View 
+                className="absolute -bottom-1 -right-1 rounded-full items-center justify-center border-4 border-white"
+                style={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: userProgression 
+                    ? pointsService.getLevelColor(userProgression.level)
+                    : '#06b6d4',
+                  shadowColor: userProgression 
+                    ? pointsService.getLevelColor(userProgression.level)
+                    : '#06b6d4',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.5,
+                  shadowRadius: 8,
+                  elevation: 10,
+                  transform: [{ scale: scaleAnim }]
+                }}
+              >
+                <Text className="text-white text-sm font-bold">
+                  {userProgression ? userProgression.level : (userData?.level || 1)}
+                </Text>
+              </Animated.View>
+            </Animated.View>
+
+            {/* Edit Button */}
+              <TouchableOpacity 
+              className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 flex-row items-center mb-4"
+              onPress={() => Alert.alert('Éditer', 'Fonction d\'édition en cours de développement')}
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="settings-outline" size={16} color="#64748b" style={{ marginRight: 6 }} />
+              <Text className="text-slate-300 text-sm font-medium">Éditer</Text>
+              </TouchableOpacity>
           </View>
           
-          {/* Statistiques supplémentaires */}
-          {userData.stats?.totalRatings > 0 && (
-            <View style={styles.additionalStats}>
-              <Text style={styles.additionalStatsTitle}>Détails des évaluations</Text>
-              <View style={styles.additionalStatsRow}>
-                <View style={styles.additionalStatItem}>
-                  <Ionicons name="star" size={20} color="#F59730" />
-                  <Text style={styles.additionalStatValue}>
-                    {userData.stats.totalRatings}
+          {/* Name and Info */}
+          <Animated.View 
+            className="mt-4"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            <Text className="text-white text-2xl font-bold mb-1">{userData.name}</Text>
+            <Text className="text-slate-400 text-base mb-2">{userData.username}</Text>
+            
+            <View className="flex-row items-center mb-4">
+              <Ionicons name="location-outline" size={16} color="#64748b" style={{ marginRight: 6 }} />
+              <Text className="text-slate-400 text-sm mr-4">{userData.location}</Text>
+              <Text className="text-slate-400 text-sm">{userData.joinDate}</Text>
+            </View>
+
+            {/* Level and Points Summary */}
+            <View className="flex-row items-center justify-center mb-4">
+              <View className="bg-slate-800/60 border border-slate-700/50 rounded-full px-4 py-2 flex-row items-center">
+                <View 
+                  className="w-6 h-6 rounded-full items-center justify-center mr-2"
+                  style={{ 
+                    backgroundColor: userProgression 
+                      ? pointsService.getLevelColor(userProgression.level)
+                      : '#06b6d4'
+                  }}
+                >
+                  <Text className="text-white text-xs font-bold">
+                    {userProgression ? userProgression.level : (userData?.level || 1)}
                   </Text>
-                  <Text style={styles.additionalStatLabel}>Évaluations reçues</Text>
                 </View>
+                <Text className="text-white text-sm font-semibold mr-3">
+                  {userProgression 
+                    ? pointsService.getLevelTitle(userProgression.level)
+                    : 'Débutant'
+                  }
+                </Text>
+                <Ionicons name="star" size={14} color="#f59e0b" />
+                <Text className="text-white text-sm font-semibold ml-1">
+                  {userProgression ? userProgression.points : (userData?.stats?.points || 0)}
+                </Text>
               </View>
             </View>
-          )}
-        </View>
+          </Animated.View>
+        </Animated.View>
 
-        {/* Sports pratiqués */}
-        {userData.favoritesSports && userData.favoritesSports.length > 0 && (
-          <View style={styles.sportsSection}>
-            <View style={styles.sportsContainer}>
-              {userData.favoritesSports.map((sport, index) => (
-                <SportTag key={index} sport={sport} />
-              ))}
-            </View>
-          </View>
-        )}
+        {/* Profile Content Section */}
+        <Animated.View 
+          className="bg-slate-900 px-6 relative"
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }}
+        >
 
-        {/* Événements récents */}
-        {userData.recentEvents && userData.recentEvents.length > 0 && (
-          <View style={styles.eventsSection}>
-            <Text style={styles.sectionTitle}>Événements récents</Text>
-            <View style={styles.eventsContainer}>
-              {userData.recentEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </View>
-          </View>
-        )}
+          {/* Bio */}
+          <Animated.View 
+            className="mb-6"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            <Text className="text-slate-300 text-base leading-6">
+              {userData.bio}
+            </Text>
+          </Animated.View>
 
-        {/* Navigation tabs */}
-        <View style={styles.tabsSection}>
-          <View style={styles.tabButtons}>
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'stats' && styles.activeTabButton
-              ]}
-              onPress={() => setActiveTab('stats')}
+          {/* Social Stats (Simplified) */}
+          <Animated.View 
+            className="flex-row justify-center items-center mb-8"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            <TouchableOpacity 
+              className="items-center flex-1"
+              activeOpacity={0.8}
             >
-              <Ionicons 
-                name="trophy" 
-                size={20} 
-                color={activeTab === 'stats' ? '#84cc16' : '#94a3b8'} 
-              />
-              <Text style={[
-                styles.tabButtonText,
-                activeTab === 'stats' && styles.activeTabButtonText
-              ]}>
-                Stats
-              </Text>
+              <Text className="text-white text-2xl font-bold">{userData?.stats?.followers || 0}</Text>
+              <Text className="text-slate-400 text-sm">Abonnés</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'reviews' && styles.activeTabButton
-              ]}
-              onPress={() => setActiveTab('reviews')}
+            <TouchableOpacity 
+              className="items-center flex-1"
+              activeOpacity={0.8}
+            >
+              <Text className="text-white text-2xl font-bold">{userData?.stats?.following || 0}</Text>
+              <Text className="text-slate-400 text-sm">Abonnements</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Sports Tags */}
+          <Animated.View 
+            className="mb-8"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            <View className="flex-row flex-wrap">
+              {userData.sports.map((sport, index) => (
+                <SportTag key={index} sport={sport} index={index} />
+              ))}
+        </View>
+          </Animated.View>
+
+          {/* Tab Navigation */}
+          <Animated.View 
+            className="flex-row justify-between mb-8" 
+            style={{ 
+              gap: 8,
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+              <TouchableOpacity 
+              className={`flex-1 rounded-xl py-3 flex-row items-center justify-center ${
+                activeTab === 'Stats' ? 'bg-cyan-500' : 'bg-slate-800 border border-slate-700'
+              }`}
+              onPress={() => handleTabPress('Stats')}
+              style={{
+                shadowColor: activeTab === 'Stats' ? '#06b6d4' : '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: activeTab === 'Stats' ? 0.3 : 0.1,
+                shadowRadius: 8,
+                elevation: activeTab === 'Stats' ? 6 : 2,
+              }}
+              activeOpacity={0.8}
             >
               <Ionicons 
+                name="stats-chart" 
+                size={18} 
+                color={activeTab === 'Stats' ? "#ffffff" : "#64748b"} 
+                style={{ marginRight: 6 }} 
+              />
+              <Text className={`text-sm font-medium ${
+                activeTab === 'Stats' ? 'text-white font-bold' : 'text-slate-300'
+              }`}>Stats</Text>
+              </TouchableOpacity>
+
+            <TouchableOpacity 
+              className={`flex-1 rounded-xl py-3 flex-row items-center justify-center ${
+                activeTab === 'Avis' ? 'bg-cyan-500' : 'bg-slate-800 border border-slate-700'
+              }`}
+              onPress={() => handleTabPress('Avis')}
+              style={{
+                shadowColor: activeTab === 'Avis' ? '#06b6d4' : '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: activeTab === 'Avis' ? 0.3 : 0.1,
+                shadowRadius: 8,
+                elevation: activeTab === 'Avis' ? 6 : 2,
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons 
+                name="star-outline" 
+                size={18} 
+                color={activeTab === 'Avis' ? "#ffffff" : "#64748b"} 
+                style={{ marginRight: 6 }} 
+              />
+              <Text className={`text-sm font-medium ${
+                activeTab === 'Avis' ? 'text-white font-bold' : 'text-slate-300'
+              }`}>Avis</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              className={`flex-1 rounded-xl py-3 flex-row items-center justify-center ${
+                activeTab === 'Succès' ? 'bg-cyan-500' : 'bg-slate-800 border border-slate-700'
+              }`}
+              onPress={() => handleTabPress('Succès')}
+              style={{
+                shadowColor: activeTab === 'Succès' ? '#06b6d4' : '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: activeTab === 'Succès' ? 0.3 : 0.1,
+                shadowRadius: 8,
+                elevation: activeTab === 'Succès' ? 6 : 2,
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons 
+                name="trophy-outline" 
+                size={18} 
+                color={activeTab === 'Succès' ? "#ffffff" : "#64748b"} 
+                style={{ marginRight: 6 }} 
+              />
+              <Text className={`text-sm font-medium ${
+                activeTab === 'Succès' ? 'text-white font-bold' : 'text-slate-300'
+              }`}>Succès</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Tab Content */}
+          {activeTab === 'Stats' && (
+            <View className="mb-8">
+              {userProgression ? (
+                <>
+                  {/* Real Statistics Grid */}
+                  <View className="flex-row justify-between mb-4" style={{ gap: 12 }}>
+                    {/* Événements organisés */}
+                    <View className="flex-1 bg-slate-800 border border-slate-700/50 rounded-2xl p-6 items-center">
+                      <View className="w-12 h-12 bg-green-500/20 rounded-xl items-center justify-center mb-4">
+                        <Ionicons name="calendar" size={24} color="#22c55e" />
+                      </View>
+                      <Text className="text-white text-3xl font-bold mb-2">
+                        {userProgression.stats.eventsOrganized}
+                      </Text>
+                      <Text className="text-slate-400 text-sm text-center leading-5">
+                        Événements{'\n'}organisés
+                      </Text>
+                    </View>
+            
+                    {/* Événements rejoints */}
+                    <View className="flex-1 bg-slate-800 border border-slate-700/50 rounded-2xl p-6 items-center">
+                      <View className="w-12 h-12 bg-blue-500/20 rounded-xl items-center justify-center mb-4">
+                        <Ionicons name="people" size={24} color="#3b82f6" />
+                      </View>
+                      <Text className="text-white text-3xl font-bold mb-2">
+                        {userProgression.stats.eventsJoined}
+                      </Text>
+                      <Text className="text-slate-400 text-sm text-center leading-5">
+                        Événements{'\n'}rejoints
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row justify-between mb-6" style={{ gap: 12 }}>
+                    {/* Note moyenne */}
+                    <View className="flex-1 bg-slate-800 border border-slate-700/50 rounded-2xl p-6 items-center">
+                      <View className="w-12 h-12 bg-yellow-500/20 rounded-xl items-center justify-center mb-4">
+                        <Ionicons name="star" size={24} color="#f59e0b" />
+                      </View>
+                      <Text className="text-white text-3xl font-bold mb-2">
+                        {userProgression.stats.averageRating > 0 
+                          ? userProgression.stats.averageRating.toFixed(1) 
+                          : '0.0'
+                        }
+                      </Text>
+                      <Text className="text-slate-400 text-sm text-center">
+                        Note moyenne
+                      </Text>
+                    </View>
+
+                    {/* Points totaux */}
+                    <View className="flex-1 bg-slate-800 border border-slate-700/50 rounded-2xl p-6 items-center">
+                      <View className="w-12 h-12 bg-purple-500/20 rounded-xl items-center justify-center mb-4">
+                        <Ionicons name="trophy" size={24} color="#8b5cf6" />
+                      </View>
+                      <Text className="text-white text-3xl font-bold mb-2">
+                        {userProgression.points}
+                      </Text>
+                      <Text className="text-slate-400 text-sm text-center">
+                        Points totaux
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Additional Stats */}
+                  <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6 mb-6">
+                    <Text className="text-white text-lg font-bold mb-4">📊 Détails</Text>
+                    
+                    <View style={{ gap: 16 }}>
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-slate-300 text-base">Niveau actuel</Text>
+                        <Text className="text-white text-base font-bold">
+                          {userProgression.level} ({pointsService.getLevelTitle(userProgression.level)})
+                        </Text>
+                      </View>
+                      
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-slate-300 text-base">Évaluations reçues</Text>
+                        <Text className="text-white text-base font-bold">
+                          {userProgression.stats.totalRatings}
+                        </Text>
+                      </View>
+                      
+                      <View className="flex-row justify-between items-center">
+                        <Text className="text-slate-300 text-base">Email vérifié</Text>
+                        <View className="flex-row items-center">
+                          <Ionicons 
+                            name={userProgression.stats.isEmailVerified ? "checkmark-circle" : "close-circle"} 
+                            size={16} 
+                            color={userProgression.stats.isEmailVerified ? "#22c55e" : "#ef4444"} 
+                          />
+                          <Text className={`text-base font-bold ml-2 ${
+                            userProgression.stats.isEmailVerified ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {userProgression.stats.isEmailVerified ? 'Oui' : 'Non'}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      {userProgression.stats.registrationDate && (
+                        <View className="flex-row justify-between items-center">
+                          <Text className="text-slate-300 text-base">Membre depuis</Text>
+                          <Text className="text-white text-base font-bold">
+                            {new Date(userProgression.stats.registrationDate).toLocaleDateString('fr-FR', { 
+                              day: 'numeric',
+                              month: 'long', 
+                              year: 'numeric' 
+                            })}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <View className="items-center py-12">
+                  <Text className="text-slate-400 text-base">Chargement des statistiques...</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'Avis' && (
+            <View className="mb-8">
+              {/* Real Rating Overview */}
+              <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-8 items-center mb-6">
+                <Text className="text-white text-5xl font-bold mb-2">
+                  {userProgression?.stats.averageRating > 0 
+                    ? userProgression.stats.averageRating.toFixed(1) 
+                    : '0.0'
+                  }
+                </Text>
+                <View className="flex-row mb-3">
+                  {[1,2,3,4,5].map((star) => {
+                    const rating = userProgression?.stats.averageRating || 0;
+                    const isFilledStar = star <= Math.floor(rating);
+                    const isHalfStar = star === Math.ceil(rating) && rating % 1 !== 0;
+                    
+                    return (
+                      <Ionicons 
+                        key={star}
+                        name={isFilledStar ? "star" : isHalfStar ? "star-half" : "star-outline"} 
+                        size={24} 
+                        color={isFilledStar || isHalfStar ? "#f59e0b" : "#64748b"}
+                        style={{ marginHorizontal: 2 }}
+                      />
+                    );
+                  })}
+                </View>
+                <Text className="text-slate-400 text-base">
+                  {userProgression?.stats.totalRatings > 0 
+                    ? `Basé sur ${userProgression.stats.totalRatings} avis`
+                    : 'Aucune évaluation pour le moment'
+                  }
+                </Text>
+              </View>
+
+              {/* Recent Reviews */}
+              <Text className="text-white text-xl font-bold mb-6">Avis récents</Text>
+              
+              <View style={{ gap: 16 }}>
+                {/* Sophie Laurent Review */}
+                <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
+                  <View className="flex-row items-start justify-between mb-3">
+                    <View className="flex-row items-center">
+                      <Image
+                        source={{ uri: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
+                        className="w-10 h-10 rounded-full mr-3"
+                      />
+                      <View>
+                        <Text className="text-white text-base font-bold">Sophie Laurent</Text>
+                        <View className="flex-row">
+                          {[1,2,3,4,5].map((star) => (
+              <Ionicons 
+                              key={star}
                 name="star" 
-                size={20} 
-                color={activeTab === 'reviews' ? '#84cc16' : '#94a3b8'} 
-              />
-              <Text style={[
-                styles.tabButtonText,
-                activeTab === 'reviews' && styles.activeTabButtonText
-              ]}>
-                Avis
+                              size={14} 
+                              color="#f59e0b"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+                    <Text className="text-slate-400 text-sm">Il y a 2 jours</Text>
+                  </View>
+                  
+                  <Text className="text-slate-300 text-base leading-6 mb-3">
+                    Excellent organisateur ! Match très bien organisé, ambiance super. Je recommande vivement !
               </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[
-                styles.tabButton,
-                activeTab === 'achievements' && styles.activeTabButton
-              ]}
-              onPress={() => setActiveTab('achievements')}
-            >
+                  
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-slate-400 text-sm">Événement: Match de Football</Text>
+                    <View className="flex-row items-center">
+                      <Ionicons name="heart-outline" size={16} color="#64748b" style={{ marginRight: 4 }} />
+                      <Text className="text-slate-400 text-sm">12</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Marc Dubois Review */}
+                <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
+                  <View className="flex-row items-start justify-between mb-3">
+                    <View className="flex-row items-center">
+                      <Image
+                        source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
+                        className="w-10 h-10 rounded-full mr-3"
+                      />
+                      <View>
+                        <Text className="text-white text-base font-bold">Marc Dubois</Text>
+                        <View className="flex-row">
+                          {[1,2,3,4,5].map((star) => (
               <Ionicons 
-                name="ribbon" 
-                size={20} 
-                color={activeTab === 'achievements' ? '#84cc16' : '#94a3b8'} 
-              />
-              <Text style={[
-                styles.tabButtonText,
-                activeTab === 'achievements' && styles.activeTabButtonText
-              ]}>
-                Succès
-              </Text>
-            </TouchableOpacity>
+                              key={star}
+                              name="star" 
+                              size={14} 
+                              color="#f59e0b"
+                              style={{ marginRight: 2 }}
+                            />
+                          ))}
           </View>
         </View>
-
-        {/* Contenu selon l'onglet actif */}
-        <View style={styles.tabContent}>
-          {activeTab === 'stats' && (
-            <View style={styles.statsContent}>
-              <Text style={styles.sectionTitle}>Statistiques sportives</Text>
-              <View style={styles.statsGrid}>
-                <View style={styles.statCard}>
-                  <Ionicons name="calendar" size={32} color="#84cc16" />
-                  <Text style={styles.statCardValue}>{userData.stats?.eventsOrganized || 0}</Text>
-                  <Text style={styles.statCardLabel}>Événements organisés</Text>
+                </View>
+                    <Text className="text-slate-400 text-sm">Il y a 1 semaine</Text>
                 </View>
                 
-                <View style={styles.statCard}>
-                  <Ionicons name="people" size={32} color="#84cc16" />
-                  <Text style={styles.statCardValue}>{userData.stats?.eventsJoined || 0}</Text>
-                  <Text style={styles.statCardLabel}>Événements rejoints</Text>
-                </View>
-                
-                <View style={styles.statCard}>
-                  <Ionicons name="star" size={32} color="#84cc16" />
-                  <Text style={styles.statCardValue}>{userData.stats?.averageRating || 0}</Text>
-                  <Text style={styles.statCardLabel}>Note moyenne</Text>
-                </View>
-                
-                <View style={styles.statCard}>
-                  <Ionicons name="trophy" size={32} color="#84cc16" />
-                  <Text style={styles.statCardValue}>{userData.favoritesSports ? userData.favoritesSports.length : 0}</Text>
-                  <Text style={styles.statCardLabel}>Sports pratiqués</Text>
+                  <Text className="text-slate-300 text-base leading-6 mb-3">
+                    Très bon joueur et super sympa ! Toujours de bonne humeur et fair-play.
+                  </Text>
+                  
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-slate-400 text-sm">Événement: Session Basketball</Text>
+                    <View className="flex-row items-center">
+                      <Ionicons name="heart-outline" size={16} color="#64748b" style={{ marginRight: 4 }} />
+                      <Text className="text-slate-400 text-sm">8</Text>
                 </View>
               </View>
             </View>
-          )}
-          
-          {activeTab === 'reviews' && (
-            <View style={styles.reviewsContent}>
-              <Text style={styles.sectionTitle}>Avis et commentaires</Text>
-              <Text style={styles.comingSoon}>Fonctionnalité à venir...</Text>
+            </View>
             </View>
           )}
-          
-          {activeTab === 'achievements' && (
-            <View style={styles.achievementsContent}>
-              <Text style={styles.sectionTitle}>Succès débloqués</Text>
-              <Text style={styles.comingSoon}>Fonctionnalité à venir...</Text>
-            </View>
-          )}
-        </View>
 
-        <View style={styles.bottomPadding} />
+          {activeTab === 'Succès' && (
+            <View className="mb-8">
+              {userProgression ? (
+                <>
+                  {/* Unlocked Achievements */}
+                  {userProgression.achievements.unlocked.length > 0 && (
+                    <AchievementsList
+                      achievements={userProgression.achievements.unlocked}
+                      title="🏆 Succès Débloqués"
+                      maxDisplay={10}
+                    />
+                  )}
+
+                  {/* Locked Achievements */}
+                  {userProgression.achievements.locked.length > 0 && (
+                    <AchievementsList
+                      achievements={userProgression.achievements.locked}
+                      title="🔒 Prochains Défis"
+                      maxDisplay={10}
+                    />
+                  )}
+
+                  {/* No Achievements */}
+                  {userProgression.achievements.unlocked.length === 0 && userProgression.achievements.locked.length === 0 && (
+                    <View className="items-center py-12">
+                      <Ionicons name="trophy-outline" size={64} color="#475569" />
+                      <Text className="text-white text-xl font-bold mt-4 mb-2">
+                        Aucun succès pour le moment
+                      </Text>
+                      <Text className="text-slate-400 text-center text-base mb-6 leading-6">
+                        Participez à des événements pour débloquer vos premiers achievements !
+                      </Text>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <View className="items-center py-12">
+                  <Text className="text-slate-400 text-base">Chargement des succès...</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Événements récents - Always show at bottom */}
+          <Animated.View 
+            className="mb-8"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }}
+          >
+            <Text className="text-white text-xl font-bold mb-6">Événements récents</Text>
+            
+            <View style={{ gap: 12 }}>
+              {/* Match de Football */}
+              <TouchableOpacity className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4 flex-row items-center">
+                <View className="w-14 h-14 rounded-xl overflow-hidden mr-4">
+                  <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
+                    className="w-full h-full"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-lg font-bold mb-1">Match de Football</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-slate-400 text-sm mr-3">Hier</Text>
+                    <View className="bg-cyan-500/20 px-2 py-1 rounded-lg">
+                      <Text className="text-cyan-400 text-xs font-medium">Organisateur</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Session Basketball */}
+              <TouchableOpacity className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4 flex-row items-center">
+                <View className="w-14 h-14 rounded-xl overflow-hidden mr-4">
+                  <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
+                    className="w-full h-full"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-lg font-bold mb-1">Session Basketball</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-slate-400 text-sm mr-3">3 jours</Text>
+                    <View className="bg-blue-500/20 px-2 py-1 rounded-lg">
+                      <Text className="text-blue-400 text-xs font-medium">Participant</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              {/* Tournoi Tennis */}
+              <TouchableOpacity className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4 flex-row items-center">
+                <View className="w-14 h-14 rounded-xl overflow-hidden mr-4">
+                  <Image
+                    source={{ uri: 'https://images.unsplash.com/photo-1554068865-24cecd4e34b8?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
+                    className="w-full h-full"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-lg font-bold mb-1">Tournoi Tennis</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-slate-400 text-sm mr-3">1 semaine</Text>
+                    <View className="bg-blue-500/20 px-2 py-1 rounded-lg">
+                      <Text className="text-blue-400 text-xs font-medium">Participant</Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a', // dark-900
-  },
-  
-  // Header Background
-  headerBackground: {
-    width: width,
-    height: 200,
-  },
-  headerBackgroundImage: {
-    resizeMode: 'cover',
-  },
-  headerOverlay: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  
-  // Navigation
-  navigationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 50,
-    paddingBottom: 20,
-  },
-  navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  // Profile Section
-  profileSection: {
-    backgroundColor: '#0f172a', // dark-900
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    marginTop: -30,
-  },
-  avatarContainer: {
-    position: 'relative',
-    alignSelf: 'flex-start',
-    marginBottom: 20,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: 'white',
-  },
-  levelBadge: {
-    position: 'absolute',
-    bottom: 5,
-    right: 5,
-    backgroundColor: '#84cc16',
-    borderRadius: 12,
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  levelText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-
-  // ScrollView
-  scrollView: {
-    flex: 1,
-  },
-  nameSection: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff', // white
-  },
-  editButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    backgroundColor: '#1e293b', // dark-800
-    borderWidth: 1,
-    borderColor: '#334155', // dark-700
-  },
-  editButtonText: {
-    fontSize: 12,
-    color: '#94a3b8', // dark-400
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  username: {
-    fontSize: 14,
-    color: '#94a3b8', // dark-400
-    marginBottom: 12,
-  },
-  locationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  locationText: {
-    fontSize: 14,
-    color: '#94a3b8', // dark-400
-    marginLeft: 4,
-    marginRight: 8,
-  },
-  joinDate: {
-    fontSize: 14,
-    color: '#94a3b8', // dark-400
-  },
-  bio: {
-    fontSize: 14,
-    color: '#ffffff', // white
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  
-  // Follow Button
-  followButton: {
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  followButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-  },
-  followButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-
-  // Main Stats Section
-  mainStatsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#0f172a', // dark-900
-    marginBottom: 10,
-  },
-  statsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  refreshStatsButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 15,
-    backgroundColor: '#1e293b', // dark-800
-    borderWidth: 1,
-    borderColor: '#334155', // dark-700
-  },
-  refreshStatsText: {
-    fontSize: 14,
-    color: '#94a3b8', // dark-400
-    marginLeft: 4,
-    fontWeight: '500',
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 15,
-  },
-  statCard: {
-    width: '47%',
-    backgroundColor: '#1e293b', // dark-800
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#334155', // dark-700
-    marginBottom: 10,
-  },
-  statIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  additionalStats: {
-    marginTop: 20,
-    paddingTop: 15,
-    borderTopWidth: 1,
-    borderTopColor: colors.gray[200],
-  },
-  additionalStatsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#ffffff', // white
-    marginBottom: 12,
-  },
-  additionalStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  additionalStatItem: {
-    alignItems: 'center',
-  },
-  additionalStatValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff', // white
-    marginTop: 4,
-  },
-  additionalStatLabel: {
-    fontSize: 12,
-    color: '#94a3b8', // dark-400
-  },
-
-  // Social Stats
-  socialStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#0f172a', // dark-900
-    marginBottom: 0,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff', // white
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#94a3b8', // dark-400
-  },
-
-  // Sports Section
-  sportsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#0f172a', // dark-900
-    marginBottom: 0,
-  },
-  sportsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  sportTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 8,
-  },
-  sportTagText: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginLeft: 6,
-    color: 'white',
-  },
-
-  // Events Section
-  eventsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    backgroundColor: '#0f172a', // dark-900
-    marginBottom: 20,
-  },
-  eventsContainer: {
-    gap: 12,
-  },
-  eventCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1e293b', // dark-800
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155', // dark-700
-  },
-  eventIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  eventInfo: {
-    flex: 1,
-  },
-  eventTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#ffffff', // white
-    marginBottom: 4,
-  },
-  eventMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  eventTime: {
-    fontSize: 14,
-    color: '#94a3b8', // dark-400
-  },
-  eventRole: {
-    fontSize: 14,
-    color: '#84cc16', // lime
-    fontWeight: '500',
-  },
-
-  // Tabs Section
-  tabsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: '#0f172a', // dark-900
-    marginBottom: 0,
-  },
-  tabButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  tabButton: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    minWidth: 80,
-    justifyContent: 'center',
-  },
-  activeTabButton: {
-    backgroundColor: 'rgba(132, 204, 22, 0.1)', // lime/10
-  },
-  tabButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 4,
-    color: '#94a3b8', // dark-400
-  },
-  activeTabButtonText: {
-    color: '#84cc16', // lime
-  },
-
-  // Tab Content
-  tabContent: {
-    paddingHorizontal: 20,
-  },
-  statsContent: {
-    marginBottom: 30,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  statCard: {
-    backgroundColor: '#1e293b', // dark-800
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-    width: (width - 60) / 2,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#334155', // dark-700
-  },
-  statCardValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#ffffff', // white
-    marginVertical: 8,
-  },
-  statCardLabel: {
-    fontSize: 12,
-    color: '#94a3b8', // dark-400
-    textAlign: 'center',
-  },
-  
-  comingSoon: {
-    fontSize: 16,
-    color: '#94a3b8', // dark-400
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginTop: 40,
-  },
-  
-  bottomPadding: {
-    height: 100,
-  },
-
-  // Loading styles
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0f172a', // dark-900
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#94a3b8', // dark-400
-  },
-});
 
 export default UserProfileScreen; 

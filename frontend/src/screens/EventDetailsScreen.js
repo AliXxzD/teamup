@@ -4,489 +4,827 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  ActivityIndicator,
   Image,
-  Share
+  StatusBar,
+  Dimensions,
+  ImageBackground,
+  SafeAreaView,
+  Alert,
+  Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Marker } from 'react-native-maps';
+import { useAuth } from '../contexts/AuthContext';
+import { API_BASE_URL } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
-import GradientButton from '../components/GradientButton';
+import { getId, getOrganizerId, getEventId, getUserId, safeNavigate } from '../utils/idUtils';
+import organizerMessageService from '../services/organizerMessageService';
 
-const EventDetailsScreen = ({ route, navigation }) => {
+const { width } = Dimensions.get('window');
+
+const EventDetailsScreen = ({ navigation, route }) => {
+  const { user } = useAuth();
+  const [isLiked, setIsLiked] = useState(false);
+  const [eventData, setEventData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [mapCoordinates, setMapCoordinates] = useState(null);
   const { eventId } = route.params || {};
   
-  // Vérifier que eventId est présent
-  if (!eventId) {
-    console.error('❌ EventDetailsScreen: eventId manquant dans les paramètres');
-    Alert.alert('Erreur', 'ID de l\'événement manquant');
-    navigation.goBack();
-    return null;
-  }
-  
-  const [event, setEvent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [isJoining, setIsJoining] = useState(false);
-  const [userToken, setUserToken] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-
-
+  const geocodeAddress = async (address) => {
+    try {
+      console.log('🗺️ Géocodage de l\'adresse:', address);
+      
+      // Réinitialiser les coordonnées avant le géocodage
+      setMapCoordinates(null);
+      
+      // Pour la démo, utilisons Nominatim (OpenStreetMap) qui est gratuit
+      const encodedAddress = encodeURIComponent(address);
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&addressdetails=1`;
+      
+      const response = await fetch(nominatimUrl, {
+        headers: {
+          'User-Agent': 'TeamUp-App/1.0'
+        }
+      });
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const coordinates = {
+          latitude: parseFloat(data[0].lat),
+          longitude: parseFloat(data[0].lon)
+        };
+        console.log('✅ Coordonnées trouvées pour', address, ':', coordinates);
+        setMapCoordinates(coordinates);
+      } else {
+        console.log('❌ Adresse non trouvée:', address);
+        // Coordonnées par défaut pour Paris
+        setMapCoordinates({
+          latitude: 48.8566,
+          longitude: 2.3522
+        });
+      }
+    } catch (error) {
+      console.error('❌ Erreur géocodage pour', address, ':', error);
+      // Coordonnées par défaut en cas d'erreur
+      setMapCoordinates({
+        latitude: 48.8566,
+        longitude: 2.3522
+      });
+    }
+  };
 
   useEffect(() => {
+    // Réinitialiser les coordonnées à chaque changement d'événement
+    setMapCoordinates(null);
+    setEventData(null);
     fetchEventDetails();
-    checkUserAuth();
-  }, []);
+  }, [eventId]);
 
-  const checkUserAuth = async () => {
-    const token = await AsyncStorage.getItem('accessToken');
-    const userData = await AsyncStorage.getItem('user');
-    setUserToken(token);
-    
-    if (userData) {
-      setCurrentUser(JSON.parse(userData));
+  // Fonction pour contacter l'organisateur
+  const handleMessageOrganizer = async () => {
+    try {
+      console.log('🔍 handleMessageOrganizer appelé');
+      console.log('🔍 Données disponibles:', {
+        eventData: !!eventData,
+        user: !!user,
+        eventTitle: eventData?.title,
+        organizerExists: !!eventData?.organizer,
+        organizerName: eventData?.organizer?.name,
+        userId: user?.id
+      });
+      
+      if (!eventData || !user) {
+        console.log('❌ Données manquantes:', { eventData: !!eventData, user: !!user });
+        Alert.alert('Erreur', 'Données manquantes pour contacter l\'organisateur');
+        return;
+      }
+
+      if (!eventData.organizer) {
+        console.log('❌ Pas d\'organisateur dans eventData');
+        console.log('🔍 eventData structure:', Object.keys(eventData));
+        Alert.alert('Erreur', 'Organisateur non trouvé pour cet événement');
+        return;
+      }
+
+      // Vérifier si l'utilisateur peut contacter l'organisateur
+      console.log('🔍 Appel canMessageOrganizer...');
+      const canMessage = await organizerMessageService.canMessageOrganizer(eventData, user.id);
+      console.log('🔍 Résultat canMessage:', canMessage);
+      
+      if (!canMessage.canMessage) {
+        Alert.alert('Information', canMessage.reason);
+        return;
+      }
+
+      // Envoi direct sans popup
+      const prefilledMessage = organizerMessageService.generateOrganizerMessage(
+        eventData.title,
+        user.name
+      );
+
+      console.log('📤 Envoi direct du message à l\'organisateur');
+      startConversationAndSendMessage(prefilledMessage);
+
+    } catch (error) {
+      console.error('❌ Erreur handleMessageOrganizer:', error);
+      Alert.alert('Erreur', 'Impossible de contacter l\'organisateur');
+    }
+  };
+
+
+  // Créer la conversation et envoyer le message automatiquement
+  const startConversationAndSendMessage = async (message) => {
+    try {
+      const result = await organizerMessageService.messageOrganizer(
+        navigation,
+        eventId,
+        eventData.title,
+        eventData.organizer.name
+      );
+
+      if (result.success && result.conversation) {
+        console.log('✅ Conversation créée avec succès:', result.conversation.id);
+        
+        // Rafraîchir la liste des conversations dans MessagesScreen
+        // Envoyer un événement pour rafraîchir la liste
+        navigation.navigate('Messages', { refresh: true });
+        
+        // Naviguer vers le chat avec un message à envoyer automatiquement
+        navigation.navigate('Chat', {
+          conversation: result.conversation,
+          eventContext: {
+            id: eventId,
+            title: eventData.title,
+            organizerName: eventData.organizer.name
+          },
+          autoSendMessage: message
+        });
+      } else {
+        console.log('❌ Échec création conversation, tentative de création directe');
+        
+        // Essayer de créer la conversation directement via API
+        try {
+          const accessToken = await AsyncStorage.getItem('accessToken');
+          if (accessToken) {
+            const response = await fetch(`${API_BASE_URL}/api/messages/conversations/with-organizer`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ eventId }),
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.success && data.conversation) {
+                console.log('✅ Conversation créée directement:', data.conversation.id);
+                
+                // Rafraîchir la liste des conversations
+                navigation.navigate('Messages', { refresh: true });
+                
+                // Naviguer vers le chat
+                navigation.navigate('Chat', {
+                  conversation: data.conversation,
+                  eventContext: {
+                    id: eventId,
+                    title: eventData.title,
+                    organizerName: eventData.organizer.name
+                  },
+                  autoSendMessage: message
+                });
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.log('❌ Erreur création directe:', error);
+        }
+        
+        // Si tout échoue, créer une conversation temporaire
+        const tempConversation = {
+          id: `temp-${Date.now()}`,
+          type: 'private',
+          name: `Chat avec ${eventData.organizer.name}`,
+          participants: [
+            { _id: user.id, name: user.name },
+            { _id: eventData.organizer._id, name: eventData.organizer.name }
+          ],
+          isActive: true,
+          isTemporary: true
+        };
+        
+        console.log('🔧 Création conversation temporaire pour envoi direct');
+        navigation.navigate('Chat', {
+          conversation: tempConversation,
+          eventContext: {
+            id: eventId,
+            title: eventData.title,
+            organizerName: eventData.organizer.name
+          },
+          autoSendMessage: message
+        });
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur startConversationAndSendMessage:', error);
+      Alert.alert('Erreur', 'Impossible d\'envoyer le message');
     }
   };
 
   const fetchEventDetails = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`);
-      const data = await response.json();
+      setLoading(true);
+      const token = await AsyncStorage.getItem('accessToken');
+      
+      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (data.success) {
-        setEvent(data.data);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('📝 Event data received:', data);
+        setEventData(data.data); // Correction: utiliser data.data au lieu de data.event
+        
+        // Géocoder l'adresse pour obtenir les coordonnées
+        if (data.data.location?.address) {
+          console.log('🏠 Adresse de l\'événement:', data.data.location.address);
+          geocodeAddress(data.data.location.address);
+        } else {
+          console.log('⚠️ Pas d\'adresse trouvée pour cet événement');
+          // Coordonnées par défaut si pas d'adresse
+          setMapCoordinates({
+            latitude: 48.8566,
+            longitude: 2.3522
+          });
+        }
       } else {
-        Alert.alert('Erreur', 'Événement non trouvé');
-        navigation.goBack();
+        console.error('❌ Error fetching event:', response.status);
+        Alert.alert('Erreur', 'Impossible de charger les détails de l\'événement');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement de l\'événement:', error);
-      Alert.alert('Erreur', 'Impossible de charger l\'événement');
-      navigation.goBack();
+      console.error('❌ Error fetching event details:', error);
+      Alert.alert('Erreur', 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
   };
-
+  
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
-      day: 'numeric',
+    const options = { 
+      weekday: 'long', 
+      day: 'numeric', 
       month: 'long',
       year: 'numeric'
-    });
-  };
-
-  const formatTime = (timeString) => {
-    return timeString.substring(0, 5); // HH:MM
-  };
-
-  const getEventImage = (sport) => {
-    const sportImages = {
-      'Football': 'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=800&h=600&fit=crop',
-      'Basketball': 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=600&fit=crop',
-      'Tennis': 'https://images.unsplash.com/photo-1622279457486-62dcc4a431d6?w=800&h=600&fit=crop',
-      'Running': 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
-      'Yoga': 'https://images.unsplash.com/photo-1588286840104-8957b019727f?w=800&h=600&fit=crop',
-      'Natation': 'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800&h=600&fit=crop'
     };
-    return sportImages[sport] || sportImages['Football'];
+    return date.toLocaleDateString('fr-FR', options);
   };
 
-  const handleJoinEvent = async () => {
-    if (!userToken) {
-      Alert.alert(
-        'Connexion requise',
-        'Vous devez être connecté pour rejoindre un événement',
-        [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Se connecter', onPress: () => navigation.navigate('Login') }
-        ]
+  const handleLike = () => {
+    setIsLiked(!isLiked);
+  };
+
+  const handleShare = () => {
+    Alert.alert('Partager', 'Fonctionnalité de partage en cours de développement');
+  };
+
+  const handleJoinEvent = () => {
+    Alert.alert('Rejoindre', 'Vous voulez rejoindre cet événement ?');
+  };
+
+  const handleViewProfile = () => {
+    const userId = getOrganizerId(eventData);
+    
+    if (userId) {
+      safeNavigate(
+        navigation, 
+        'UserProfile', 
+        { userId }, 
+        'Impossible d\'accéder au profil de l\'organisateur'
       );
-      return;
+    } else {
+      debugEventData();
+      Alert.alert('Erreur', 'ID de l\'organisateur non trouvé');
     }
+  };
 
-    setIsJoining(true);
+  // Fonction de debug pour afficher les données
+  const debugEventData = () => {
+    console.log('🔍 DEBUG COMPLET:');
+    console.log('📊 eventData:', eventData);
+    console.log('👤 organizer:', eventData?.organizer);
+    if (eventData?.organizer) {
+      console.log('🔑 Clés organizer:', Object.keys(eventData.organizer));
+      console.log('🆔 _id:', eventData.organizer._id);
+      console.log('🆔 id:', eventData.organizer.id);
+      console.log('📛 name:', eventData.organizer.name);
+    }
+  };
 
+  const handleMessage = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/join`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${userToken}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        Alert.alert('Succès !', 'Vous avez rejoint l\'événement avec succès');
-        fetchEventDetails(); // Recharger les détails
-      } else {
-        Alert.alert('Erreur', data.message || 'Impossible de rejoindre l\'événement');
+      console.log('🔍 handleMessage appelé');
+      console.log('🔍 eventData exists:', !!eventData);
+      console.log('🔍 eventData.organizer exists:', !!eventData?.organizer);
+      
+      if (!eventData) {
+        console.log('❌ eventData est undefined');
+        Alert.alert('Erreur', 'Données d\'événement non chargées. Veuillez réessayer.');
+        return;
       }
+      
+      if (!eventData.organizer) {
+        console.log('❌ eventData.organizer est undefined');
+        console.log('🔍 eventData keys:', Object.keys(eventData));
+        Alert.alert('Erreur', 'Organisateur non trouvé pour cet événement.');
+        return;
+      }
+      
+      const organizerId = getOrganizerId(eventData);
+      const organizerName = eventData.organizer.name || 'l\'organisateur';
+      
+      console.log('🔍 organizerId:', organizerId);
+      console.log('🔍 organizerName:', organizerName);
+      
+      if (!organizerId) {
+        console.log('❌ organizerId est undefined');
+        console.log('🔍 eventData.organizer structure:', {
+          _id: eventData.organizer._id,
+          id: eventData.organizer.id,
+          name: eventData.organizer.name,
+          keys: Object.keys(eventData.organizer)
+        });
+        debugEventData();
+        Alert.alert('Erreur', 'Impossible d\'identifier l\'organisateur');
+        return;
+      }
+
+      // Utiliser le nouveau système de messagerie avec l'organisateur
+      console.log('✅ Appel handleMessageOrganizer');
+      await handleMessageOrganizer();
+      
     } catch (error) {
-      console.error('Erreur lors de l\'inscription:', error);
-      Alert.alert('Erreur', 'Impossible de rejoindre l\'événement');
-    } finally {
-      setIsJoining(false);
+      console.error('❌ Erreur dans handleMessage:', error);
+      Alert.alert('Erreur', 'Erreur lors de l\'ouverture du chat: ' + error.message);
     }
-  };
-
-  const handleLeaveEvent = async () => {
-    Alert.alert(
-      'Quitter l\'événement',
-      'Êtes-vous sûr de vouloir quitter cet événement ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Quitter',
-          style: 'destructive',
-          onPress: async () => {
-            setIsJoining(true);
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/events/${eventId}/leave`, {
-                method: 'DELETE',
-                headers: {
-                  'Authorization': `Bearer ${userToken}`,
-                  'Content-Type': 'application/json'
-                }
-              });
-
-              const data = await response.json();
-
-              if (data.success) {
-                Alert.alert('Succès', 'Vous avez quitté l\'événement');
-                fetchEventDetails();
-              } else {
-                Alert.alert('Erreur', data.message || 'Impossible de quitter l\'événement');
-              }
-            } catch (error) {
-              console.error('Erreur lors de la désinscription:', error);
-              Alert.alert('Erreur', 'Impossible de quitter l\'événement');
-            } finally {
-              setIsJoining(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleShare = async () => {
-    try {
-      await Share.share({
-        message: `Rejoignez-moi pour "${event.title}" - ${event.description}`,
-        title: event.title
-      });
-    } catch (error) {
-      console.error('Erreur lors du partage:', error);
-    }
-  };
-
-  const isUserParticipant = () => {
-    if (!currentUser || !event.participants) return false;
-    return event.participants.some(
-      participant => participant.user._id === currentUser._id
-    );
-  };
-
-  const isUserOrganizer = () => {
-    if (!currentUser || !event.organizer) return false;
-    return event.organizer._id === currentUser._id;
-  };
-
-  const handleDeleteEvent = async () => {
-    Alert.alert(
-      'Supprimer l\'événement',
-      'Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            setIsJoining(true);
-            try {
-              const response = await fetch(`${API_BASE_URL}/api/events/${eventId}`, {
-                method: 'DELETE',
-                headers: {
-                  'Authorization': `Bearer ${userToken}`,
-                  'Content-Type': 'application/json'
-                }
-              });
-
-              const data = await response.json();
-
-              if (data.success) {
-                Alert.alert('Succès', 'Événement supprimé avec succès', [
-                  { text: 'OK', onPress: () => navigation.goBack() }
-                ]);
-              } else {
-                Alert.alert('Erreur', data.message || 'Impossible de supprimer l\'événement');
-              }
-            } catch (error) {
-              console.error('Erreur lors de la suppression:', error);
-              Alert.alert('Erreur', 'Impossible de supprimer l\'événement');
-            } finally {
-              setIsJoining(false);
-            }
-          }
-        }
-      ]
-    );
-  };
-
-  const handleEditEvent = () => {
-    navigation.navigate('CreateEvent', { 
-      eventId: eventId,
-      eventData: event,
-      isEditing: true 
-    });
   };
 
   if (loading) {
     return (
-      <SafeAreaView className="flex-1 bg-dark-900">
-        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#20B2AA" />
-          <Text className="text-dark-300 text-base mt-3">Chargement...</Text>
-        </View>
+      <SafeAreaView className="flex-1 bg-slate-900 items-center justify-center">
+        <ActivityIndicator size="large" color="#06b6d4" />
+        <Text className="text-white text-lg mt-4">Chargement...</Text>
       </SafeAreaView>
     );
   }
 
-  if (!event) {
+  if (!eventData) {
     return (
-      <SafeAreaView className="flex-1 bg-dark-900">
-        <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
-        <View className="flex-1 items-center justify-center">
-          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
-          <Text className="text-danger text-lg mt-3">Événement non trouvé</Text>
-        </View>
+      <SafeAreaView className="flex-1 bg-slate-900 items-center justify-center">
+        <Text className="text-white text-lg">Événement non trouvé</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text className="text-cyan-400 text-base mt-4">Retour</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
-  const isEventFull = event.currentParticipants >= event.maxParticipants;
-  const isEventPast = new Date(event.date) < new Date();
+  const handleOpenMap = () => {
+    const coords = mapCoordinates || { latitude: 48.8566, longitude: 2.3522 };
+    const address = eventData.location?.address || eventData.location;
+    
+    // Utiliser l'adresse pour Google Maps si disponible, sinon les coordonnées
+    const url = address 
+      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
+      : `https://www.google.com/maps/search/?api=1&query=${coords.latitude},${coords.longitude}`;
+    
+    Linking.openURL(url);
+  };
 
   return (
-    <SafeAreaView className="flex-1 bg-dark-900">
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+    <SafeAreaView className="flex-1 bg-slate-900">
+      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Header Image */}
-        <View className="h-64 relative">
-          <Image
-            source={{ uri: getEventImage(event.sport) }}
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-          <View className="absolute inset-0 bg-black/40">
-            <SafeAreaView>
-              <View className="flex-row justify-between items-center px-5 pt-2">
+        {/* Header with Background Image */}
+        <View style={{ height: 280, position: 'relative' }}>
+          <ImageBackground 
+            source={{ 
+              uri: eventData.images?.[0] || eventData.image || 
+              (eventData.sport === 'Basketball' 
+                ? 'https://images.unsplash.com/photo-1546519638-68e109498ffc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'
+                : 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80')
+            }}
+            style={{ flex: 1 }}
+            imageStyle={{ opacity: 0.9 }}
+          >
+            <LinearGradient
+              colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.8)']}
+              style={{ flex: 1, justifyContent: 'space-between', padding: 24 }}
+            >
+              {/* Navigation and Actions */}
+              <View className="flex-row items-center justify-between">
                 <TouchableOpacity 
-                  className="w-11 h-11 rounded-full bg-black/50 items-center justify-center"
+                  className="w-11 h-11 bg-black/40 rounded-full items-center justify-center"
                   onPress={() => navigation.goBack()}
+                  style={{
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 6,
+                    elevation: 6,
+                  }}
                 >
-                  <Ionicons name="arrow-back" size={24} color="#ffffff" />
+                  <Ionicons name="arrow-back" size={20} color="white" />
                 </TouchableOpacity>
-                <View className="flex-row items-center">
-                  {isUserOrganizer() && (
-                    <>
+
+                {/* GRATUIT/PRICE Badge */}
+                {(eventData.isFree || eventData.price?.isFree) ? (
+                  <View style={{
+                    backgroundColor: '#06b6d4',
+                    paddingHorizontal: 16,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    position: 'absolute',
+                    top: 0,
+                    left: '50%',
+                    transform: [{ translateX: -40 }],
+                  }}>
+                    <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold' }}>GRATUIT</Text>
+                  </View>
+                ) : eventData.price && (
+                  <View style={{
+                    backgroundColor: '#f59e0b',
+                    paddingHorizontal: 16,
+                    paddingVertical: 6,
+                    borderRadius: 20,
+                    position: 'absolute',
+                    top: 0,
+                    left: '50%',
+                    transform: [{ translateX: -30 }],
+                  }}>
+                    <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: 'bold' }}>€{eventData.price.amount}</Text>
+                  </View>
+                )}
+                
+                <View className="flex-row items-center" style={{ gap: 12 }}>
                       <TouchableOpacity 
-                        className="w-10 h-10 rounded-full bg-black/50 items-center justify-center mr-2"
-                        onPress={handleEditEvent}
-                      >
-                        <Ionicons name="create-outline" size={20} color="#ffffff" />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        className="w-10 h-10 rounded-full bg-black/50 items-center justify-center mr-2"
-                        onPress={handleDeleteEvent}
-                      >
-                        <Ionicons name="trash-outline" size={20} color="#ffffff" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                  <TouchableOpacity 
-                    className="w-11 h-11 rounded-full bg-black/50 items-center justify-center"
-                    onPress={handleShare}
+                    className="w-11 h-11 bg-black/40 rounded-full items-center justify-center"
+                    onPress={handleLike}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.4,
+                      shadowRadius: 6,
+                      elevation: 6,
+                    }}
                   >
-                    <Ionicons name="share-outline" size={24} color="#ffffff" />
+                    <Ionicons 
+                      name={isLiked ? "heart" : "heart-outline"} 
+                      size={20} 
+                      color={isLiked ? "#ef4444" : "white"} 
+                    />
+                      </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    className="w-11 h-11 bg-black/40 rounded-full items-center justify-center"
+                    onPress={handleShare}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.4,
+                      shadowRadius: 6,
+                      elevation: 6,
+                    }}
+                  >
+                    <Ionicons name="share-outline" size={20} color="white" />
                   </TouchableOpacity>
                 </View>
               </View>
-            </SafeAreaView>
-            
-            <View className="absolute bottom-4 right-4 items-end">
-              {event.price.isFree && (
-                <View className="bg-success px-3 py-1.5 rounded-full mb-2">
-                  <Text className="text-white text-xs font-bold">GRATUIT</Text>
+
+              {/* Event Title and Info */}
+              <View>
+                <Text style={{ 
+                  color: '#ffffff', 
+                  fontSize: 28, 
+                  fontWeight: 'bold', 
+                  marginBottom: 16,
+                  textShadowColor: 'rgba(0,0,0,0.5)',
+                  textShadowOffset: { width: 0, height: 2 },
+                  textShadowRadius: 4
+                }}>
+                  {eventData.title}
+                </Text>
+                
+                <View className="flex-row items-center">
+                  <View className="flex-row items-center mr-6">
+                    <Ionicons name="calendar-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text className="text-white text-base font-medium">{formatDate(eventData.date)}</Text>
+                  </View>
+                  <View className="flex-row items-center">
+                    <Ionicons name="time-outline" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text className="text-white text-base font-medium">{eventData.time}</Text>
+                  </View>
                 </View>
-              )}
-              <View className="bg-black/70 px-3 py-1.5 rounded-full">
-                <Text className="text-white text-sm font-semibold">{event.sport}</Text>
               </View>
-            </View>
-          </View>
+            </LinearGradient>
+          </ImageBackground>
         </View>
 
-        {/* Event Content */}
-        <View className="p-5">
-          {/* Title and Description */}
+        {/* Event Details Section */}
+        <View className="bg-slate-900 px-6 pt-6">
+          {/* Location with Map */}
           <View className="mb-6">
-            <Text className="text-white text-2xl font-bold mb-3">{event.title}</Text>
-            <Text className="text-dark-300 text-base leading-6">{event.description}</Text>
-          </View>
-
-          {/* Event Details */}
-          <View className="mb-6">
-            <Text className="text-white text-lg font-bold mb-4">Détails de l'événement</Text>
-            
-            <View className="flex-row items-start mb-4">
-              <Ionicons name="calendar-outline" size={20} color="#20B2AA" />
-              <View className="ml-3 flex-1">
-                <Text className="text-dark-400 text-sm mb-0.5">Date et heure</Text>
-                <Text className="text-white text-base font-medium">
-                  {formatDate(event.date)} à {formatTime(event.time)}
-                </Text>
-              </View>
+            <View className="flex-row items-center mb-4">
+              <Ionicons name="location" size={20} color="#64748b" style={{ marginRight: 12 }} />
+              <Text className="text-white text-lg font-medium">
+                {eventData.location?.address || eventData.location || 'Lieu à définir'}
+              </Text>
             </View>
 
-            <View className="flex-row items-start mb-4">
-              <Ionicons name="location-outline" size={20} color="#20B2AA" />
-              <View className="ml-3 flex-1">
-                <Text className="text-dark-400 text-sm mb-0.5">Lieu</Text>
-                <Text className="text-white text-base font-medium">{event.location.address}</Text>
-              </View>
-            </View>
+            {/* Real Map */}
+            <View className="mb-4">
+              <View 
+                className="h-40 bg-slate-800 border border-slate-700/50 rounded-2xl overflow-hidden relative"
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 8,
+                  elevation: 6,
+                }}
+              >
+                {mapCoordinates ? (
+                  <MapView
+                    key={`map-${eventId}-${mapCoordinates.latitude}-${mapCoordinates.longitude}`}
+                    style={{ flex: 1 }}
+                    region={{
+                      latitude: mapCoordinates.latitude,
+                      longitude: mapCoordinates.longitude,
+                      latitudeDelta: 0.01,
+                      longitudeDelta: 0.01,
+                    }}
+                    mapType="standard"
+                    showsUserLocation={false}
+                    showsMyLocationButton={false}
+                    zoomEnabled={true}
+                    scrollEnabled={true}
+                    pitchEnabled={false}
+                    rotateEnabled={false}
+                  >
+                    <Marker
+                      coordinate={{
+                        latitude: mapCoordinates.latitude,
+                        longitude: mapCoordinates.longitude,
+                      }}
+                      title={eventData.title}
+                      description={eventData.location?.address || eventData.location}
+                    >
+                      <View className="items-center">
+                        <View className="w-10 h-10 bg-cyan-500 rounded-full items-center justify-center border-2 border-white">
+                          <Ionicons 
+                            name={eventData.sport === 'Basketball' ? 'basketball' : eventData.sport === 'Tennis' ? 'tennisball' : 'football'} 
+                            size={20} 
+                            color="#ffffff" 
+                          />
+                        </View>
+                        <View className="w-0 h-0 border-l-2 border-r-2 border-t-4 border-l-transparent border-r-transparent border-t-cyan-500 -mt-1" />
+                      </View>
+                    </Marker>
+                  </MapView>
+                ) : (
+                  <View className="flex-1 items-center justify-center">
+                    <ActivityIndicator size="small" color="#06b6d4" />
+                    <Text className="text-slate-400 text-xs mt-2">Chargement de la carte...</Text>
+                  </View>
+                )}
+                
+                {/* Map Controls */}
+                <View className="absolute top-3 right-3 flex-row" style={{ gap: 8 }}>
+                  <TouchableOpacity 
+                    className="bg-white rounded-lg px-3 py-2 flex-row items-center"
+                    onPress={handleOpenMap}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.2,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }}
+                  >
+                    <Ionicons name="navigate" size={16} color="#06b6d4" style={{ marginRight: 4 }} />
+                    <Text className="text-slate-900 text-xs font-bold">Itinéraire</Text>
+                  </TouchableOpacity>
+                </View>
 
-            <View className="flex-row items-start mb-4">
-              <Ionicons name="people-outline" size={20} color="#20B2AA" />
-              <View className="ml-3 flex-1">
-                <Text className="text-dark-400 text-sm mb-0.5">Participants</Text>
-                <Text className="text-white text-base font-medium">
-                  {event.currentParticipants}/{event.maxParticipants} personnes
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row items-start mb-4">
-              <Ionicons name="star-outline" size={20} color="#20B2AA" />
-              <View className="ml-3 flex-1">
-                <Text className="text-dark-400 text-sm mb-0.5">Niveau requis</Text>
-                <Text className="text-white text-base font-medium">{event.level}</Text>
-              </View>
-            </View>
-
-            {!event.price.isFree && (
-              <View className="flex-row items-start mb-4">
-                <Ionicons name="card-outline" size={20} color="#20B2AA" />
-                <View className="ml-3 flex-1">
-                  <Text className="text-dark-400 text-sm mb-0.5">Prix</Text>
-                  <Text className="text-white text-base font-medium">{event.price.amount}€</Text>
+                {/* Location Info Overlay */}
+                <View className="absolute bottom-3 left-3 bg-black/70 rounded-lg px-3 py-2">
+                  <Text className="text-white text-xs font-medium">
+                    📍 {eventData.location?.address || eventData.location || 'Lieu à définir'}
+                  </Text>
                 </View>
               </View>
-            )}
-          </View>
+            </View>
 
-          {/* Organizer */}
-          <View className="mb-6">
-            <Text className="text-white text-lg font-bold mb-4">Organisateur</Text>
-            <View className="flex-row items-center">
-              <View className="w-12 h-12 rounded-full bg-primary-500 items-center justify-center mr-3">
-                <Text className="text-white text-lg font-bold">
-                  {event.organizer.name.charAt(0).toUpperCase()}
+            {/* Participants and Level */}
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center">
+                <Ionicons name="people" size={20} color="#64748b" style={{ marginRight: 12 }} />
+                <Text className="text-white text-base font-medium">
+                  {eventData.currentParticipants || eventData.participants?.length || 0}/{eventData.maxParticipants} participants
                 </Text>
               </View>
-              <View className="flex-1">
-                <Text className="text-white text-base font-semibold">{event.organizer.name}</Text>
-                <Text className="text-dark-300 text-sm">{event.organizer.email}</Text>
+              <Text className="text-slate-400 text-base">Niveau: {eventData.level}</Text>
+            </View>
+
+            {/* Progress Bar */}
+            <View className="mt-4">
+              <View className="w-full h-2 bg-slate-700 rounded-full">
+                <View 
+                  className="h-2 bg-cyan-500 rounded-full"
+                  style={{ 
+                    width: `${((eventData.currentParticipants || eventData.participants?.length || 0) / eventData.maxParticipants) * 100}%` 
+                  }}
+                />
               </View>
             </View>
           </View>
 
-          {/* Participants */}
-          {event.participants && event.participants.length > 0 && (
-            <View className="mb-6">
-              <Text className="text-white text-lg font-bold mb-4">
-                Participants ({event.participants.length})
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row">
-                  {event.participants.map((participant, index) => (
-                    <View key={index} className="w-10 h-10 rounded-full bg-primary-500 items-center justify-center mr-2">
-                      <Text className="text-white text-sm font-bold">
-                        {participant.user.name.charAt(0).toUpperCase()}
+          {/* Organizer Section */}
+          <View className="mb-6">
+            <Text className="text-white text-xl font-bold mb-4">Organisateur</Text>
+            
+            <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <Image
+                    source={{ 
+                      uri: eventData.organizer?.profile?.avatar || eventData.organizer?.avatar ||
+                      'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'
+                    }}
+                    className="w-12 h-12 rounded-full mr-4"
+                  />
+                  <View className="flex-1">
+                    <Text className="text-white text-lg font-bold">
+                      {eventData.organizer?.name || 'Organisateur'}
+                    </Text>
+                    <View className="flex-row items-center">
+                      <Ionicons name="star" size={14} color="#f59e0b" style={{ marginRight: 4 }} />
+                      <Text className="text-slate-400 text-sm mr-3">
+                        {eventData.organizer?.rating || '4.8'}
+                      </Text>
+                      <Text className="text-slate-400 text-sm">
+                        • {eventData.organizer?.eventsCount || eventData.organizer?.totalEvents || '0'} événements
                       </Text>
                     </View>
-                  ))}
+                  </View>
                 </View>
-              </ScrollView>
+                
+                <View className="flex-row items-center" style={{ gap: 8 }}>
+                  <TouchableOpacity 
+                    className="w-10 h-10 bg-slate-700 rounded-full items-center justify-center"
+                    onPress={handleMessage}
+                    style={{
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 3,
+                    }}
+                  >
+                    <Ionicons name="chatbubble" size={18} color="#22d3ee" />
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    className="bg-cyan-500 rounded-xl px-4 py-2 flex-row items-center"
+                    onPress={handleViewProfile}
+                    style={{
+                      shadowColor: '#06b6d4',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      elevation: 4,
+                    }}
+                  >
+                    <Ionicons name="person" size={16} color="#ffffff" style={{ marginRight: 6 }} />
+                    <Text className="text-white text-sm font-bold">Voir profil</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          )}
+          </View>
 
-          {/* Action Buttons */}
-          <View className="mt-5">
-            {isEventPast ? (
-              <View className="flex-row items-center justify-center py-4 bg-dark-800 rounded-xl">
-                <Ionicons name="time-outline" size={24} color="#64748b" />
-                <Text className="text-dark-400 text-base ml-2">Cet événement est terminé</Text>
+          {/* Description */}
+            <View className="mb-6">
+            <Text className="text-white text-xl font-bold mb-4">Description</Text>
+            <Text className="text-slate-300 text-base leading-6">
+              {eventData.description}
+              </Text>
+          </View>
+
+          {/* Participants Section */}
+          <View className="mb-6">
+            <Text className="text-white text-xl font-bold mb-4">
+              Participants ({eventData.currentParticipants || eventData.participants?.length || 0})
+            </Text>
+            
+            <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
+              <View style={{ gap: 12 }}>
+                {(eventData.participants || []).map((participant, index) => {
+                  if (!participant) return null;
+                  
+                  const participantKey = getId(participant) || `participant_${index}`;
+                  const userId = getUserId(participant);
+                  const userName = participant.user?.name || participant.name || `Participant ${index + 1}`;
+                  const userAvatar = participant.user?.profile?.avatar || participant.avatar;
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={participantKey}
+                      className="flex-row items-center"
+                      onPress={() => {
+                        if (userId) {
+                          safeNavigate(
+                            navigation,
+                            'UserProfile',
+                            { userId },
+                            'Profil du participant non disponible'
+                          );
+                        } else {
+                          Alert.alert('Info', 'Profil du participant non disponible');
+                        }
+                      }}
+                    >
+                      <Image
+                        source={{ 
+                          uri: userAvatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'
+                        }}
+                        className="w-12 h-12 rounded-full mr-4"
+                      />
+                      <Text className="text-white text-lg font-medium flex-1">
+                        {userName}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                
+                {/* Show message if no participants to display */}
+                {(!eventData.participants || eventData.participants.length === 0) && (
+                  <View className="flex-row items-center">
+                    <View className="w-12 h-12 bg-slate-700 rounded-full items-center justify-center mr-4">
+                      <Ionicons name="people" size={20} color="#64748b" />
+                    </View>
+                    <Text className="text-slate-400 text-lg">
+                      Aucun participant pour le moment
+                    </Text>
+                  </View>
+                )}
               </View>
-            ) : isUserOrganizer() ? (
-              <View className="gap-3">
-                <GradientButton
-                  title="Modifier l'événement"
-                  onPress={handleEditEvent}
-                  disabled={isJoining}
-                  variant="primary"
-                  size="large"
-                  icon="create-outline"
-                />
-                <GradientButton
-                  title={isJoining ? 'Suppression...' : 'Supprimer l\'événement'}
-                  onPress={handleDeleteEvent}
-                  loading={isJoining}
-                  disabled={isJoining}
-                  variant="danger"
-                  size="large"
-                  icon="trash-outline"
-                />
+            </View>
               </View>
-            ) : isUserParticipant() ? (
-              <GradientButton
-                title={isJoining ? 'Désinscription...' : 'Quitter l\'événement'}
-                onPress={handleLeaveEvent}
-                loading={isJoining}
-                disabled={isJoining}
-                variant="danger"
-                size="large"
-                icon="exit-outline"
-              />
-            ) : (
-              <GradientButton
-                title={isJoining ? 'Inscription...' : isEventFull ? 'Événement complet' : 'Rejoindre l\'événement'}
+
+          {/* Join Button */}
+          <View className="mb-8">
+            <TouchableOpacity 
                 onPress={handleJoinEvent}
-                loading={isJoining}
-                disabled={isJoining || isEventFull}
-                variant={isEventFull ? "disabled" : "primary"}
-                size="large"
-                icon={isEventFull ? "lock-closed" : "add"}
-              />
-            )}
+              style={{
+                shadowColor: '#06b6d4',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 8,
+              }}
+            >
+              <LinearGradient
+                colors={['#06b6d4', '#0891b2']}
+                style={{
+                  borderRadius: 12,
+                  paddingVertical: 20,
+                  paddingHorizontal: 24,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons name="add-circle-outline" size={22} color="#ffffff" style={{ marginRight: 12 }} />
+                <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: 'bold' }}>
+                  Rejoindre l'événement
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-
 
 export default EventDetailsScreen; 

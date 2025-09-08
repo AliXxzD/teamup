@@ -40,15 +40,21 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [dateFieldAnim] = useState(new Animated.Value(1));
+  const [timeFieldAnim] = useState(new Animated.Value(1));
+  const [pickerSlideAnim] = useState(new Animated.Value(300));
 
   const { eventId, eventData, isEditing } = route.params || {};
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
+    // Délayer l'animation pour éviter les conflits avec React 18
+    const timer = setTimeout(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
+    }, 100);
 
     if (isEditing && eventData) {
       setFormData({
@@ -64,6 +70,8 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
         isFree: eventData.price?.isFree ?? true
       });
     }
+
+    return () => clearTimeout(timer);
   }, [isEditing, eventData]);
 
   const sports = [
@@ -97,6 +105,120 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const handleDateChange = (event, selectedDate) => {
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      setFormData({ ...formData, date: formattedDate });
+      
+      // Animation de confirmation du champ avec délai
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(dateFieldAnim, {
+            toValue: 0.95,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.spring(dateFieldAnim, {
+            toValue: 1,
+            tension: 300,
+            friction: 10,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, 50);
+    }
+    
+    // Fermeture du picker avec animation
+    setTimeout(() => {
+      Animated.timing(pickerSlideAnim, {
+        toValue: 300,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setShowDatePicker(false));
+    }, 100);
+  };
+
+  const handleTimeChange = (event, selectedTime) => {
+    if (selectedTime) {
+      setSelectedTime(selectedTime);
+      const hours = selectedTime.getHours().toString().padStart(2, '0');
+      const minutes = selectedTime.getMinutes().toString().padStart(2, '0');
+      const formattedTime = `${hours}:${minutes}`;
+      setFormData({ ...formData, time: formattedTime });
+      
+      // Animation de confirmation du champ avec délai
+      setTimeout(() => {
+        Animated.sequence([
+          Animated.timing(timeFieldAnim, {
+            toValue: 0.95,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.spring(timeFieldAnim, {
+            toValue: 1,
+            tension: 300,
+            friction: 10,
+            useNativeDriver: true,
+          }),
+        ]).start();
+      }, 50);
+    }
+    
+    // Fermeture du picker avec animation
+    setTimeout(() => {
+      Animated.timing(pickerSlideAnim, {
+        toValue: 300,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(() => setShowTimePicker(false));
+    }, 100);
+  };
+
+  const openDatePicker = () => {
+    setShowDatePicker(true);
+    // Réinitialiser l'animation avant ouverture
+    pickerSlideAnim.setValue(300);
+    
+    setTimeout(() => {
+      Animated.timing(pickerSlideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 50);
+  };
+
+  const openTimePicker = () => {
+    setShowTimePicker(true);
+    // Réinitialiser l'animation avant ouverture
+    pickerSlideAnim.setValue(300);
+    
+    setTimeout(() => {
+      Animated.timing(pickerSlideAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 50);
+  };
+
+  const formatDisplayDate = (date) => {
+    if (!date) return 'Sélectionner une date';
+    const options = { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    };
+    return new Date(date).toLocaleDateString('fr-FR', options);
+  };
+
+  const formatDisplayTime = (time) => {
+    if (!time) return 'Sélectionner une heure';
+    return time;
   };
 
   const handleSubmit = async () => {
@@ -296,36 +418,140 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
               
               <View className="flex-row justify-between mb-4">
                 {/* Date */}
-                <View className="flex-1 mr-2">
-                  <Text className="text-dark-300 text-sm font-medium mb-2">Date *</Text>
+                <Animated.View 
+                  className="flex-1 mr-2"
+                  style={{
+                    transform: [{ scale: dateFieldAnim }]
+                  }}
+                >
+                  <Text className="text-white text-base font-medium mb-3">Date *</Text>
                   <TouchableOpacity
-                    className={`bg-dark-700 rounded-xl px-4 py-3 flex-row items-center border ${
-                      errors.date ? 'border-danger' : 'border-dark-600'
+                    className={`bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 flex-row items-center ${
+                      errors.date ? 'border-red-500' : formData.date ? 'border-cyan-500/50' : 'border-slate-600'
                     }`}
-                    onPress={() => setShowDatePicker(true)}
+                    onPress={openDatePicker}
+                    activeOpacity={0.8}
+                    style={{
+                      shadowColor: formData.date ? '#06b6d4' : '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: formData.date ? 0.2 : 0.1,
+                      shadowRadius: 8,
+                      elevation: formData.date ? 4 : 2,
+                    }}
                   >
-                    <Ionicons name="calendar-outline" size={20} color="#64748b" />
-                    <Text className="text-white text-base ml-3">
-                      {formData.date || 'Sélectionner'}
-                    </Text>
+                    <Animated.View 
+                      className="w-8 h-8 bg-cyan-500/20 rounded-lg items-center justify-center mr-3"
+                      style={{
+                        transform: [{ scale: formData.date ? 1.1 : 1 }]
+                      }}
+                    >
+                      <Ionicons name="calendar" size={16} color="#22d3ee" />
+                    </Animated.View>
+                    <View className="flex-1">
+                      <Text className={`text-sm font-medium ${
+                        formData.date ? 'text-white' : 'text-slate-400'
+                      }`}>
+                        {formatDisplayDate(formData.date)}
+                      </Text>
+                      {formData.date && (
+                        <Animated.View
+                          style={{
+                            opacity: fadeAnim,
+                            transform: [{ translateY: fadeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [10, 0]
+                            })}]
+                          }}
+                        >
+                          <Text className="text-slate-400 text-xs mt-1">
+                            {new Date(formData.date).toLocaleDateString('fr-FR')}
+                          </Text>
+                        </Animated.View>
+                      )}
+                    </View>
                   </TouchableOpacity>
-                </View>
+                  {errors.date && (
+                    <Animated.View
+                      style={{
+                        opacity: fadeAnim,
+                        transform: [{ translateX: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-10, 0]
+                        })}]
+                      }}
+                    >
+                      <Text className="text-red-400 text-sm mt-2">{errors.date}</Text>
+                    </Animated.View>
+                  )}
+                </Animated.View>
 
                 {/* Time */}
-                <View className="flex-1 ml-2">
-                  <Text className="text-dark-300 text-sm font-medium mb-2">Heure *</Text>
+                <Animated.View 
+                  className="flex-1 ml-2"
+                  style={{
+                    transform: [{ scale: timeFieldAnim }]
+                  }}
+                >
+                  <Text className="text-white text-base font-medium mb-3">Heure *</Text>
                   <TouchableOpacity
-                    className={`bg-dark-700 rounded-xl px-4 py-3 flex-row items-center border ${
-                      errors.time ? 'border-danger' : 'border-dark-600'
+                    className={`bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 flex-row items-center ${
+                      errors.time ? 'border-red-500' : formData.time ? 'border-cyan-500/50' : 'border-slate-600'
                     }`}
-                    onPress={() => setShowTimePicker(true)}
+                    onPress={openTimePicker}
+                    activeOpacity={0.8}
+                    style={{
+                      shadowColor: formData.time ? '#06b6d4' : '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: formData.time ? 0.2 : 0.1,
+                      shadowRadius: 8,
+                      elevation: formData.time ? 4 : 2,
+                    }}
                   >
-                    <Ionicons name="time-outline" size={20} color="#64748b" />
-                    <Text className="text-white text-base ml-3">
-                      {formData.time || 'Sélectionner'}
-                    </Text>
+                    <Animated.View 
+                      className="w-8 h-8 bg-cyan-500/20 rounded-lg items-center justify-center mr-3"
+                      style={{
+                        transform: [{ scale: formData.time ? 1.1 : 1 }]
+                      }}
+                    >
+                      <Ionicons name="time" size={16} color="#22d3ee" />
+                    </Animated.View>
+                    <View className="flex-1">
+                      <Text className={`text-sm font-medium ${
+                        formData.time ? 'text-white' : 'text-slate-400'
+                      }`}>
+                        {formatDisplayTime(formData.time)}
+                      </Text>
+                      {formData.time && (
+                        <Animated.View
+                          style={{
+                            opacity: fadeAnim,
+                            transform: [{ translateY: fadeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [10, 0]
+                            })}]
+                          }}
+                        >
+                          <Text className="text-slate-400 text-xs mt-1">
+                            Heure de début
+                          </Text>
+                        </Animated.View>
+                      )}
+                    </View>
                   </TouchableOpacity>
-                </View>
+                  {errors.time && (
+                    <Animated.View
+                      style={{
+                        opacity: fadeAnim,
+                        transform: [{ translateX: fadeAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-10, 0]
+                        })}]
+                      }}
+                    >
+                      <Text className="text-red-400 text-sm mt-2">{errors.time}</Text>
+                    </Animated.View>
+                  )}
+                </Animated.View>
               </View>
             </View>
 
@@ -456,45 +682,132 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
           </Animated.View>
         </ScrollView>
 
-        {/* Date Picker */}
+        {/* Date Picker with Animation */}
         {showDatePicker && (
-          <DateTimePicker
-            value={selectedDate}
-            mode="date"
-            display="default"
-            onChange={(event, date) => {
-              setShowDatePicker(false);
-              if (date) {
-                setSelectedDate(date);
-                setFormData({ 
-                  ...formData, 
-                  date: date.toISOString().split('T')[0] 
-                });
-              }
-            }}
-            minimumDate={new Date()}
-          />
+          <>
+            {/* Backdrop */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                opacity: fadeAnim,
+                zIndex: 1000,
+              }}
+            >
+              <TouchableOpacity 
+                style={{ flex: 1 }}
+                onPress={() => handleDateChange(null, null)}
+              />
+            </Animated.View>
+
+            {/* Date Picker Container */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: '#1e293b',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                padding: 24,
+                zIndex: 1001,
+                transform: [{ translateY: pickerSlideAnim }],
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 12,
+                elevation: 15,
+              }}
+            >
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-white text-xl font-bold">Sélectionner la date</Text>
+                <TouchableOpacity onPress={() => handleDateChange(null, null)}>
+                  <Ionicons name="close" size={24} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+              
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                textColor="#ffffff"
+                accentColor="#06b6d4"
+                themeVariant="dark"
+                style={{ backgroundColor: 'transparent' }}
+              />
+            </Animated.View>
+          </>
         )}
 
-        {/* Time Picker */}
+        {/* Time Picker with Animation */}
         {showTimePicker && (
-          <DateTimePicker
-            value={selectedTime}
-            mode="time"
-            display="default"
-            onChange={(event, time) => {
-              setShowTimePicker(false);
-              if (time) {
-                setSelectedTime(time);
-                const hours = time.getHours().toString().padStart(2, '0');
-                const minutes = time.getMinutes().toString().padStart(2, '0');
-                setFormData({ 
-                  ...formData, 
-                  time: `${hours}:${minutes}` 
-                });
-              }
-            }}
-          />
+          <>
+            {/* Backdrop */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                opacity: fadeAnim,
+                zIndex: 1000,
+              }}
+            >
+              <TouchableOpacity 
+                style={{ flex: 1 }}
+                onPress={() => handleTimeChange(null, null)}
+              />
+            </Animated.View>
+
+            {/* Time Picker Container */}
+            <Animated.View
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                backgroundColor: '#1e293b',
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                padding: 24,
+                zIndex: 1001,
+                transform: [{ translateY: pickerSlideAnim }],
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 12,
+                elevation: 15,
+              }}
+            >
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-white text-xl font-bold">Sélectionner l'heure</Text>
+                <TouchableOpacity onPress={() => handleTimeChange(null, null)}>
+                  <Ionicons name="close" size={24} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+              
+              <DateTimePicker
+                value={selectedTime}
+                mode="time"
+                display="spinner"
+                onChange={handleTimeChange}
+                textColor="#ffffff"
+                accentColor="#06b6d4"
+                themeVariant="dark"
+                is24Hour={true}
+                style={{ backgroundColor: 'transparent' }}
+              />
+            </Animated.View>
+          </>
         )}
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -83,7 +83,7 @@ const NewConversationScreen = ({ navigation }) => {
         },
         body: JSON.stringify({
           type: 'private',
-          participants: [selectedUser.id]
+          participants: [selectedUser._id || selectedUser.id]
         })
       });
 

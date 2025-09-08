@@ -90,7 +90,7 @@ const StatsScreenTailwind = ({ navigation }) => {
     }
   ];
 
-  const currentSport = sports.find(s => s.id === activeTab);
+  const currentSport = sports.find(s => s.key === activeTab);
 
   const StatCard = ({ title, value, icon, color, subtitle = null }) => (
     <View className="bg-dark-800 rounded-2xl p-4 mb-4" style={{ borderLeftWidth: 4, borderLeftColor: color }}>
@@ -134,25 +134,25 @@ const StatsScreenTailwind = ({ navigation }) => {
           <View className="flex-row">
             {sports.map((sport) => (
               <TouchableOpacity
-                key={sport.id}
+                key={sport.key || sport.id}
                 className={`flex-row items-center px-4 py-3 rounded-2xl mr-3 ${
-                  activeTab === sport.id 
+                  activeTab === (sport.key || sport.id)
                     ? 'border-2' 
                     : 'bg-dark-800 border border-dark-600'
                 }`}
                 style={{
-                  backgroundColor: activeTab === sport.id ? sport.color + '20' : undefined,
-                  borderColor: activeTab === sport.id ? sport.color : undefined
+                  backgroundColor: activeTab === (sport.key || sport.id) ? sport.color + '20' : undefined,
+                  borderColor: activeTab === (sport.key || sport.id) ? sport.color : undefined
                 }}
-                onPress={() => setActiveTab(sport.id)}
+                onPress={() => setActiveTab(sport.key || sport.id)}
               >
                 <MaterialIcons 
                   name={sport.icon} 
                   size={20} 
-                  color={activeTab === sport.id ? sport.color : '#64748b'} 
+                  color={activeTab === (sport.key || sport.id) ? sport.color : '#64748b'} 
                 />
                 <Text className={`ml-2 font-medium ${
-                  activeTab === sport.id ? 'text-white' : 'text-dark-300'
+                  activeTab === (sport.key || sport.id) ? 'text-white' : 'text-dark-300'
                 }`}>
                   {sport.name}
                 </Text>

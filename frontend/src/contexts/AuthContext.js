@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import socketService from '../services/socketService';
 
 // Configuration de l'API
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
@@ -173,6 +174,22 @@ export const AuthProvider = ({ children }) => {
         
         setUser(data.user);
         
+        // Connecter Socket.io après la connexion réussie
+        setTimeout(async () => {
+          try {
+            // Déconnecter d'abord si déjà connecté (cas de reconnexion)
+            if (socketService.isConnected) {
+              socketService.disconnect();
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            await socketService.connect();
+            console.log('🔌 Socket.io connecté après login');
+          } catch (socketError) {
+            console.log('🔄 Socket.io: Reconnexion en cours...', socketError.message);
+          }
+        }, 1000); // Délai pour laisser le temps à l'UI de se mettre à jour
+        
         console.log(`✅ Connexion réussie - Session: ${data.sessionInfo.duration}`);
         return { success: true, message: data.message };
       } else {
@@ -257,6 +274,22 @@ export const AuthProvider = ({ children }) => {
         
         setUser(data.user);
         
+        // Connecter Socket.io après l'inscription réussie
+        setTimeout(async () => {
+          try {
+            // Déconnecter d'abord si déjà connecté
+            if (socketService.isConnected) {
+              socketService.disconnect();
+              await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            await socketService.connect();
+            console.log('🔌 Socket.io connecté après inscription');
+          } catch (socketError) {
+            console.log('🔄 Socket.io: Connexion en cours...', socketError.message);
+          }
+        }, 1000);
+        
         console.log(`✅ Inscription réussie - Session: ${data.sessionInfo.duration}`);
         return { success: true, message: data.message };
       } else {
@@ -307,6 +340,14 @@ export const AuthProvider = ({ children }) => {
         } catch (apiError) {
           console.log('Erreur API lors de la déconnexion:', apiError);
         }
+      }
+      
+      // Déconnecter Socket.io
+      try {
+        socketService.disconnect();
+        console.log('🔌 Socket.io déconnecté lors du logout');
+      } catch (socketError) {
+        console.warn('⚠️ Erreur déconnexion Socket.io:', socketError.message);
       }
       
       // Nettoyer le stockage local

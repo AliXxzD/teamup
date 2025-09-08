@@ -46,17 +46,14 @@ const eventSchema = new mongoose.Schema({
       maxlength: [200, 'L\'adresse ne peut pas dépasser 200 caractères']
     },
     coordinates: {
-      latitude: {
-        type: Number,
-        min: [-90, 'Latitude invalide'],
-        max: [90, 'Latitude invalide'],
-        required: false
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point'
       },
-      longitude: {
-        type: Number,
-        min: [-180, 'Longitude invalide'],
-        max: [180, 'Longitude invalide'],
-        required: false
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        index: '2dsphere'
       }
     }
   },
@@ -207,8 +204,7 @@ const eventSchema = new mongoose.Schema({
 
 // Index pour améliorer les performances des recherches
 eventSchema.index({ sport: 1, date: 1 });
-// TODO: Add geospatial index when coordinate support is implemented
-// eventSchema.index({ 'location.coordinates': '2dsphere' }); // Pour les recherches géographiques
+eventSchema.index({ 'location.coordinates': '2dsphere' }); // Index géospatial pour recherche par proximité
 eventSchema.index({ organizer: 1 });
 eventSchema.index({ date: 1, status: 1 });
 eventSchema.index({ createdAt: -1 });
@@ -327,6 +323,105 @@ eventSchema.statics.findByFilters = function(filters = {}) {
     .populate('organizer', 'name email profile.avatar')
     .populate('participants.user', 'name profile.avatar')
     .sort({ date: 1 });
+};
+
+// Méthode statique pour rechercher des événements par proximité
+eventSchema.statics.findByProximity = function(longitude, latitude, maxDistance = 10000, filters = {}) {
+  const query = {
+    status: 'active',
+    date: { $gte: new Date() },
+    'location.coordinates.coordinates': {
+      $near: {
+        $geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude]
+        },
+        $maxDistance: maxDistance // en mètres
+      }
+    }
+  };
+  
+  // Ajouter les filtres additionnels
+  if (filters.sport) query.sport = filters.sport;
+  if (filters.level) query.level = filters.level;
+  if (filters.isFree !== undefined) query['price.isFree'] = filters.isFree;
+  if (filters.dateFrom) {
+    query.date.$gte = new Date(filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    query.date.$lte = new Date(filters.dateTo);
+  }
+  
+  return this.find(query)
+    .populate('organizer', 'name email profile.avatar')
+    .populate('participants.user', 'name profile.avatar')
+    .sort({ date: 1 });
+};
+
+// Méthode statique pour rechercher avec agrégation et calcul de distance
+eventSchema.statics.findWithDistance = function(longitude, latitude, maxDistance = 10000, filters = {}) {
+  const matchQuery = {
+    status: 'active',
+    date: { $gte: new Date() }
+  };
+  
+  // Ajouter les filtres additionnels
+  if (filters.sport) matchQuery.sport = filters.sport;
+  if (filters.level) matchQuery.level = filters.level;
+  if (filters.isFree !== undefined) matchQuery['price.isFree'] = filters.isFree;
+  if (filters.dateFrom) {
+    matchQuery.date.$gte = new Date(filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    matchQuery.date.$lte = new Date(filters.dateTo);
+  }
+  
+  return this.aggregate([
+    {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [longitude, latitude]
+        },
+        distanceField: 'distance',
+        maxDistance: maxDistance,
+        spherical: true,
+        query: matchQuery,
+        key: 'location.coordinates.coordinates'
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'organizer',
+        foreignField: '_id',
+        as: 'organizer',
+        pipeline: [
+          { $project: { name: 1, email: 1, 'profile.avatar': 1 } }
+        ]
+      }
+    },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'participants.user',
+        foreignField: '_id',
+        as: 'participantUsers',
+        pipeline: [
+          { $project: { name: 1, 'profile.avatar': 1 } }
+        ]
+      }
+    },
+    {
+      $addFields: {
+        organizer: { $arrayElemAt: ['$organizer', 0] },
+        distanceKm: { $round: [{ $divide: ['$distance', 1000] }, 2] }
+      }
+    },
+    {
+      $sort: { date: 1 }
+    }
+  ]);
 };
 
 const Event = mongoose.model('Event', eventSchema);

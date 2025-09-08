@@ -153,7 +153,7 @@ conversationSchema.methods.getUnreadCount = function(userId) {
 conversationSchema.methods.getPublicInfo = function(currentUserId) {
   return {
     id: this._id,
-    type: this.type,
+    type: this.type || 'private', // Fallback si type est undefined
     name: this.name,
     description: this.description,
     avatar: this.avatar,
@@ -161,8 +161,8 @@ conversationSchema.methods.getPublicInfo = function(currentUserId) {
     lastMessage: this.lastMessage,
     unreadCount: this.getUnreadCount(currentUserId),
     participants: this.participants,
-    isActive: this.isActive,
-    isArchived: this.isArchived,
+    isActive: this.isActive !== false, // Fallback true si undefined
+    isArchived: this.isArchived || false, // Fallback false si undefined
     createdAt: this.createdAt,
     updatedAt: this.updatedAt
   };

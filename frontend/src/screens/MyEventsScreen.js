@@ -286,7 +286,13 @@ const MyEventsScreenTailwind = ({ navigation }) => {
               <EventCard 
                 key={event._id} 
                 event={event} 
-                showManageButton={activeTab === 'organized'} 
+                navigation={navigation}
+                showManageButton={activeTab === 'organized'}
+                onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
+                onManage={() => {
+                  // Handle event management
+                  Alert.alert('Gérer', `Gérer l'événement: ${event.title}`);
+                }}
               />
             ))}
             

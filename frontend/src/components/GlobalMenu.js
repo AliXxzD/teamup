@@ -137,11 +137,16 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
               console.log('📍 Navigating to Messages tab');
               navigation.navigate('Messages');
             } else if (screenName === 'Settings') {
-              Alert.alert('Info', 'Page des paramètres en cours de développement');
+              console.log('📍 Navigating to Settings');
+              navigation.navigate('Settings');
             } else if (screenName === 'Support') {
               Alert.alert('Support', 'Contactez-nous à support@teamup.com');
             } else if (screenName === 'Notifications') {
-              Alert.alert('Notifications', 'Page des notifications en cours de développement');
+              console.log('📍 Navigating to Notifications');
+              navigation.navigate('Notifications');
+            } else if (screenName === 'Ranking') {
+              console.log('📍 Navigating to Ranking');
+              navigation.navigate('Ranking');
             }
           } else {
             // Guest user navigation
