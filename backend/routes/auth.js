@@ -9,10 +9,16 @@ const Event = require('../models/Event');
 
 const router = express.Router();
 
-// Configuration JWT
-const JWT_SECRET = process.env.JWT_SECRET || 'teamup_secret_key_change_in_production';
+// Configuration JWT depuis les variables d'environnement
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 const REFRESH_TOKEN_EXPIRES_IN = process.env.REFRESH_TOKEN_EXPIRES_IN || '7d';
+
+// Vérification des variables d'environnement critiques
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET n\'est pas définie dans les variables d\'environnement');
+  process.exit(1);
+}
 
 // Fonction pour générer les tokens
 const generateTokens = (userId, rememberMe = false) => {

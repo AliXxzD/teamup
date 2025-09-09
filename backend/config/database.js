@@ -5,7 +5,12 @@ const mongoose = require('mongoose');
  */
 const connectDB = async () => {
   try {
-    const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://root:root@teamup.7fqehdy.mongodb.net/teamup?retryWrites=true&w=majority&appName=teamup';
+    // Utiliser la variable d'environnement MONGODB_URI
+    const MONGODB_URI = process.env.MONGODB_URI;
+    
+    if (!MONGODB_URI) {
+      throw new Error('❌ MONGODB_URI n\'est pas définie dans les variables d\'environnement');
+    }
     
     const options = {
       maxPoolSize: 10, // Maintient jusqu'à 10 connexions de socket

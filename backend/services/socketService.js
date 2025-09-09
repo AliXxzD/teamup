@@ -79,7 +79,11 @@ class SocketService {
       }
 
       // Vérifier le token JWT
-      const JWT_SECRET = process.env.JWT_SECRET || 'teamup_secret_key_change_in_production';
+      const JWT_SECRET = process.env.JWT_SECRET;
+      if (!JWT_SECRET) {
+        socket.emit('auth_error', { error: 'Configuration JWT manquante' });
+        return;
+      }
       const decoded = jwt.verify(token, JWT_SECRET);
       
       // Récupérer l'utilisateur

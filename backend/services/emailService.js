@@ -7,6 +7,13 @@ class EmailService {
   }
 
   initializeTransporter() {
+    // Vérifier les variables d'environnement email
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.warn('⚠️ Variables d\'environnement EMAIL_USER ou EMAIL_PASSWORD manquantes');
+      console.warn('⚠️ Le service email ne fonctionnera pas correctement');
+      return;
+    }
+
     // Configuration pour Gmail (vous pouvez changer pour un autre service)
     this.transporter = nodemailer.createTransport({
       service: 'gmail',

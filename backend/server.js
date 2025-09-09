@@ -26,31 +26,33 @@ const PORT = process.env.PORT || 5000;
 // Middleware de sécurité
 app.use(helmet());
 
-// Configuration CORS pour Render et Expo EAS
+// Configuration CORS depuis les variables d'environnement
 const allowedOrigins = [
-  // Expo EAS Build URLs
+  // URLs Expo par défaut
   'https://expo.dev',
   'https://exp.host',
   'https://snack.expo.io',
   
-  // Expo Go URLs
-  'exp://192.168.1.205:8081',
-  'exp://localhost:8081',
-  
-  // Local development
+  // URLs de développement par défaut
   'http://localhost:19006',
   'http://192.168.1.205:19006',
   'http://192.168.1.205:8081',
-  
-  // Production URLs (à ajouter selon votre domaine)
-  process.env.FRONTEND_URL || 'http://localhost:19006'
+  'exp://localhost:8081',
+  'exp://192.168.1.205:8081'
 ];
 
-// Ajouter les URLs depuis FRONTEND_URLS si définies
+// Ajouter l'URL frontend principale si définie
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+// Ajouter les URLs supplémentaires depuis FRONTEND_URLS si définies
 if (process.env.FRONTEND_URLS) {
   const additionalUrls = process.env.FRONTEND_URLS.split(',').map(url => url.trim());
   allowedOrigins.push(...additionalUrls);
 }
+
+console.log('🌐 CORS configuré pour les origines:', allowedOrigins);
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -256,6 +258,20 @@ app.use('*', (req, res) => {
 // Démarrage du serveur
 const startServer = async () => {
   try {
+    // Vérifier les variables d'environnement critiques
+    console.log('🔧 Vérification des variables d\'environnement...');
+    
+    const requiredEnvVars = ['MONGODB_URI', 'JWT_SECRET'];
+    const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+    
+    if (missingVars.length > 0) {
+      console.error('❌ Variables d\'environnement manquantes:', missingVars.join(', '));
+      console.error('❌ Assurez-vous que le fichier .env est configuré correctement');
+      process.exit(1);
+    }
+    
+    console.log('✅ Variables d\'environnement validées');
+    
     // Connexion à MongoDB
     await connectDB();
     
@@ -266,17 +282,17 @@ const startServer = async () => {
     }, 2000);
     
     server.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 TeamUp API démarré sur Render!`);
+      console.log(`🚀 TeamUp API démarré!`);
       console.log(`📍 Port: ${PORT}`);
-      console.log(`🌍 Host: 0.0.0.0 (Render compatible)`);
+      console.log(`🌍 Host: 0.0.0.0`);
+      console.log(`🌟 Environnement: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🏥 Health check: /api/health`);
       console.log(`🔐 Auth API: /api/auth`);
       console.log(`⚽ Events API: /api/events`);
       console.log(`💬 Messages API: /api/messages`);
       console.log(`🔌 Socket.io: Messagerie temps réel activée`);
-      console.log(`🌟 Environnement: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 CORS: Expo EAS Build compatible`);
       console.log(`💾 Database: MongoDB Atlas`);
+      console.log(`📧 Email: ${process.env.EMAIL_USER ? 'Configuré' : 'Non configuré'}`);
     });
   } catch (error) {
     console.error('❌ Erreur lors du démarrage du serveur:', error);
