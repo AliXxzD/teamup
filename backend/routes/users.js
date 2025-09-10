@@ -109,4 +109,91 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+/**
+ * PUT /api/users/profile
+ * Met à jour le profil de l'utilisateur connecté
+ */
+router.put('/profile', authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const updateData = req.body;
+    
+    console.log('📝 Mise à jour du profil utilisateur:', userId);
+    console.log('📝 Données à mettre à jour:', updateData);
+    
+    // Champs autorisés pour la mise à jour
+    const allowedFields = [
+      'name', 'email', 'phone', 'bio', 'location', 
+      'dateOfBirth', 'gender', 'favoriteSports'
+    ];
+    
+    // Filtrer les champs autorisés
+    const filteredData = {};
+    Object.keys(updateData).forEach(key => {
+      if (allowedFields.includes(key)) {
+        filteredData[key] = updateData[key];
+      }
+    });
+    
+    // Vérifier que l'email n'est pas déjà utilisé par un autre utilisateur
+    if (filteredData.email) {
+      const existingUser = await User.findOne({ 
+        email: filteredData.email, 
+        _id: { $ne: userId } 
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cet email est déjà utilisé par un autre utilisateur'
+        });
+      }
+    }
+    
+    // Mettre à jour l'utilisateur
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: filteredData },
+      { new: true, runValidators: true }
+    ).select('-password -__v');
+    
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'Utilisateur non trouvé'
+      });
+    }
+    
+    console.log('✅ Profil utilisateur mis à jour:', {
+      id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email
+    });
+    
+    res.json({
+      success: true,
+      user: updatedUser,
+      message: 'Profil mis à jour avec succès'
+    });
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de la mise à jour du profil:', error);
+    
+    // Gérer les erreurs de validation Mongoose
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Données invalides',
+        errors: errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur lors de la mise à jour du profil'
+    });
+  }
+});
+
 module.exports = router;

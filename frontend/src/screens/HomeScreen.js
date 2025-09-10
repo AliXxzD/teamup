@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import GlobalMenu from '../components/GlobalMenu';
 import EventCard from '../components/EventCard';
 import LoginPromptModal from '../components/LoginPromptModal';
+import TeamupLogo from '../components/TeamupLogo';
 import { getAllEvents } from '../data/eventsData';
 import { getEventAddress, getEventTitle, getEventPrice, getEventParticipants, getEventTime, getOrganizerName } from '../utils/eventUtils';
 
@@ -78,36 +79,9 @@ const HomeScreen = ({ navigation }) => {
       {/* Fixed Header */}
       <View className="bg-slate-900 border-b border-slate-800/50 px-6 pt-6 pb-5">
         <View className="flex-row justify-between items-center">
-          <View className="flex-row items-center">
-            <LinearGradient
-              colors={['#06b6d4', '#0891b2']}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 14,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 14,
-                shadowColor: '#06b6d4',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.3,
-                shadowRadius: 8,
-                elevation: 6,
-              }}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View className="border border-white/20 rounded-xl w-full h-full items-center justify-center">
-                <Ionicons name="people" size={24} color="#ffffff" />
-              </View>
-            </LinearGradient>
-            <Text className="text-white text-2xl font-bold tracking-tight">TEAMUP</Text>
-          </View>
+          <TeamupLogo size="medium" textColor="#ffffff" />
           
-          <View className="flex-row items-center" style={{ gap: 12 }}>
-            <TouchableOpacity className="w-11 h-11 bg-slate-800 border border-slate-700/50 rounded-xl items-center justify-center">
-              <Ionicons name="search" size={20} color="#ffffff" />
-            </TouchableOpacity>
+          <View className="flex-row items-center">
             <GlobalMenu navigation={navigation} currentRoute="Home" />
           </View>
         </View>

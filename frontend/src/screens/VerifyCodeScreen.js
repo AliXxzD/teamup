@@ -19,6 +19,7 @@ import { API_BASE_URL } from '../config/api';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import GradientButton from '../components/GradientButton';
+import TeamupLogo from '../components/TeamupLogo';
 
 const { width } = Dimensions.get('window');
 
@@ -198,17 +199,7 @@ const VerifyCodeScreen = ({ navigation, route }) => {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {/* Header with Global Menu */}
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
-              <LinearGradient
-                colors={['#20B2AA', '#17A2B8', '#0891B2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.logoIcon}
-              >
-                <Text style={styles.logoText}>T</Text>
-              </LinearGradient>
-              <Text style={styles.appName}>TEAMUP</Text>
-            </View>
+            <TeamupLogo size="small" textColor="#ffffff" />
             <GlobalMenu navigation={navigation} />
           </View>
 

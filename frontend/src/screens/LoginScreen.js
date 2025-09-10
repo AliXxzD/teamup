@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
 import GlobalMenu from '../components/GlobalMenu';
+import TeamupLogo from '../components/TeamupLogo';
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
@@ -73,24 +74,7 @@ const LoginScreen = ({ navigation }) => {
       <View className="bg-slate-900 px-6 pt-6 pb-4 border-b border-slate-800">
         <View className="flex-row justify-between items-center">
           {/* Logo and App Name */}
-          <View className="flex-row items-center">
-            <LinearGradient
-              colors={['#06b6d4', '#0891b2']}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="people" size={24} color="#ffffff" />
-            </LinearGradient>
-            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
-          </View>
+          <TeamupLogo size="medium" textColor="#ffffff" />
           
           {/* Menu Only */}
           <View className="flex-row items-center">

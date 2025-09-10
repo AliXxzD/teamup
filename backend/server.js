@@ -202,6 +202,12 @@ app.use('/api/events', require('./routes/events-notifications'));
 // Routes des statistiques d'événements
 app.use('/api/events', require('./routes/events-stats'));
 
+// Routes de classement
+app.use('/api/ranking', require('./routes/ranking'));
+
+// Routes d'avis
+app.use('/api/reviews', require('./routes/reviews'));
+
 // Routes de messagerie
 app.use('/api/messages', messageRoutes);
 

@@ -17,6 +17,7 @@ import { API_BASE_URL } from '../config/api';
 import CustomAlert from '../components/CustomAlert';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import GradientButton from '../components/GradientButton';
+import TeamupLogo from '../components/TeamupLogo';
 
 const ResetPasswordScreen = ({ navigation, route }) => {
   const [newPassword, setNewPassword] = useState('');
@@ -155,17 +156,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
         <ScrollView className="flex-1 px-6 pb-10" showsVerticalScrollIndicator={false}>
           {/* Header with Global Menu */}
           <View className="flex-row justify-between items-center pt-4 pb-5">
-            <View className="flex-row items-center">
-              <LinearGradient
-                colors={['#20B2AA', '#17A2B8', '#0891B2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                className="w-8 h-8 rounded-2xl items-center justify-center mr-3"
-              >
-                <Ionicons name="trophy" size={20} color="#ffffff" />
-              </LinearGradient>
-              <Text className="text-white text-xl font-bold">TEAMUP</Text>
-            </View>
+            <TeamupLogo size="small" textColor="#ffffff" />
             <GlobalMenu navigation={navigation} />
           </View>
 

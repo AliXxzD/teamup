@@ -9,8 +9,7 @@ export const navigationRoutes = {
     'Register': 'RegisterScreen',
     'ForgotPassword': 'ForgotPasswordScreen',
     'VerifyCode': 'VerifyCodeScreen',
-    'ResetPassword': 'ResetPasswordScreen',
-    'OAuthSuccess': 'OAuthSuccessScreen'
+    'ResetPassword': 'ResetPasswordScreen'
   },
   
   // Routes pour utilisateurs authentifiés
@@ -27,7 +26,6 @@ export const navigationRoutes = {
     'CreateEventModal': 'CreateEventScreen',
     'UserProfile': 'UserProfileScreen',
     'Stats': 'StatsScreen',
-    'MyEventsStack': 'MyEventsStackNavigator',
     'Chat': 'ChatScreen',
     'NewConversation': 'NewConversationScreen'
   },
@@ -68,7 +66,6 @@ export const checkNavigationConsistency = () => {
     'CreateEventScreen',
     'DiscoverScreen',
     'EventDetailsScreen',
-    'MyEventsScreen',
     'MessagesScreen',
     'ChatScreen',
     'NewConversationScreen',

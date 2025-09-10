@@ -19,17 +19,23 @@ import { useAuth } from '../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import socketService from '../services/socketService';
+import TeamupLogo from '../components/TeamupLogo';
 
 const ChatScreenTailwind = ({ route, navigation }) => {
   const { conversation, eventContext, autoSendMessage, prefilledMessage } = route.params || {};
   const { user } = useAuth();
   
   // Vérification robuste de conversation
+  useEffect(() => {
+    if (!conversation) {
+      console.log('❌ ChatScreen: conversation undefined dans route.params');
+      console.log('🔍 route.params:', route.params);
+      // Rediriger automatiquement vers MessagesScreen au lieu d'afficher une erreur
+      navigation.navigate('Messages');
+    }
+  }, [conversation, navigation]);
+
   if (!conversation) {
-    console.log('❌ ChatScreen: conversation undefined dans route.params');
-    console.log('🔍 route.params:', route.params);
-    // Rediriger automatiquement vers MessagesScreen au lieu d'afficher une erreur
-    navigation.navigate('Messages');
     return null;
   }
 
@@ -203,7 +209,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       
       if (!conversation) {
         console.error('❌ Pas de données de conversation');
-        navigation.navigate('Messages');
+        setTimeout(() => navigation.navigate('Messages'), 0);
         return;
       }
       
@@ -224,7 +230,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       
       if (!conversationId) {
         console.error('❌ ID de conversation manquant');
-        navigation.navigate('Messages');
+        setTimeout(() => navigation.navigate('Messages'), 0);
         return;
       }
       
@@ -316,7 +322,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
     const messageContent = newMessage.trim();
     
     if (!conversation) {
-      navigation.navigate('Messages');
+      setTimeout(() => navigation.navigate('Messages'), 0);
       return;
     }
     
@@ -326,7 +332,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
     console.log('📤 Envoi direct autorisé');
     
     if (!conversationId) {
-      navigation.navigate('Messages');
+      setTimeout(() => navigation.navigate('Messages'), 0);
       return;
     }
     
@@ -404,7 +410,7 @@ const ChatScreenTailwind = ({ route, navigation }) => {
               );
               
               // Rafraîchir la liste des conversations
-              navigation.navigate('Messages', { refresh: true });
+              setTimeout(() => navigation.navigate('Messages', { refresh: true }), 0);
               
               setSending(false);
               return;
@@ -559,17 +565,9 @@ const ChatScreenTailwind = ({ route, navigation }) => {
       <View className="bg-dark-900 px-6 pt-4 pb-4">
         {/* Top Bar with Logo and Icons */}
         <View className="flex-row justify-between items-center mb-4">
-          <View className="flex-row items-center">
-            <View className="w-10 h-10 bg-gradient-to-br from-lime to-green-500 rounded-2xl items-center justify-center mr-3">
-              <Ionicons name="people" size={20} color="#ffffff" />
-            </View>
-            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
-          </View>
+          <TeamupLogo size="extra-small" textColor="#ffffff" />
           
-          <View className="flex-row items-center space-x-3">
-            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
-              <Ionicons name="search" size={20} color="#ffffff" />
-            </TouchableOpacity>
+          <View className="flex-row items-center">
             <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
               <Ionicons name="ellipsis-vertical" size={20} color="#ffffff" />
             </TouchableOpacity>

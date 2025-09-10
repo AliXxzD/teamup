@@ -683,12 +683,66 @@ router.get('/my/organized', authMiddleware, async (req, res) => {
 // GET /api/events/my/joined - Récupérer les événements auxquels l'utilisateur participe
 router.get('/my/joined', authMiddleware, async (req, res) => {
   try {
+    console.log('🔍 Recherche des événements rejoints pour l\'utilisateur:', req.userId);
+    console.log('🔍 Type de req.userId:', typeof req.userId);
+    console.log('🔍 req.userId toString:', req.userId.toString());
+    
+    // S'assurer que req.userId est bien un ObjectId
+    const mongoose = require('mongoose');
+    const userId = mongoose.Types.ObjectId.isValid(req.userId) ? req.userId : new mongoose.Types.ObjectId(req.userId);
+    
+    // Requête pour trouver les événements où l'utilisateur est participant
+    // Inclure plus de statuts pour voir tous les événements rejoints
     const events = await Event.find({
-      'participants.user': req.userId,
-      status: { $in: ['active', 'full'] }
+      'participants.user': userId,
+      status: { $in: ['active', 'full', 'completed'] }
     })
       .populate('organizer', 'name profile.avatar')
       .sort({ date: 1 });
+
+    console.log('📊 Événements trouvés:', events.length);
+    
+    // Log détaillé pour debug
+    if (events.length > 0) {
+      console.log('📋 Détails des événements rejoints:');
+      events.forEach((event, index) => {
+        console.log(`  ${index + 1}. ${event.title} (${event._id})`);
+        console.log(`     Date: ${event.date}`);
+        console.log(`     Status: ${event.status}`);
+        console.log(`     Participants: ${event.participants.length}`);
+        event.participants.forEach((participant, pIndex) => {
+          console.log(`       ${pIndex + 1}. User ID: ${participant.user}`);
+        });
+      });
+    } else {
+      console.log('ℹ️ Aucun événement rejoint trouvé avec le filtre actuel');
+      
+      // Debug: vérifier s'il y a des événements avec des participants pour cet utilisateur
+      const userEventsAllStatus = await Event.find({
+        'participants.user': userId
+      }).select('title participants status');
+      
+      console.log('🔍 Événements où l\'utilisateur est participant (tous statuts):', userEventsAllStatus.length);
+      userEventsAllStatus.forEach((event, index) => {
+        console.log(`  ${index + 1}. ${event.title} - Status: ${event.status}`);
+        console.log(`     Participants: ${event.participants.length}`);
+        event.participants.forEach((participant, pIndex) => {
+          console.log(`       ${pIndex + 1}. User ID: ${participant.user} (type: ${typeof participant.user})`);
+          console.log(`            Égal à userId recherché: ${participant.user.toString() === userId.toString()}`);
+        });
+      });
+      
+      // Debug: vérifier tous les événements avec participants
+      const allEventsWithParticipants = await Event.find({
+        'participants.0': { $exists: true }
+      }).select('title participants status');
+      
+      console.log('🔍 Tous les événements avec participants dans la DB:', allEventsWithParticipants.length);
+      allEventsWithParticipants.forEach((event, index) => {
+        console.log(`  ${index + 1}. ${event.title} - Status: ${event.status}`);
+        console.log(`     Participants: ${event.participants.length}`);
+      });
+    }
 
     res.json({
       success: true,
@@ -696,7 +750,7 @@ router.get('/my/joined', authMiddleware, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Erreur lors de la récupération des événements rejoints:', error);
+    console.error('❌ Erreur lors de la récupération des événements rejoints:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur lors de la récupération des événements'

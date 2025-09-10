@@ -72,8 +72,8 @@ const CustomTabBar = ({ state, descriptors, navigation }) => {
             );
           case 'Messages':
             iconName = isFocused ? 'chatbubbles' : 'chatbubbles-outline';
-            badgeCount = 3;
-            showBadge = true;
+            badgeCount = 0; // Pas de messages non lus par défaut
+            showBadge = false; // Ne pas afficher le badge s'il n'y a pas de messages
             break;
           case 'Profile':
             iconName = isFocused ? 'person' : 'person-outline';

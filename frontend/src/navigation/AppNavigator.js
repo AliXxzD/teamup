@@ -17,7 +17,6 @@ import DashboardScreen from '../screens/DashboardScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
 import EventDetailsScreen from '../screens/EventDetailsScreen';
-import MyEventsScreen from '../screens/MyEventsScreen';
 import MessagesScreen from '../screens/MessagesScreen';
 import ChatScreen from '../screens/ChatScreen';
 import NewConversationScreen from '../screens/NewConversationScreen';
@@ -29,8 +28,12 @@ import UserProfileScreen from '../screens/UserProfileScreen';
 import StatsScreen from '../screens/StatsScreen';
 import EventParticipantsScreen from '../screens/EventParticipantsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import AboutScreen from '../screens/AboutScreen';
+import PrivacyScreen from '../screens/PrivacyScreen';
+import TermsScreen from '../screens/TermsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import RankingScreen from '../screens/RankingScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 
 // Custom Components
 import CreateTabButton from '../components/CreateTabButton';
@@ -106,19 +109,6 @@ const EventsStackNavigator = () => (
   </Stack.Navigator>
 );
 
-// Stack Navigator pour Mes Événements
-const MyEventsStackNavigator = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerShown: false,
-      cardStyle: { backgroundColor: colors.background }
-    }}
-  >
-    <Stack.Screen name="MyEventsMain" component={MyEventsScreen} />
-    <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
-    <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
-  </Stack.Navigator>
-);
 
 // Navigateur pour les utilisateurs authentifiés
 const AuthenticatedNavigator = () => (
@@ -166,9 +156,41 @@ const AuthenticatedNavigator = () => (
   </Tab.Navigator>
 );
 
+// Écran de chargement
+const LoadingScreen = () => (
+  <View style={{
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }}>
+    <Ionicons name="football" size={64} color={colors.primary} />
+    <Text style={{
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: colors.textPrimary,
+      marginTop: 16
+    }}>
+      TeamUp
+    </Text>
+    <Text style={{
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginTop: 8
+    }}>
+      Chargement...
+    </Text>
+  </View>
+);
+
 // Navigateur principal avec Stack pour gérer les modales et navigations spéciales
 const RootStackNavigator = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // Afficher l'écran de chargement pendant l'initialisation
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <Stack.Navigator
@@ -213,14 +235,6 @@ const RootStackNavigator = () => {
             }}
           />
           <Stack.Screen 
-            name="MyEventsStack" 
-            component={MyEventsStackNavigator}
-            options={{
-              presentation: 'card',
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen 
             name="Chat" 
             component={ChatScreen}
             options={{
@@ -253,6 +267,30 @@ const RootStackNavigator = () => {
             }}
           />
           <Stack.Screen 
+            name="About" 
+            component={AboutScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="Privacy" 
+            component={PrivacyScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="Terms" 
+            component={TermsScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
             name="Notifications" 
             component={NotificationsScreen}
             options={{
@@ -271,6 +309,14 @@ const RootStackNavigator = () => {
           <Stack.Screen 
             name="UserProfile" 
             component={UserProfileScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="EditProfile" 
+            component={EditProfileScreen}
             options={{
               presentation: 'card',
               gestureEnabled: true,

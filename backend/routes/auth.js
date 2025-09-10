@@ -864,7 +864,7 @@ router.get('/profile/events/recent', authMiddleware, async (req, res) => {
     const recentEvents = await Event.find({
       $or: [
         { organizer: userId },
-        { participants: userId }
+        { 'participants.user': userId }
       ]
     })
     .sort({ date: -1 })

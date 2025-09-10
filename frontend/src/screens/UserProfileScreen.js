@@ -26,6 +26,10 @@ import { AchievementsList } from '../components/AchievementCard';
 import pointsService from '../services/pointsService';
 import { LevelBadge, XPProgressBar, AchievementCard } from '../components/LevelingSystem';
 import Avatar from '../components/Avatar';
+import TeamupLogo from '../components/TeamupLogo';
+import ReviewCard from '../components/ReviewCard';
+import ReviewForm from '../components/ReviewForm';
+import reviewService from '../services/reviewService';
 import { 
   calculateLevel, 
   getAllAchievementsWithStatus, 
@@ -48,6 +52,13 @@ const UserProfileScreen = ({ navigation, route }) => {
   const [userData, setUserData] = useState(null);
   const [userProgression, setUserProgression] = useState(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  
+  // États pour les avis
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
 
   useEffect(() => {
     // Initialiser les données utilisateur
@@ -73,6 +84,13 @@ const UserProfileScreen = ({ navigation, route }) => {
       }),
     ]).start();
   }, [user, userId]); // Recharger quand l'utilisateur ou l'userId change
+
+  // Charger les avis quand l'onglet Avis est sélectionné
+  useEffect(() => {
+    if (activeTab === 'Avis' && userData?._id) {
+      loadReviews();
+    }
+  }, [activeTab, userData]);
 
   // Charger les statistiques quand userData change
   useEffect(() => {
@@ -429,6 +447,101 @@ const UserProfileScreen = ({ navigation, route }) => {
     }
   };
 
+  // Charger les avis de l'utilisateur
+  const loadReviews = async () => {
+    if (!userData?._id) return;
+    
+    try {
+      setLoadingReviews(true);
+      const result = await reviewService.getUserReviews(userData._id);
+      
+      if (result.success) {
+        setReviews(result.data.reviews || []);
+        setReviewStats(result.data.stats || null);
+      } else {
+        console.error('Erreur chargement avis:', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur loadReviews:', error);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  // Créer un nouvel avis
+  const handleCreateReview = async (reviewData) => {
+    if (!userData?._id) return;
+    
+    try {
+      const result = await reviewService.createReview({
+        reviewedUserId: userData._id,
+        ...reviewData
+      });
+      
+      if (result.success) {
+        setShowReviewForm(false);
+        loadReviews(); // Recharger les avis
+        Alert.alert('Succès', 'Votre avis a été publié avec succès');
+      } else {
+        Alert.alert('Erreur', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur création avis:', error);
+      Alert.alert('Erreur', 'Impossible de publier l\'avis');
+    }
+  };
+
+  // Modifier un avis
+  const handleEditReview = async (reviewData) => {
+    if (!editingReview) return;
+    
+    try {
+      const result = await reviewService.updateReview(editingReview._id, reviewData);
+      
+      if (result.success) {
+        setShowReviewForm(false);
+        setEditingReview(null);
+        loadReviews(); // Recharger les avis
+        Alert.alert('Succès', 'Votre avis a été modifié avec succès');
+      } else {
+        Alert.alert('Erreur', result.error);
+      }
+    } catch (error) {
+      console.error('Erreur modification avis:', error);
+      Alert.alert('Erreur', 'Impossible de modifier l\'avis');
+    }
+  };
+
+  // Supprimer un avis
+  const handleDeleteReview = async (review) => {
+    Alert.alert(
+      'Supprimer l\'avis',
+      'Êtes-vous sûr de vouloir supprimer cet avis ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await reviewService.deleteReview(review._id);
+              
+              if (result.success) {
+                loadReviews(); // Recharger les avis
+                Alert.alert('Succès', 'Avis supprimé avec succès');
+              } else {
+                Alert.alert('Erreur', result.error);
+              }
+            } catch (error) {
+              console.error('Erreur suppression avis:', error);
+              Alert.alert('Erreur', 'Impossible de supprimer l\'avis');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleShare = async () => {
     try {
       await Share.share({
@@ -484,30 +597,10 @@ const UserProfileScreen = ({ navigation, route }) => {
       <View className="bg-slate-900 px-6 pt-6 pb-4 border-b border-slate-800">
         <View className="flex-row justify-between items-center">
           {/* Logo and App Name */}
-          <View className="flex-row items-center">
-            <LinearGradient
-              colors={['#06b6d4', '#0891b2']}
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="people" size={24} color="#ffffff" />
-            </LinearGradient>
-            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
-          </View>
+          <TeamupLogo size="medium" textColor="#ffffff" />
           
           {/* Menu and Actions */}
-          <View className="flex-row items-center" style={{ gap: 12 }}>
-            <TouchableOpacity className="w-11 h-11 bg-slate-800 border border-slate-700/50 rounded-xl items-center justify-center">
-              <Ionicons name="search" size={20} color="#ffffff" />
-            </TouchableOpacity>
+          <View className="flex-row items-center">
             <GlobalMenu navigation={navigation} currentRoute="Profile" />
           </View>
         </View>
@@ -647,21 +740,23 @@ const UserProfileScreen = ({ navigation, route }) => {
             </Animated.View>
 
             {/* Edit Button */}
+            {isOwnProfile && (
               <TouchableOpacity 
-              className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 flex-row items-center mb-4"
-              onPress={() => Alert.alert('Éditer', 'Fonction d\'édition en cours de développement')}
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 4,
-                elevation: 3,
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="settings-outline" size={16} color="#64748b" style={{ marginRight: 6 }} />
-              <Text className="text-slate-300 text-sm font-medium">Éditer</Text>
+                className="bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 flex-row items-center mb-4"
+                onPress={() => navigation.navigate('EditProfile')}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 3,
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="create-outline" size={16} color="#06b6d4" style={{ marginRight: 6 }} />
+                <Text className="text-cyan-400 text-sm font-medium">Modifier le profil</Text>
               </TouchableOpacity>
+            )}
           </View>
           
           {/* Name and Info */}
@@ -986,14 +1081,14 @@ const UserProfileScreen = ({ navigation, route }) => {
               {/* Real Rating Overview */}
               <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-8 items-center mb-6">
                 <Text className="text-white text-5xl font-bold mb-2">
-                  {userProgression?.stats.averageRating > 0 
-                    ? userProgression.stats.averageRating.toFixed(1) 
+                  {reviewStats?.averageRating > 0 
+                    ? reviewStats.averageRating.toFixed(1) 
                     : '0.0'
                   }
                 </Text>
                 <View className="flex-row mb-3">
                   {[1,2,3,4,5].map((star) => {
-                    const rating = userProgression?.stats.averageRating || 0;
+                    const rating = reviewStats?.averageRating || 0;
                     const isFilledStar = star <= Math.floor(rating);
                     const isHalfStar = star === Math.ceil(rating) && rating % 1 !== 0;
                     
@@ -1009,95 +1104,71 @@ const UserProfileScreen = ({ navigation, route }) => {
                   })}
                 </View>
                 <Text className="text-slate-400 text-base">
-                  {userProgression?.stats.totalRatings > 0 
-                    ? `Basé sur ${userProgression.stats.totalRatings} avis`
+                  {reviewStats?.totalReviews > 0 
+                    ? `Basé sur ${reviewStats.totalReviews} avis`
                     : 'Aucune évaluation pour le moment'
                   }
                 </Text>
               </View>
 
               {/* Recent Reviews */}
-              <Text className="text-white text-xl font-bold mb-6">Avis récents</Text>
-              
-              <View style={{ gap: 16 }}>
-                {/* Sophie Laurent Review */}
-                <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
-                  <View className="flex-row items-start justify-between mb-3">
-                    <View className="flex-row items-center">
-                      <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
-                        className="w-10 h-10 rounded-full mr-3"
-                      />
-                      <View>
-                        <Text className="text-white text-base font-bold">Sophie Laurent</Text>
-                        <View className="flex-row">
-                          {[1,2,3,4,5].map((star) => (
-              <Ionicons 
-                              key={star}
-                name="star" 
-                              size={14} 
-                              color="#f59e0b"
-                              style={{ marginRight: 2 }}
-                            />
-                          ))}
-                        </View>
-                      </View>
-                    </View>
-                    <Text className="text-slate-400 text-sm">Il y a 2 jours</Text>
-                  </View>
-                  
-                  <Text className="text-slate-300 text-base leading-6 mb-3">
-                    Excellent organisateur ! Match très bien organisé, ambiance super. Je recommande vivement !
-              </Text>
-                  
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-slate-400 text-sm">Événement: Match de Football</Text>
-                    <View className="flex-row items-center">
-                      <Ionicons name="heart-outline" size={16} color="#64748b" style={{ marginRight: 4 }} />
-                      <Text className="text-slate-400 text-sm">12</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Marc Dubois Review */}
-                <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
-                  <View className="flex-row items-start justify-between mb-3">
-                    <View className="flex-row items-center">
-                      <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80' }}
-                        className="w-10 h-10 rounded-full mr-3"
-                      />
-                      <View>
-                        <Text className="text-white text-base font-bold">Marc Dubois</Text>
-                        <View className="flex-row">
-                          {[1,2,3,4,5].map((star) => (
-              <Ionicons 
-                              key={star}
-                              name="star" 
-                              size={14} 
-                              color="#f59e0b"
-                              style={{ marginRight: 2 }}
-                            />
-                          ))}
-          </View>
-        </View>
-                </View>
-                    <Text className="text-slate-400 text-sm">Il y a 1 semaine</Text>
-                </View>
-                
-                  <Text className="text-slate-300 text-base leading-6 mb-3">
-                    Très bon joueur et super sympa ! Toujours de bonne humeur et fair-play.
-                  </Text>
-                  
-                  <View className="flex-row items-center justify-between">
-                    <Text className="text-slate-400 text-sm">Événement: Session Basketball</Text>
-                    <View className="flex-row items-center">
-                      <Ionicons name="heart-outline" size={16} color="#64748b" style={{ marginRight: 4 }} />
-                      <Text className="text-slate-400 text-sm">8</Text>
-                </View>
+              <View className="flex-row items-center justify-between mb-6">
+                <Text className="text-white text-xl font-bold">Avis récents</Text>
+                {!isOwnProfile && user && (
+                  <TouchableOpacity
+                    className="bg-cyan-500 rounded-xl px-4 py-2"
+                    onPress={() => setShowReviewForm(true)}
+                    activeOpacity={0.8}
+                  >
+                    <Text className="text-white text-sm font-bold">Donner un avis</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-            </View>
-            </View>
+              
+              {loadingReviews ? (
+                <View className="items-center py-8">
+                  <ActivityIndicator size="large" color="#06b6d4" />
+                  <Text className="text-slate-400 text-base mt-4">Chargement des avis...</Text>
+                </View>
+              ) : reviews.length > 0 ? (
+                <View style={{ gap: 16 }}>
+                  {reviews.map((review, index) => (
+                    <ReviewCard
+                      key={review._id || index}
+                      review={review}
+                      showActions={!isOwnProfile && user && review.reviewer._id === user._id}
+                      onEdit={(review) => {
+                        setEditingReview(review);
+                        setShowReviewForm(true);
+                      }}
+                      onDelete={handleDeleteReview}
+                      currentUserId={user?._id}
+                    />
+                  ))}
+                </View>
+              ) : (
+                <View className="items-center py-12">
+                  <Ionicons name="star-outline" size={64} color="#475569" />
+                  <Text className="text-white text-xl font-bold mt-4 mb-2">
+                    Aucun avis pour le moment
+                  </Text>
+                  <Text className="text-slate-400 text-center text-base mb-6 leading-6">
+                    {isOwnProfile 
+                      ? 'Participez à des événements pour recevoir vos premiers avis !'
+                      : 'Soyez le premier à donner un avis à cet utilisateur.'
+                    }
+                  </Text>
+                  {!isOwnProfile && user && (
+                    <TouchableOpacity
+                      className="bg-cyan-500 rounded-xl px-6 py-3"
+                      onPress={() => setShowReviewForm(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-base font-bold">Donner un avis</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
             </View>
           )}
 
@@ -1215,6 +1286,19 @@ const UserProfileScreen = ({ navigation, route }) => {
           </Animated.View>
         </Animated.View>
       </ScrollView>
+
+      {/* Review Form Modal */}
+      <ReviewForm
+        visible={showReviewForm}
+        onClose={() => {
+          setShowReviewForm(false);
+          setEditingReview(null);
+        }}
+        onSubmit={editingReview ? handleEditReview : handleCreateReview}
+        review={editingReview}
+        user={userData}
+        loading={loadingReviews}
+      />
     </SafeAreaView>
   );
 };

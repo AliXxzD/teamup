@@ -11,6 +11,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
+import TeamupLogo from './TeamupLogo';
+import { calculateLevel } from '../utils/levelingSystem';
+import pointsService from '../services/pointsService';
 
 const GlobalMenu = ({ navigation, currentRoute }) => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -20,13 +23,41 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
   const [floatAnim] = useState(new Animated.Value(0));
   const [headerSlideAnim] = useState(new Animated.Value(0));
   const [isNavigating, setIsNavigating] = useState(false);
+  const [userPoints, setUserPoints] = useState(0);
+
+  // Vérifier que la navigation est disponible
+  if (!navigation) {
+    console.warn('⚠️ GlobalMenu: Navigation not available');
+    return null;
+  }
   
   // Vérifier si on est sur une page spéciale qui doit garder le bouton allumé
   const isSpecialPage = ['Home', 'Dashboard', 'Messages', 'Profile', 'Stats'].includes(currentRoute);
 
+  // Calculer les points de l'utilisateur
+  const calculateUserPoints = async () => {
+    if (!isAuthenticated || !user) return;
+    
+    try {
+      const result = await pointsService.calculateUserProgression();
+      if (result.success && result.data) {
+        setUserPoints(result.data.totalPoints || 0);
+      } else {
+        // Fallback vers les points stockés dans l'utilisateur
+        setUserPoints(user.points || user.xp || 0);
+      }
+    } catch (error) {
+      console.log('Erreur calcul points:', error);
+      // Fallback vers les points stockés dans l'utilisateur
+      setUserPoints(user.points || user.xp || 0);
+    }
+  };
+
   const toggleMenu = () => {
     if (!menuVisible) {
       setMenuVisible(true);
+      // Calculer les points quand le menu s'ouvre
+      calculateUserPoints();
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
@@ -108,6 +139,13 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
       console.log('🔍 Navigating to:', screenName);
       console.log('🔍 Navigation object:', navigation);
       
+      // Vérifier que la navigation est disponible
+      if (!navigation || !navigation.navigate) {
+        console.error('❌ Navigation not available');
+        Alert.alert('Erreur', 'Navigation non disponible');
+        return;
+      }
+      
       // Animation pour faire descendre le header quand on clique sur une page
       setIsNavigating(true);
       Animated.timing(headerSlideAnim, {
@@ -127,9 +165,6 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
             if (screenName === 'Profile') {
               console.log('📍 Navigating to Profile tab');
               navigation.navigate('Profile');
-            } else if (screenName === 'MyEventsStack') {
-              console.log('📍 Navigating to MyEventsStack');
-              navigation.navigate('MyEventsStack');
             } else if (screenName === 'Stats') {
               console.log('📍 Navigating to Stats');
               navigation.navigate('Stats');
@@ -184,14 +219,6 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
       color: '#20B2AA',
       onPress: () => {
         navigateToScreen('Profile');
-      }
-    },
-    {
-      title: 'Mes Événements',
-      icon: 'calendar-outline',
-      color: '#10B981',
-      onPress: () => {
-        navigateToScreen('MyEventsStack');
       }
     },
     {
@@ -328,6 +355,11 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
               ]
             }}
           >
+            <TouchableOpacity 
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={{ flex: 1 }}
+            >
             {/* Header */}
             <View className="px-6 pt-16 pb-8">
               <View className="flex-row items-center justify-between mb-6">
@@ -349,28 +381,8 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
               
               {/* App Logo Section */}
               <View className="flex-row items-center mb-6">
-                <LinearGradient
-                  colors={['#06b6d4', '#0891b2']}
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 16,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 16,
-                    shadowColor: '#06b6d4',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 6,
-                  }}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Ionicons name="people" size={24} color="#ffffff" />
-                </LinearGradient>
-                <View>
-                  <Text className="text-white text-xl font-bold tracking-tight">TEAMUP</Text>
+                <TeamupLogo size="small" textColor="#ffffff" />
+                <View style={{ marginLeft: 16 }}>
                   <Text className="text-slate-400 text-sm">Connectez-vous au sport</Text>
                 </View>
               </View>
@@ -382,15 +394,15 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
                 <View className="bg-teal-600 rounded-2xl p-4 flex-row items-center">
                   <View className="w-12 h-12 bg-white rounded-full items-center justify-center mr-3">
                     <Text className="text-teal-600 text-lg font-bold">
-                      {user?.name?.charAt(0)?.toUpperCase() || 'A'}
+                      {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                     </Text>
                   </View>
                   <View>
                     <Text className="text-white text-lg font-bold">
-                      {user?.name || 'Alex Martin'}
+                      {user?.name || user?.email?.split('@')[0] || 'Utilisateur'}
                     </Text>
                     <Text className="text-teal-200 text-sm">
-                      Niveau 12 • {user?.points || '2,450'} pts
+                      Niveau {calculateLevel(userPoints)} • {userPoints} pts
                     </Text>
                   </View>
                 </View>
@@ -498,9 +510,6 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
                             : 'text-slate-400'
                         }`}>Conversations</Text>
                       </View>
-                      <View className="w-6 h-6 bg-red-500 rounded-full items-center justify-center">
-                        <Text className="text-white text-xs font-bold">3</Text>
-                      </View>
                     </TouchableOpacity>
                   )}
 
@@ -536,37 +545,6 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
                     </TouchableOpacity>
                   )}
 
-                  {/* Succès - Only show for authenticated users */}
-                  {isAuthenticated && (
-                    <TouchableOpacity
-                      className={`rounded-2xl p-4 flex-row items-center ${
-                        currentRoute === 'Stats' 
-                          ? 'bg-teal-600' 
-                          : 'bg-slate-800'
-                      }`}
-                      onPress={() => navigateToScreen('Stats')}
-                    >
-                      <View className={`w-10 h-10 rounded-xl items-center justify-center mr-3 ${
-                        currentRoute === 'Stats' 
-                          ? 'bg-white/20' 
-                          : 'bg-slate-700'
-                      }`}>
-                        <Ionicons 
-                          name="trophy" 
-                          size={20} 
-                          color={currentRoute === 'Stats' ? "#ffffff" : "#f59e0b"} 
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="text-white text-base font-medium">Succès</Text>
-                        <Text className={`text-sm ${
-                          currentRoute === 'Stats' 
-                            ? 'text-teal-200' 
-                            : 'text-slate-400'
-                        }`}>Mes récompenses</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
                 </View>
               </View>
 
@@ -676,6 +654,7 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
                 </View>
               </View>
             </ScrollView>
+            </TouchableOpacity>
           </Animated.View>
         </TouchableOpacity>
       </Modal>

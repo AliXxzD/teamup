@@ -182,6 +182,15 @@ const SettingsScreen = ({ navigation }) => {
       <View className="bg-slate-900 px-6 pt-6 pb-4 border-b border-slate-800">
         <View className="flex-row justify-between items-center">
           <View className="flex-row items-center">
+            {/* Bouton retour */}
+            <TouchableOpacity
+              className="w-10 h-10 bg-slate-800 rounded-xl items-center justify-center mr-3"
+              onPress={() => navigation.navigate('Dashboard')}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-back" size={20} color="#ffffff" />
+            </TouchableOpacity>
+            
             <LinearGradient
               colors={['#06b6d4', '#0891b2']}
               style={{
@@ -200,10 +209,7 @@ const SettingsScreen = ({ navigation }) => {
             <Text className="text-white text-2xl font-bold">Paramètres</Text>
           </View>
           
-          <View className="flex-row items-center" style={{ gap: 12 }}>
-            <TouchableOpacity className="w-11 h-11 bg-slate-800 border border-slate-700/50 rounded-xl items-center justify-center">
-              <Ionicons name="search" size={20} color="#ffffff" />
-            </TouchableOpacity>
+          <View className="flex-row items-center">
             <GlobalMenu navigation={navigation} currentRoute="Settings" />
           </View>
         </View>
@@ -211,15 +217,15 @@ const SettingsScreen = ({ navigation }) => {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <Animated.View 
-          className="px-6 pt-6"
+          className="px-6 pt-6 pb-8"
           style={{
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }]
           }}
         >
           {/* Account Section */}
-          <View className="mb-8">
-            <Text className="text-white text-xl font-bold mb-4">Compte</Text>
+          <View className="bg-slate-800/30 border border-slate-700/20 rounded-2xl p-5 mb-6">
+            <Text className="text-white text-xl font-bold mb-5 px-1">Compte</Text>
             
             <SettingItem
               icon="person-outline"
@@ -227,14 +233,6 @@ const SettingsScreen = ({ navigation }) => {
               subtitle="Modifier vos informations personnelles"
               onPress={() => navigation.navigate('Profile')}
               iconColor="#22d3ee"
-            />
-            
-            <SettingItem
-              icon="shield-outline"
-              title="Confidentialité"
-              subtitle="Gérer la visibilité de votre profil"
-              onPress={() => Alert.alert('Confidentialité', 'Page en cours de développement')}
-              iconColor="#8b5cf6"
             />
             
             <SettingItem
@@ -247,8 +245,8 @@ const SettingsScreen = ({ navigation }) => {
           </View>
 
           {/* Notifications Section */}
-          <View className="mb-8">
-            <Text className="text-white text-xl font-bold mb-4">Notifications</Text>
+          <View className="bg-slate-800/30 border border-slate-700/20 rounded-2xl p-5 mb-6">
+            <Text className="text-white text-xl font-bold mb-5 px-1">Notifications</Text>
             
             <SwitchItem
               icon="notifications-outline"
@@ -265,8 +263,8 @@ const SettingsScreen = ({ navigation }) => {
           </View>
 
           {/* App Preferences */}
-          <View className="mb-8">
-            <Text className="text-white text-xl font-bold mb-4">Préférences</Text>
+          <View className="bg-slate-800/30 border border-slate-700/20 rounded-2xl p-5 mb-6">
+            <Text className="text-white text-xl font-bold mb-5 px-1">Préférences</Text>
             
             <SettingItem
               icon="color-palette-outline"
@@ -305,8 +303,8 @@ const SettingsScreen = ({ navigation }) => {
           </View>
 
           {/* Support Section */}
-          <View className="mb-8">
-            <Text className="text-white text-xl font-bold mb-4">Support</Text>
+          <View className="bg-slate-800/30 border border-slate-700/20 rounded-2xl p-5 mb-6">
+            <Text className="text-white text-xl font-bold mb-5 px-1">Support</Text>
             
             <SettingItem
               icon="trophy-outline"
@@ -349,43 +347,22 @@ const SettingsScreen = ({ navigation }) => {
             />
           </View>
 
-          {/* About Section */}
-          <View className="mb-8">
-            <Text className="text-white text-xl font-bold mb-4">À propos</Text>
-            
-            <SettingItem
-              icon="information-circle-outline"
-              title="À propos de TeamUp"
-              subtitle="Version 1.0.0"
-              onPress={() => Alert.alert('TeamUp', 'Version 1.0.0\nDéveloppé avec ❤️ pour les sportifs')}
-              iconColor="#64748b"
-            />
-            
-            <SettingItem
-              icon="document-text-outline"
-              title="Conditions d'utilisation"
-              subtitle="Lire nos conditions d'utilisation"
-              onPress={() => Alert.alert('Conditions', 'Page en cours de développement')}
-              iconColor="#64748b"
-            />
-            
-            <SettingItem
-              icon="shield-checkmark-outline"
-              title="Politique de confidentialité"
-              subtitle="Comment nous protégeons vos données"
-              onPress={() => Alert.alert('Confidentialité', 'Page en cours de développement')}
-              iconColor="#64748b"
-            />
-          </View>
 
           {/* Danger Zone */}
-          <View className="mb-8">
-            <Text className="text-red-400 text-xl font-bold mb-4">Zone de danger</Text>
+          <View className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5 mb-6">
+            <Text className="text-red-400 text-xl font-bold mb-5 px-1">Zone de danger</Text>
             
             <TouchableOpacity
               className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 mb-3 flex-row items-center"
               onPress={() => Alert.alert('Supprimer', 'Fonctionnalité en cours de développement')}
               activeOpacity={0.8}
+              style={{
+                shadowColor: '#ef4444',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
             >
               <View className="w-10 h-10 bg-red-500/20 rounded-xl items-center justify-center mr-4">
                 <Ionicons name="trash-outline" size={20} color="#ef4444" />
@@ -403,6 +380,13 @@ const SettingsScreen = ({ navigation }) => {
               className="bg-red-500/15 border border-red-500/30 rounded-2xl p-4 flex-row items-center justify-center"
               onPress={handleLogout}
               activeOpacity={0.8}
+              style={{
+                shadowColor: '#ef4444',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
             >
               <Ionicons name="log-out-outline" size={20} color="#ef4444" style={{ marginRight: 12 }} />
               <Text className="text-red-400 text-lg font-bold">Se déconnecter</Text>
@@ -410,30 +394,134 @@ const SettingsScreen = ({ navigation }) => {
           </View>
 
           {/* App Info */}
-          <View className="items-center mb-8">
-            <LinearGradient
-              colors={['#06b6d4', '#0891b2']}
-              style={{
-                width: 60,
-                height: 60,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 16,
-              }}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Ionicons name="people" size={32} color="#ffffff" />
-            </LinearGradient>
+          <View className="bg-slate-800/50 border border-slate-700/30 rounded-3xl p-6 mb-8">
+            <View className="items-center mb-6">
+              <LinearGradient
+                colors={['#06b6d4', '#0891b2']}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 24,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 20,
+                  shadowColor: '#06b6d4',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 8,
+                }}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons name="people" size={40} color="#ffffff" />
+              </LinearGradient>
+              
+              <Text className="text-white text-2xl font-bold mb-2">TeamUp</Text>
+              <Text className="text-slate-300 text-base text-center mb-3 leading-6">
+                Connectez-vous au sport local
+              </Text>
+              <Text className="text-slate-500 text-sm">
+                Version 1.0.0 • Build 2024.01
+              </Text>
+            </View>
             
-            <Text className="text-white text-xl font-bold mb-2">TeamUp</Text>
-            <Text className="text-slate-400 text-sm text-center mb-4">
-              Connectez-vous au sport local
-            </Text>
-            <Text className="text-slate-500 text-xs">
-              Version 1.0.0 • Build 2024.01
-            </Text>
+            {/* Legal Links */}
+            <View className="space-y-3">
+              <Text className="text-slate-300 text-lg font-semibold text-center mb-4">
+                Informations légales
+              </Text>
+              
+              <TouchableOpacity
+                className="bg-slate-700/50 border border-slate-600/30 rounded-2xl p-4 flex-row items-center"
+                onPress={() => {
+                  console.log('About button pressed');
+                  try {
+                    navigation.push('About');
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                    navigation.navigate('About');
+                  }
+                }}
+                activeOpacity={0.8}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <View className="w-10 h-10 bg-cyan-500/20 rounded-xl items-center justify-center mr-4">
+                  <Ionicons name="information-circle" size={20} color="#06b6d4" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-base font-medium">À propos</Text>
+                  <Text className="text-slate-400 text-sm mt-1">En savoir plus sur TeamUp</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#64748b" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="bg-slate-700/50 border border-slate-600/30 rounded-2xl p-4 flex-row items-center"
+                onPress={() => {
+                  console.log('Privacy button pressed');
+                  try {
+                    navigation.push('Privacy');
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                    navigation.navigate('Privacy');
+                  }
+                }}
+                activeOpacity={0.8}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <View className="w-10 h-10 bg-green-500/20 rounded-xl items-center justify-center mr-4">
+                  <Ionicons name="shield-checkmark" size={20} color="#10b981" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-base font-medium">Confidentialité</Text>
+                  <Text className="text-slate-400 text-sm mt-1">Politique de protection des données</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#64748b" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                className="bg-slate-700/50 border border-slate-600/30 rounded-2xl p-4 flex-row items-center"
+                onPress={() => {
+                  console.log('Terms button pressed');
+                  try {
+                    navigation.push('Terms');
+                  } catch (error) {
+                    console.error('Navigation error:', error);
+                    navigation.navigate('Terms');
+                  }
+                }}
+                activeOpacity={0.8}
+                style={{
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2,
+                }}
+              >
+                <View className="w-10 h-10 bg-amber-500/20 rounded-xl items-center justify-center mr-4">
+                  <Ionicons name="document-text" size={20} color="#f59e0b" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-base font-medium">Conditions d'utilisation</Text>
+                  <Text className="text-slate-400 text-sm mt-1">Termes et conditions du service</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#64748b" />
+              </TouchableOpacity>
+            </View>
           </View>
         </Animated.View>
       </ScrollView>

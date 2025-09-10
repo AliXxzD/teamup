@@ -467,20 +467,24 @@ userSchema.methods.calculateRealStats = async function() {
     // Compter les événements organisés
     const eventsOrganized = await Event.countDocuments({ 
       organizer: this._id,
-      status: { $ne: 'cancelled' }
+      status: { $in: ['active', 'completed', 'full'] }
     });
     
     // Compter les événements rejoints (participant)
-    // Les participants sont stockés dans un tableau d'objets { user: ObjectId, ... }
+    // Les participants sont stockés dans un tableau d'objets { user: ObjectId, status: 'confirmed' }
     const eventsJoined = await Event.countDocuments({
-      'participants.user': this._id,
-      status: { $ne: 'cancelled' }
+      $and: [
+        { 'participants.user': this._id },
+        { 'participants.status': { $in: ['confirmed', 'pending'] } },
+        { status: { $ne: 'cancelled' } }
+      ]
     });
     
-    // Pour l'instant, on utilise des valeurs par défaut pour les évaluations
-    // car le système de ratings n'est pas encore implémenté
-    const averageRating = 0;
-    const ratingCount = 0;
+    // Calculer les vraies statistiques de rating
+    const Review = require('./Review');
+    const ratingStats = await Review.getUserStats(this._id);
+    const averageRating = ratingStats.averageRating;
+    const ratingCount = ratingStats.totalReviews;
     
     // Mettre à jour les statistiques dans le profil
     if (!this.profile) {
@@ -500,6 +504,8 @@ userSchema.methods.calculateRealStats = async function() {
     console.log(`📊 Statistiques calculées pour ${this.name}:`);
     console.log(`   - Événements organisés: ${eventsOrganized}`);
     console.log(`   - Événements rejoints: ${eventsJoined}`);
+    console.log(`   - Note moyenne: ${averageRating}`);
+    console.log(`   - Nombre d'avis: ${ratingCount}`);
     
     return {
       eventsOrganized,

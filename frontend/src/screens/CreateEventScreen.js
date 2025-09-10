@@ -57,6 +57,7 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
     }, 100);
 
     if (isEditing && eventData) {
+      // Mode édition : remplir avec les données de l'événement
       setFormData({
         title: eventData.title || '',
         description: eventData.description || '',
@@ -69,10 +70,55 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
         price: eventData.price?.amount?.toString() || '',
         isFree: eventData.price?.isFree ?? true
       });
+    } else {
+      // Mode création : réinitialiser le formulaire
+      setFormData({
+        title: '',
+        description: '',
+        sport: '',
+        date: '',
+        time: '',
+        location: '',
+        maxParticipants: '',
+        level: '',
+        price: '',
+        isFree: true
+      });
+      
+      // Réinitialiser aussi les dates et les erreurs
+      setSelectedDate(new Date());
+      setSelectedTime(new Date());
+      setErrors({});
     }
 
     return () => clearTimeout(timer);
   }, [isEditing, eventData]);
+
+  // Réinitialiser le formulaire quand on navigue vers la page (focus)
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Si ce n'est pas en mode édition, réinitialiser le formulaire
+      if (!isEditing) {
+        setFormData({
+          title: '',
+          description: '',
+          sport: '',
+          date: '',
+          time: '',
+          location: '',
+          maxParticipants: '',
+          level: '',
+          price: '',
+          isFree: true
+        });
+        setSelectedDate(new Date());
+        setSelectedTime(new Date());
+        setErrors({});
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, isEditing]);
 
   const sports = [
     { name: 'Football', icon: 'football', color: '#10B981' },
@@ -262,6 +308,25 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
       const responseData = await response.json();
 
       if (response.ok && responseData.success) {
+        // Réinitialiser le formulaire après succès
+        if (!isEditing) {
+          setFormData({
+            title: '',
+            description: '',
+            sport: '',
+            date: '',
+            time: '',
+            location: '',
+            maxParticipants: '',
+            level: '',
+            price: '',
+            isFree: true
+          });
+          setSelectedDate(new Date());
+          setSelectedTime(new Date());
+          setErrors({});
+        }
+        
         Alert.alert(
           'Succès !',
           isEditing ? 'Événement modifié avec succès.' : 'Événement créé avec succès.',

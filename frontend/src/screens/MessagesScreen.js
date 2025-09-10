@@ -18,6 +18,7 @@ import { useAuth } from '../contexts/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 import GlobalMenu from '../components/GlobalMenu';
+import TeamupLogo from '../components/TeamupLogo';
 
 const MessagesScreenTailwind = ({ navigation }) => {
   const { user } = useAuth();
@@ -275,17 +276,9 @@ const MessagesScreenTailwind = ({ navigation }) => {
       <View className="bg-dark-900 px-6 pt-4 pb-4">
         {/* Top Bar with Logo and Icons */}
         <View className="flex-row justify-between items-center mb-4">
-          <View className="flex-row items-center">
-            <View className="w-10 h-10 bg-gradient-to-br from-lime to-green-500 rounded-2xl items-center justify-center mr-3">
-              <Ionicons name="people" size={20} color="#ffffff" />
-            </View>
-            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
-          </View>
+          <TeamupLogo size="extra-small" textColor="#ffffff" />
           
-          <View className="flex-row items-center space-x-3">
-            <TouchableOpacity className="w-10 h-10 bg-dark-800 rounded-2xl items-center justify-center">
-              <Ionicons name="search" size={20} color="#ffffff" />
-            </TouchableOpacity>
+          <View className="flex-row items-center">
             <GlobalMenu navigation={navigation} currentRoute="Messages" />
           </View>
         </View>

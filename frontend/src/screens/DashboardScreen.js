@@ -22,6 +22,7 @@ import SimplifiedUserCard from '../components/SimplifiedUserCard';
 import { AchievementsList } from '../components/AchievementCard';
 import pointsService from '../services/pointsService';
 import { API_BASE_URL, getAuthHeaders } from '../config/api';
+import TeamupLogo from '../components/TeamupLogo';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -37,6 +38,8 @@ const DashboardScreen = ({ navigation }) => {
   const [loadingStats, setLoadingStats] = useState(true);
   const [joinedEvents, setJoinedEvents] = useState([]);
   const [loadingJoinedEvents, setLoadingJoinedEvents] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredEvents, setFilteredEvents] = useState([]);
 
   useEffect(() => {
     Animated.parallel([
@@ -62,17 +65,54 @@ const DashboardScreen = ({ navigation }) => {
     const unsubscribe = navigation.addListener('focus', () => {
       loadEvents();
       loadUserProgression();
+      // Recharger aussi les événements rejoints si l'utilisateur est connecté
+      if (user && user._id) {
+        loadJoinedEvents();
+      }
     });
 
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, user]);
 
-  // Charger les événements rejoints quand l'onglet activity est sélectionné
+  // Charger les événements rejoints quand l'utilisateur est disponible
   useEffect(() => {
-    if (activeTab === 'activity') {
+    if (user && user._id) {
+      console.log('🔄 Chargement des événements rejoints pour l\'utilisateur:', user._id);
+      console.log('🔄 Détails utilisateur:', { name: user.name, email: user.email, _id: user._id });
+      loadJoinedEvents();
+    } else if (!user) {
+      console.log('⚠️ Utilisateur non connecté, pas de chargement des événements rejoints');
+      setJoinedEvents([]);
+    } else {
+      console.log('⚠️ Utilisateur partiellement chargé:', user);
+    }
+  }, [user]);
+
+  // Recharger les événements rejoints quand l'onglet activity est sélectionné
+  useEffect(() => {
+    if (activeTab === 'activity' && user && user._id) {
+      console.log('🔄 Rechargement des événements rejoints pour l\'onglet activity');
       loadJoinedEvents();
     }
   }, [activeTab]);
+
+  // Filtrer les événements basé sur la recherche
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredEvents(nearbyEvents);
+    } else {
+      const filtered = nearbyEvents.filter(event => {
+        const query = searchQuery.toLowerCase();
+        return (
+          event.title?.toLowerCase().includes(query) ||
+          event.sport?.toLowerCase().includes(query) ||
+          event.location?.toLowerCase().includes(query) ||
+          event.description?.toLowerCase().includes(query)
+        );
+      });
+      setFilteredEvents(filtered);
+    }
+  }, [searchQuery, nearbyEvents]);
 
   const loadUserProgression = async () => {
     try {
@@ -105,21 +145,42 @@ const DashboardScreen = ({ navigation }) => {
       setLoadingJoinedEvents(true);
       console.log('📅 Chargement des événements rejoints...');
       
+      // Vérifier que l'utilisateur est bien connecté
+      if (!user || !user._id) {
+        console.log('⚠️ Utilisateur non connecté, impossible de charger les événements rejoints');
+        setJoinedEvents([]);
+        setLoadingJoinedEvents(false);
+        return;
+      }
+      
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
         console.log('⚠️ Pas de token, impossible de charger les événements rejoints');
+        setJoinedEvents([]);
+        setLoadingJoinedEvents(false);
         return;
       }
 
+      console.log('🔍 Token trouvé, appel API...');
       const response = await fetch(`${API_BASE_URL}/api/events/my/joined`, {
         headers: getAuthHeaders(token)
       });
 
+      console.log('📊 Réponse API:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Événements rejoints chargés:', data.data?.length || 0);
         console.log('🔍 Debug - Premier événement rejoint:', data.data?.[0]);
+        console.log('🔍 Tous les événements rejoints:', data.data?.map(e => `${e.title}: ${e.status}`));
+        console.log('🔍 Réponse complète de l\'API:', JSON.stringify(data, null, 2));
+        
+        // Le backend filtre déjà les événements, pas besoin de filtrer côté frontend
         setJoinedEvents(data.data || []);
+        console.log('🔍 État joinedEvents mis à jour:', data.data || []);
+      } else if (response.status === 401) {
+        console.log('🔐 Token expiré, déconnexion nécessaire');
+        setJoinedEvents([]);
       } else {
         console.error('❌ Erreur chargement événements rejoints:', response.status);
         setJoinedEvents([]);
@@ -368,18 +429,10 @@ const DashboardScreen = ({ navigation }) => {
           }}
         >
           {/* Logo and App Name */}
-          <View className="flex-row items-center">
-            <View className="w-12 h-12 bg-gradient-to-br from-lime to-green-500 rounded-2xl items-center justify-center mr-3">
-              <Ionicons name="people" size={24} color="#ffffff" />
-            </View>
-            <Text className="text-white text-2xl font-bold">TEAMUP</Text>
-          </View>
+          <TeamupLogo size="medium" textColor="#ffffff" />
           
           {/* Search and Menu Icons */}
-          <View className="flex-row items-center space-x-4">
-            <TouchableOpacity className="w-12 h-12 bg-dark-800 rounded-2xl items-center justify-center">
-              <Ionicons name="search" size={20} color="#ffffff" />
-            </TouchableOpacity>
+          <View className="flex-row items-center">
             <GlobalMenu navigation={navigation} currentRoute="Dashboard" />
           </View>
         </Animated.View>
@@ -460,18 +513,31 @@ const DashboardScreen = ({ navigation }) => {
           <>
             {/* Search Bar */}
             <View className="px-6 mb-6">
-              <View className="bg-dark-800/60 border border-dark-600/30 rounded-2xl flex-row items-center px-4 py-3">
+              <View className="bg-slate-800/60 border border-slate-600/30 rounded-2xl flex-row items-center px-4 py-3">
                 <Ionicons name="search" size={20} color="#64748b" />
                 <TextInput 
                   placeholder="Rechercher un sport, lieu..."
                   placeholderTextColor="#64748b"
                   className="flex-1 text-white text-base ml-3"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  returnKeyType="search"
+                  clearButtonMode="while-editing"
                 />
-                <TouchableOpacity className="w-10 h-10 bg-dark-700 rounded-xl items-center justify-center">
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity 
+                    className="w-8 h-8 bg-slate-700 rounded-full items-center justify-center mr-2"
+                    onPress={() => setSearchQuery('')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="close" size={16} color="#64748b" />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity className="w-10 h-10 bg-slate-700 rounded-xl items-center justify-center">
                   <Ionicons name="filter" size={18} color="#84cc16" />
                 </TouchableOpacity>
               </View>
-          </View>
+            </View>
           
             {/* Create Event Button */}
             <View className="px-6 mb-8">
@@ -488,7 +554,10 @@ const DashboardScreen = ({ navigation }) => {
             <View className="px-6 mb-8">
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-white text-xl font-bold">Événements près de vous</Text>
-                <TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('Discover')}
+                  activeOpacity={0.8}
+                >
                   <Text className="text-lime text-sm font-medium underline">Voir tout</Text>
                 </TouchableOpacity>
               </View>
@@ -500,18 +569,34 @@ const DashboardScreen = ({ navigation }) => {
                 {loading ? (
                   <View className="items-center py-8">
                     <Text className="text-white text-base">Chargement des événements...</Text>
-                    </View>
-                ) : nearbyEvents.length > 0 ? (
-                  nearbyEvents.map((event) => renderEventCard(formatEventData(event), false))
+                  </View>
+                ) : filteredEvents.length > 0 ? (
+                  filteredEvents.map((event) => renderEventCard(formatEventData(event), false))
+                ) : searchQuery.trim() !== '' ? (
+                  <View className="items-center py-8">
+                    <Ionicons name="search-outline" size={48} color="#64748b" />
+                    <Text className="text-white text-lg font-medium mt-3 mb-2">Aucun résultat trouvé</Text>
+                    <Text className="text-slate-400 text-center text-base leading-6">
+                      Aucun événement ne correspond à votre recherche "{searchQuery}".
+                    </Text>
+                    <TouchableOpacity 
+                      className="mt-4 bg-slate-700 rounded-xl px-4 py-2"
+                      onPress={() => setSearchQuery('')}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-sm font-medium">Effacer la recherche</Text>
+                    </TouchableOpacity>
+                  </View>
                 ) : (
                   <View className="items-center py-8">
                     <Ionicons name="calendar-outline" size={48} color="#64748b" />
-                    <Text className="text-dark-300 text-base mt-4 text-center">
-                      Aucun événement à proximité pour le moment
+                    <Text className="text-white text-lg font-medium mt-3 mb-2">Aucun événement trouvé</Text>
+                    <Text className="text-slate-400 text-center text-base leading-6">
+                      Il n'y a pas d'événements près de vous pour le moment.
                     </Text>
                   </View>
                 )}
-                    </View>
+              </View>
                   </View>
           </>
         )}
@@ -525,7 +610,7 @@ const DashboardScreen = ({ navigation }) => {
               </View>
               <Text className="text-white text-2xl font-bold mb-2">Mes événements</Text>
               <Text className="text-dark-300 text-base text-center leading-6">
-                Gérez vos événements organisés et vos participations
+                Gérez vos événements organisés
               </Text>
             </View>
 
@@ -558,26 +643,6 @@ const DashboardScreen = ({ navigation }) => {
               )}
             </View>
 
-            {/* Events Joined Section */}
-            <View className="mb-6">
-              <View className="flex-row items-center mb-4">
-                <Ionicons name="people-outline" size={20} color="#84cc16" />
-                <Text className="text-white text-lg font-bold ml-2">Événements rejoints</Text>
-              </View>
-              
-              <View className="items-center py-8">
-                <Ionicons name="calendar-outline" size={48} color="#64748b" />
-                <Text className="text-dark-300 text-base mt-4 text-center">
-                  Aucun événement rejoint pour le moment
-                </Text>
-                <TouchableOpacity 
-                  className="bg-lime/20 border border-lime/30 px-6 py-3 rounded-2xl mt-4"
-                  onPress={() => setActiveTab('discover')}
-                >
-                  <Text className="text-lime text-sm font-bold">Découvrir des événements</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
         )}
 
@@ -592,19 +657,38 @@ const DashboardScreen = ({ navigation }) => {
                 <View className="flex-1">
                   <Text className="text-white text-xl font-bold">Événements rejoints</Text>
                   <Text className="text-slate-400 text-sm">
-                    {joinedEvents.length} événement{joinedEvents.length > 1 ? 's' : ''} rejoint{joinedEvents.length > 1 ? 's' : ''}
+                    {Array.isArray(joinedEvents) ? joinedEvents.length : 0} événement{(Array.isArray(joinedEvents) ? joinedEvents.length : 0) > 1 ? 's' : ''} rejoint{(Array.isArray(joinedEvents) ? joinedEvents.length : 0) > 1 ? 's' : ''}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  className="w-10 h-10 bg-slate-700 rounded-xl items-center justify-center"
+                  onPress={() => {
+                    if (user && user._id) {
+                      loadJoinedEvents();
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="refresh" size={20} color="#84cc16" />
+                </TouchableOpacity>
               </View>
             </View>
             
             {/* Liste des événements rejoints */}
+            {(() => {
+              console.log('🔍 DEBUG AFFICHAGE - loadingJoinedEvents:', loadingJoinedEvents);
+              console.log('🔍 DEBUG AFFICHAGE - joinedEvents:', joinedEvents);
+              console.log('🔍 DEBUG AFFICHAGE - joinedEvents.length:', joinedEvents?.length);
+              console.log('🔍 DEBUG AFFICHAGE - Array.isArray(joinedEvents):', Array.isArray(joinedEvents));
+              console.log('🔍 DEBUG AFFICHAGE - user:', user);
+              return null;
+            })()}
             {loadingJoinedEvents ? (
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin mb-4" />
                 <Text className="text-slate-400 text-base">Chargement des événements...</Text>
               </View>
-            ) : joinedEvents.length === 0 ? (
+            ) : !Array.isArray(joinedEvents) || joinedEvents.length === 0 ? (
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-20 h-20 bg-slate-800 rounded-full items-center justify-center mb-6">
                   <Ionicons name="calendar-outline" size={40} color="#64748b" />
@@ -621,30 +705,47 @@ const DashboardScreen = ({ navigation }) => {
                 >
                   <Text className="text-white text-lg font-bold">Découvrir des événements</Text>
                 </TouchableOpacity>
+                
+                {/* Bouton de debug temporaire */}
+                <TouchableOpacity 
+                  className="bg-slate-700 rounded-xl py-2 px-4 mt-4"
+                  onPress={() => {
+                    console.log('🔍 DEBUG - État actuel:');
+                    console.log('  loadingJoinedEvents:', loadingJoinedEvents);
+                    console.log('  joinedEvents:', joinedEvents);
+                    console.log('  joinedEvents.length:', joinedEvents?.length);
+                    console.log('  Array.isArray(joinedEvents):', Array.isArray(joinedEvents));
+                    console.log('  user:', user);
+                    
+                    // Forcer le rechargement
+                    if (user && user._id) {
+                      console.log('🔄 Forçage du rechargement...');
+                      loadJoinedEvents();
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text className="text-white text-sm">Debug & Recharger</Text>
+                </TouchableOpacity>
               </View>
-            ) : (
+            ) : Array.isArray(joinedEvents) && joinedEvents.length > 0 ? (
               <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                 <View className="space-y-4">
                   {joinedEvents.map((event, index) => {
-                    // Debug: Log des propriétés de l'événement
-                    console.log(`🔍 Debug - Événement ${index}:`, {
-                      id: event._id,
-                      title: event.title,
-                      sport: event.sport,
-                      date: event.date,
-                      time: event.time,
-                      location: event.location,
-                      address: event.location?.address,
-                      currentParticipants: event.currentParticipants,
-                      maxParticipants: event.maxParticipants,
-                      status: event.status
-                    });
-                    
                     return (
                     <TouchableOpacity
                       key={event._id || index}
                       className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6"
-                      onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
+                      onPress={() => {
+                        if (event._id && navigation) {
+                          navigation.navigate('EventDetails', { eventId: event._id });
+                        } else {
+                          console.error('❌ Erreur navigation: event._id ou navigation manquant', {
+                            eventId: event._id,
+                            hasNavigation: !!navigation
+                          });
+                        }
+                      }}
                       activeOpacity={0.8}
                     >
                       {/* Header de l'événement */}
@@ -705,6 +806,25 @@ const DashboardScreen = ({ navigation }) => {
                   })}
                 </View>
               </ScrollView>
+            ) : (
+              // Fallback pour les cas inattendus
+              <View className="flex-1 items-center justify-center py-20">
+                <View className="w-20 h-20 bg-slate-800 rounded-full items-center justify-center mb-6">
+                  <Ionicons name="alert-circle-outline" size={40} color="#64748b" />
+                </View>
+                <Text className="text-white text-xl font-bold mb-2">Erreur de chargement</Text>
+                <Text className="text-slate-400 text-center text-base mb-8 leading-6">
+                  Impossible de charger les événements rejoints.{'\n'}
+                  Veuillez réessayer plus tard.
+                </Text>
+                <TouchableOpacity 
+                  className="bg-slate-700 rounded-xl py-4 px-8"
+                  onPress={() => loadJoinedEvents()}
+                  activeOpacity={0.8}
+                >
+                  <Text className="text-white text-lg font-bold">Réessayer</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         )}
