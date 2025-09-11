@@ -35,9 +35,12 @@ const allowedOrigins = [
   
   // URLs de développement par défaut
   'http://localhost:19006',
+  'http://192.168.1.25:19006',
+  'http://192.168.1.25:8081',
   'http://192.168.1.205:19006',
   'http://192.168.1.205:8081',
   'exp://localhost:8081',
+  'exp://192.168.1.25:8081',
   'exp://192.168.1.205:8081'
 ];
 

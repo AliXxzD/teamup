@@ -4,7 +4,7 @@
 export const API_BASE_URL = (() => {
   // En développement (Expo Go)
   if (__DEV__) {
-    return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.205:5000';
+    return process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.25:5000';
   }
   
   // En production (EAS Build)

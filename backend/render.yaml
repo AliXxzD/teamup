@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: teamup-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: teamup-mongodb
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_EXPIRES_IN
+        value: 7d
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_URLS
+        value: "https://expo.dev,https://exp.host,https://snack.expo.io,exp://localhost:8081"
+      - key: EMAIL_USER
+        value: nassimblm12@gmail.com
+      - key: EMAIL_PASSWORD
+        value: hepx tyzl phrz cvyj
+
+databases:
+  - name: teamup-mongodb
+    plan: free
+    databaseName: teamup
