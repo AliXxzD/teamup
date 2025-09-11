@@ -13,7 +13,7 @@ export const navigateToEventDetails = (navigation, eventId) => {
     console.log('Navigation push failed, trying navigate...');
     try {
       // Si push échoue, essayer navigate
-      navigation.navigate('EventDetails', { eventId });
+      navigation.navigate('EventDetailsModal', { eventId });
     } catch (navigateError) {
       console.log('Navigation navigate failed, trying root navigation...');
       // Si navigate échoue, essayer la navigation racine
@@ -35,9 +35,9 @@ export const navigateToEventDetails = (navigation, eventId) => {
 export const navigateToUserProfile = (navigation, userId = null) => {
   try {
     if (userId) {
-      navigation.navigate('UserProfile', { userId });
+      navigation.navigate('UserProfileModal', { userId });
     } else {
-      navigation.navigate('UserProfile');
+      navigation.navigate('UserProfileModal');
     }
   } catch (error) {
     console.log('Navigation to UserProfile failed:', error);

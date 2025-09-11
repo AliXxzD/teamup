@@ -43,6 +43,14 @@ const UserProfileScreen = ({ navigation, route }) => {
   const { userId } = route.params || {};
   const isOwnProfile = !userId || userId === (user?._id || user?.id);
   
+  // Debug: Log des paramètres reçus
+  console.log('🔍 UserProfileScreen - Paramètres reçus:', {
+    userId,
+    userIdType: typeof userId,
+    isOwnProfile,
+    currentUserId: user?._id || user?.id
+  });
+  
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('Stats');
@@ -87,7 +95,9 @@ const UserProfileScreen = ({ navigation, route }) => {
 
   // Charger les avis quand l'onglet Avis est sélectionné
   useEffect(() => {
-    if (activeTab === 'Avis' && userData?._id) {
+    const userId = userData?._id || userData?.id;
+    if (activeTab === 'Avis' && userId) {
+      console.log('🔄 Chargement des avis pour l\'onglet Avis, userId:', userId);
       loadReviews();
     }
   }, [activeTab, userData]);
@@ -300,15 +310,33 @@ const UserProfileScreen = ({ navigation, route }) => {
         // Pour un autre utilisateur, charger depuis l'API
         console.log('Chargement du profil utilisateur:', userId);
         
+        // Vérifier que l'ID est valide
+        if (!userId || userId === 'undefined' || userId === 'null') {
+          console.error('❌ ID utilisateur invalide:', userId);
+          Alert.alert(
+            'Erreur',
+            'ID utilisateur invalide. Impossible de charger le profil.',
+            [
+              { text: 'OK', onPress: () => navigation.goBack() }
+            ]
+          );
+          return;
+        }
+        
         try {
           const accessToken = await AsyncStorage.getItem('accessToken');
           if (accessToken) {
+            console.log('🔍 Tentative de récupération du profil utilisateur:', userId);
+            console.log('🔍 URL:', `${API_BASE_URL}/api/users/${userId}`);
+            
             const response = await fetch(`${API_BASE_URL}/api/users/${userId}`, {
               headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
               }
             });
+            
+            console.log('🔍 Status de la réponse:', response.status);
             
             if (response.ok) {
               const userResponse = await response.json();
@@ -353,8 +381,23 @@ const UserProfileScreen = ({ navigation, route }) => {
               
               setUserData(otherUserData);
             } else {
+              const errorText = await response.text();
               console.error('❌ Erreur API pour récupérer le profil utilisateur:', response.status);
-              // Fallback vers des données par défaut
+              console.error('❌ Réponse d\'erreur:', errorText);
+              
+              // Si c'est une erreur 404, l'utilisateur n'existe pas
+              if (response.status === 404) {
+                Alert.alert(
+                  'Utilisateur non trouvé',
+                  'Ce profil utilisateur n\'existe pas ou a été supprimé.',
+                  [
+                    { text: 'OK', onPress: () => navigation.goBack() }
+                  ]
+                );
+                return;
+              }
+              
+              // Fallback vers des données par défaut pour les autres erreurs
               setUserData({
                 name: 'Utilisateur',
                 username: '@utilisateur',
@@ -449,20 +492,30 @@ const UserProfileScreen = ({ navigation, route }) => {
 
   // Charger les avis de l'utilisateur
   const loadReviews = async () => {
-    if (!userData?._id) return;
+    const userId = userData?._id || userData?.id;
+    if (!userId) {
+      console.log('⚠️ loadReviews: Pas d\'ID utilisateur disponible');
+      return;
+    }
     
     try {
       setLoadingReviews(true);
-      const result = await reviewService.getUserReviews(userData._id);
+      console.log('🔍 Chargement des avis pour l\'utilisateur:', userId);
+      console.log('🔍 userData complet:', userData);
+      
+      const result = await reviewService.getUserReviews(userId);
+      console.log('📊 Résultat getUserReviews:', result);
       
       if (result.success) {
+        console.log('✅ Avis chargés:', result.data.reviews?.length || 0);
+        console.log('✅ Stats chargées:', result.data.stats);
         setReviews(result.data.reviews || []);
         setReviewStats(result.data.stats || null);
       } else {
-        console.error('Erreur chargement avis:', result.error);
+        console.error('❌ Erreur chargement avis:', result.message || result.error);
       }
     } catch (error) {
-      console.error('Erreur loadReviews:', error);
+      console.error('❌ Erreur loadReviews:', error);
     } finally {
       setLoadingReviews(false);
     }
@@ -470,11 +523,12 @@ const UserProfileScreen = ({ navigation, route }) => {
 
   // Créer un nouvel avis
   const handleCreateReview = async (reviewData) => {
-    if (!userData?._id) return;
+    const userId = userData?._id || userData?.id;
+    if (!userId) return;
     
     try {
       const result = await reviewService.createReview({
-        reviewedUserId: userData._id,
+        reviewedUserId: userId,
         ...reviewData
       });
       
@@ -1111,18 +1165,65 @@ const UserProfileScreen = ({ navigation, route }) => {
                 </Text>
               </View>
 
+              {/* Distribution des notes */}
+              {reviewStats?.totalReviews > 0 && (
+                <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6 mb-6">
+                  <Text className="text-white text-lg font-bold mb-4 text-center">
+                    Distribution des notes
+                  </Text>
+                  <View className="space-y-3">
+                    {[5, 4, 3, 2, 1].map((rating) => {
+                      const count = reviewStats.ratingDistribution?.[rating] || 0;
+                      const percentage = reviewStats.totalReviews > 0 
+                        ? (count / reviewStats.totalReviews) * 100 
+                        : 0;
+                      
+                      return (
+                        <View key={rating} className="flex-row items-center">
+                          <Text className="text-slate-300 text-sm w-8">{rating}</Text>
+                          <Ionicons name="star" size={16} color="#fbbf24" />
+                          <View className="flex-1 bg-slate-700 rounded-full h-3 mx-3">
+                            <View
+                              className="bg-yellow-400 h-3 rounded-full"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </View>
+                          <Text className="text-slate-300 text-sm w-12 text-right">
+                            {count}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
               {/* Recent Reviews */}
               <View className="flex-row items-center justify-between mb-6">
                 <Text className="text-white text-xl font-bold">Avis récents</Text>
-                {!isOwnProfile && user && (
-                  <TouchableOpacity
-                    className="bg-cyan-500 rounded-xl px-4 py-2"
-                    onPress={() => setShowReviewForm(true)}
-                    activeOpacity={0.8}
-                  >
-                    <Text className="text-white text-sm font-bold">Donner un avis</Text>
-                  </TouchableOpacity>
-                )}
+                <View className="flex-row items-center space-x-2">
+                  {reviewStats?.totalReviews > 0 && (
+                    <TouchableOpacity
+                      className="bg-slate-700 rounded-xl px-4 py-2"
+                      onPress={() => navigation.navigate('UserReviews', { 
+                        userId: userData._id || userData.id, 
+                        userName: userData.name 
+                      })}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-sm font-bold">Voir tous</Text>
+                    </TouchableOpacity>
+                  )}
+                  {!isOwnProfile && user && (
+                    <TouchableOpacity
+                      className="bg-cyan-500 rounded-xl px-4 py-2"
+                      onPress={() => setShowReviewForm(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-sm font-bold">Donner un avis</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
               
               {loadingReviews ? (
@@ -1131,20 +1232,38 @@ const UserProfileScreen = ({ navigation, route }) => {
                   <Text className="text-slate-400 text-base mt-4">Chargement des avis...</Text>
                 </View>
               ) : reviews.length > 0 ? (
-                <View style={{ gap: 16 }}>
-                  {reviews.map((review, index) => (
-                    <ReviewCard
-                      key={review._id || index}
-                      review={review}
-                      showActions={!isOwnProfile && user && review.reviewer._id === user._id}
-                      onEdit={(review) => {
-                        setEditingReview(review);
-                        setShowReviewForm(true);
-                      }}
-                      onDelete={handleDeleteReview}
-                      currentUserId={user?._id}
-                    />
-                  ))}
+                <View>
+                  <View style={{ gap: 16 }}>
+                    {reviews.slice(0, 3).map((review, index) => (
+                      <ReviewCard
+                        key={review._id || index}
+                        review={review}
+                        showActions={!isOwnProfile && user && review.reviewer._id === user._id}
+                        onEdit={(review) => {
+                          setEditingReview(review);
+                          setShowReviewForm(true);
+                        }}
+                        onDelete={handleDeleteReview}
+                        currentUserId={user?._id}
+                      />
+                    ))}
+                  </View>
+                  
+                  {/* Bouton pour voir plus d'avis si il y en a plus de 3 */}
+                  {reviews.length > 3 && (
+                    <TouchableOpacity
+                      className="bg-slate-700 rounded-xl py-3 px-6 mt-4 items-center"
+                      onPress={() => navigation.navigate('UserReviews', { 
+                        userId: userData._id || userData.id, 
+                        userName: userData.name 
+                      })}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-base font-bold">
+                        Voir {reviews.length - 3} avis supplémentaires
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ) : (
                 <View className="items-center py-12">
@@ -1165,6 +1284,18 @@ const UserProfileScreen = ({ navigation, route }) => {
                       activeOpacity={0.8}
                     >
                       <Text className="text-white text-base font-bold">Donner un avis</Text>
+                    </TouchableOpacity>
+                  )}
+                  {reviewStats?.totalReviews > 0 && (
+                    <TouchableOpacity
+                      className="bg-slate-700 rounded-xl px-6 py-3 mt-3"
+                      onPress={() => navigation.navigate('UserReviews', { 
+                        userId: userData._id || userData.id, 
+                        userName: userData.name 
+                      })}
+                      activeOpacity={0.8}
+                    >
+                      <Text className="text-white text-base font-bold">Voir tous les avis</Text>
                     </TouchableOpacity>
                   )}
                 </View>

@@ -47,7 +47,7 @@ const DrawerContent = ({ navigation }) => {
     {
       title: 'Découvrir',
       icon: '🔍',
-      onPress: () => navigation.navigate('Discover')
+      onPress: () => navigation.navigate('DiscoverMain')
     },
     {
       title: 'Créer un événement',
@@ -57,7 +57,7 @@ const DrawerContent = ({ navigation }) => {
     {
       title: 'Mon profil',
       icon: '👤',
-              onPress: () => navigation.navigate('UserProfile')
+              onPress: () => navigation.navigate('UserProfileModal')
     },
     {
       title: 'Paramètres',

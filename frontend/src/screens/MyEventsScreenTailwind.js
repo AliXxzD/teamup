@@ -106,7 +106,7 @@ const MyEventsScreenTailwind = ({ navigation }) => {
   const EventCard = ({ event, showManageButton = false }) => (
     <TouchableOpacity
       className="bg-dark-800 rounded-2xl p-4 mb-4"
-      onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
+      onPress={() => navigation.navigate('EventDetailsModal', { eventId: event._id })}
       activeOpacity={0.8}
     >
       {/* Header */}
@@ -257,7 +257,7 @@ const MyEventsScreenTailwind = ({ navigation }) => {
             <TouchableOpacity
               className="bg-primary-500 px-6 py-3 rounded-xl flex-row items-center"
               onPress={() => navigation.navigate(
-                activeTab === 'organized' ? 'CreateEvent' : 'Discover'
+                activeTab === 'organized' ? 'CreateEvent' : 'DiscoverMain'
               )}
             >
               <Ionicons 
@@ -288,7 +288,7 @@ const MyEventsScreenTailwind = ({ navigation }) => {
                 event={event} 
                 navigation={navigation}
                 showManageButton={activeTab === 'organized'}
-                onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
+                onPress={() => navigation.navigate('EventDetailsModal', { eventId: event._id })}
                 onManage={() => {
                   // Handle event management
                   Alert.alert('Gérer', `Gérer l'événement: ${event.title}`);

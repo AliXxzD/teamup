@@ -639,7 +639,7 @@ const DiscoverScreenTailwind = ({ navigation }) => {
                     key={event._id} 
                     event={event} 
                     navigation={navigation}
-                    onPress={() => navigation.navigate('EventDetails', { eventId: event._id })}
+                    onPress={() => navigation.navigate('EventDetailsModal', { eventId: event._id })}
                   />
                 ))}
               </View>

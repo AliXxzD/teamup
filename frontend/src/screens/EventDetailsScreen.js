@@ -24,6 +24,7 @@ import organizerMessageService from '../services/organizerMessageService';
 import buttonService from '../services/buttonService';
 import eventService from '../services/eventService';
 import { getOrganizerName, getOrganizerInitial } from '../utils/eventUtils';
+import ReviewForm from '../components/ReviewForm';
 
 const { width } = Dimensions.get('window');
 
@@ -33,7 +34,42 @@ const EventDetailsScreen = ({ navigation, route }) => {
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [mapCoordinates, setMapCoordinates] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const { eventId } = route.params || {};
+
+
+  // Fonction pour extraire les initiales d'un nom
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const words = name.trim().split(' ');
+    if (words.length === 1) {
+      return words[0].charAt(0).toUpperCase();
+    }
+    return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  };
+
+  // Fonction pour obtenir une couleur de fond basée sur le nom
+  const getAvatarColor = (name) => {
+    const colors = [
+      '#ef4444', // rouge
+      '#f97316', // orange
+      '#eab308', // jaune
+      '#22c55e', // vert
+      '#06b6d4', // cyan
+      '#3b82f6', // bleu
+      '#8b5cf6', // violet
+      '#ec4899', // rose
+      '#6b7280', // gris
+      '#84cc16', // lime
+    ];
+    
+    if (!name) return colors[0];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
   
   const geocodeAddress = async (address) => {
     try {
@@ -361,10 +397,13 @@ const EventDetailsScreen = ({ navigation, route }) => {
     const userId = getOrganizerId(eventData);
     
     if (userId) {
+      // S'assurer que l'ID est une string
+      const userIdString = userId.toString();
+      console.log('🔍 ID organisateur converti en string:', userIdString);
       safeNavigate(
         navigation, 
-        'UserProfile', 
-        { userId }, 
+        'UserProfileModal', 
+        { userId: userIdString }, 
         'Impossible d\'accéder au profil de l\'organisateur'
       );
     } else {
@@ -724,35 +763,82 @@ const EventDetailsScreen = ({ navigation, route }) => {
           <View className="mb-6">
             <Text className="text-white text-xl font-bold mb-4">Organisateur</Text>
             
-            <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center flex-1">
-                  <Image
-                    source={{ 
-                      uri: eventData.organizer?.profile?.avatar || eventData.organizer?.avatar ||
-                      'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'
-                    }}
-                    className="w-12 h-12 rounded-full mr-4"
-                  />
-                  <View className="flex-1">
-                    <Text className="text-white text-lg font-bold">
-                      {getOrganizerName(eventData)}
-                    </Text>
-                    <View className="flex-row items-center">
-                      <Ionicons name="star" size={14} color="#f59e0b" style={{ marginRight: 4 }} />
-                      <Text className="text-slate-400 text-sm mr-3">
-                        {eventData.organizer?.rating || '4.8'}
-                      </Text>
-                      <Text className="text-slate-400 text-sm">
-                        • {eventData.organizer?.eventsCount || eventData.organizer?.totalEvents || '0'} événements
+            <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
+              <View className="flex-row items-start justify-between">
+                <View className="flex-row items-start flex-1">
+                  <View className="relative">
+                    <View
+                      className="w-16 h-16 rounded-full mr-4 items-center justify-center"
+                      style={{
+                        backgroundColor: getAvatarColor(getOrganizerName(eventData)),
+                        borderWidth: 2,
+                        borderColor: '#06b6d4'
+                      }}
+                    >
+                      <Text className="text-white text-xl font-bold">
+                        {getInitials(getOrganizerName(eventData))}
                       </Text>
                     </View>
+                    {/* Badge organisateur */}
+                    <View className="absolute -bottom-1 -right-1 w-6 h-6 bg-cyan-500 rounded-full items-center justify-center border-2 border-slate-800">
+                      <Ionicons name="crown" size={12} color="#ffffff" />
+                    </View>
+                    
+                    {/* Indicateur de statut en ligne pour l'organisateur */}
+                    <View className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-800">
+                      <View className="w-2 h-2 bg-white rounded-full m-0.5" />
+                    </View>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-white text-xl font-bold mb-1">
+                      {getOrganizerName(eventData)}
+                    </Text>
+                    
+                    {/* Rating and Stats */}
+                    <View className="flex-row items-center mb-2">
+                      <View className="flex-row items-center mr-4">
+                        <Ionicons name="star" size={16} color="#f59e0b" style={{ marginRight: 4 }} />
+                        <Text className="text-white text-base font-semibold">
+                          {eventData.organizer?.rating || '4.8'}
+                        </Text>
+                        <Text className="text-slate-400 text-sm ml-1">
+                          ({eventData.organizer?.reviewsCount || '12'} avis)
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {/* Stats Row */}
+                    <View className="flex-row items-center" style={{ gap: 16 }}>
+                      <View className="flex-row items-center">
+                        <Ionicons name="calendar" size={14} color="#64748b" style={{ marginRight: 4 }} />
+                        <Text className="text-slate-400 text-sm">
+                          {eventData.organizer?.eventsCount || eventData.organizer?.totalEvents || '0'} événements
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Ionicons name="people" size={14} color="#64748b" style={{ marginRight: 4 }} />
+                        <Text className="text-slate-400 text-sm">
+                          {eventData.organizer?.participantsCount || '0'} participants
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    {/* Level/Badge */}
+                    {eventData.organizer?.level && (
+                      <View className="mt-2">
+                        <View className="bg-cyan-500/20 border border-cyan-500/30 rounded-lg px-3 py-1 self-start">
+                          <Text className="text-cyan-400 text-xs font-bold">
+                            Niveau {eventData.organizer.level}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 </View>
                 
                 <View className="flex-row items-center" style={{ gap: 8 }}>
                   <TouchableOpacity 
-                    className="w-10 h-10 bg-slate-700 rounded-full items-center justify-center"
+                    className="w-12 h-12 bg-slate-700 rounded-full items-center justify-center"
                     onPress={handleMessage}
                     style={{
                       shadowColor: '#000',
@@ -762,11 +848,11 @@ const EventDetailsScreen = ({ navigation, route }) => {
                       elevation: 3,
                     }}
                   >
-                    <Ionicons name="chatbubble" size={18} color="#22d3ee" />
+                    <Ionicons name="chatbubble" size={20} color="#22d3ee" />
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    className="bg-cyan-500 rounded-xl px-4 py-2 flex-row items-center"
+                    className="bg-cyan-500 rounded-xl px-4 py-3 flex-row items-center"
                     onPress={handleViewProfile}
                     style={{
                       shadowColor: '#06b6d4',
@@ -777,7 +863,7 @@ const EventDetailsScreen = ({ navigation, route }) => {
                     }}
                   >
                     <Ionicons name="person" size={16} color="#ffffff" style={{ marginRight: 6 }} />
-                    <Text className="text-white text-sm font-bold">Voir profil</Text>
+                    <Text className="text-white text-sm font-bold">Profil</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -798,60 +884,202 @@ const EventDetailsScreen = ({ navigation, route }) => {
               Participants ({eventData.currentParticipants || eventData.participants?.length || 0})
             </Text>
             
-            <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-4">
-              <View style={{ gap: 12 }}>
-                {(eventData.participants || []).map((participant, index) => {
-                  if (!participant) return null;
+            <View className="bg-slate-800 border border-slate-700/50 rounded-2xl p-5">
+              <View style={{ gap: 16 }}>
+                {(eventData.participants || [])
+                  .filter(participant => {
+                    // Filtrer les participants qui n'ont pas d'utilisateur valide
+                    const userId = getUserId(participant);
+                    return participant && userId;
+                  })
+                  .map((participant, index) => {
                   
                   const participantKey = getId(participant) || `participant_${index}`;
                   const userId = getUserId(participant);
                   const userName = participant.user?.name || participant.name || `Participant ${index + 1}`;
-                  const userAvatar = participant.user?.profile?.avatar || participant.avatar;
+                  const userRating = participant.user?.rating || participant.rating;
+                  const userLevel = participant.user?.level || participant.level;
+                  const userEventsCount = participant.user?.eventsCount || participant.eventsCount || 0;
+                  const isCurrentUser = user && (user._id === userId || user.id === userId);
+                  
+                  // Debug: Log des informations du participant
+                  console.log(`🔍 Participant ${index + 1}:`, {
+                    participant,
+                    userId,
+                    userName,
+                    hasUser: !!participant.user,
+                    userData: participant.user
+                  });
                   
                   return (
                     <TouchableOpacity 
                       key={participantKey}
-                      className="flex-row items-center"
+                      className="flex-row items-start"
                       onPress={() => {
-                        if (userId) {
+                        console.log('🔍 Clic sur participant:', {
+                          userName,
+                          userId,
+                          isCurrentUser,
+                          participantKey
+                        });
+                        
+                        if (userId && !isCurrentUser) {
+                          console.log('🔍 Navigation vers profil participant:', userId);
+                          // S'assurer que l'ID est une string
+                          const userIdString = userId.toString();
+                          console.log('🔍 ID converti en string:', userIdString);
                           safeNavigate(
                             navigation,
-                            'UserProfile',
-                            { userId },
+                            'UserProfileModal',
+                            { userId: userIdString },
                             'Profil du participant non disponible'
                           );
+                        } else if (isCurrentUser) {
+                          console.log('🔍 Navigation vers profil personnel');
+                          navigation.navigate('Profile');
                         } else {
-                          Alert.alert('Info', 'Profil du participant non disponible');
+                          console.log('❌ Pas d\'ID utilisateur disponible pour:', userName);
+                          Alert.alert(
+                            'Profil non disponible', 
+                            `Le profil de ${userName} n'est pas accessible. L'utilisateur a peut-être supprimé son compte.`,
+                            [{ text: 'OK' }]
+                          );
                         }
                       }}
+                      style={{
+                        backgroundColor: isCurrentUser ? 'rgba(6, 182, 212, 0.1)' : 'transparent',
+                        borderRadius: 12,
+                        padding: 12,
+                        borderWidth: isCurrentUser ? 1 : 0,
+                        borderColor: isCurrentUser ? '#06b6d4' : 'transparent'
+                      }}
                     >
-                      <Image
-                        source={{ 
-                          uri: userAvatar || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80'
-                        }}
-                        className="w-12 h-12 rounded-full mr-4"
-                      />
-                      <Text className="text-white text-lg font-medium flex-1">
-                        {userName}
-                      </Text>
+                      <View className="relative">
+                        <View
+                          className="w-14 h-14 rounded-full mr-4 items-center justify-center"
+                          style={{
+                            backgroundColor: getAvatarColor(userName),
+                            borderWidth: 2,
+                            borderColor: isCurrentUser ? '#06b6d4' : '#64748b'
+                          }}
+                        >
+                          <Text className="text-white text-lg font-bold">
+                            {getInitials(userName)}
+                          </Text>
+                        </View>
+                        {/* Badge utilisateur actuel */}
+                        {isCurrentUser && (
+                          <View className="absolute -bottom-1 -right-1 w-5 h-5 bg-cyan-500 rounded-full items-center justify-center border-2 border-slate-800">
+                            <Ionicons name="checkmark" size={10} color="#ffffff" />
+                          </View>
+                        )}
+                        
+                        {/* Indicateur de statut en ligne */}
+                        <View className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-slate-800">
+                          <View className="w-2 h-2 bg-white rounded-full m-0.5" />
+                        </View>
+                      </View>
+                      <View className="flex-1">
+                        <View className="flex-row items-center justify-between mb-1">
+                          <Text className="text-white text-lg font-bold">
+                            {userName}
+                            {isCurrentUser && (
+                              <Text className="text-cyan-400 text-sm ml-2">(Vous)</Text>
+                            )}
+                          </Text>
+                          <Ionicons name="chevron-forward" size={16} color="#64748b" />
+                        </View>
+                        
+                        {/* Rating and Level */}
+                        <View className="flex-row items-center mb-2" style={{ gap: 12 }}>
+                          {userRating && (
+                            <View className="flex-row items-center">
+                              <Ionicons name="star" size={14} color="#f59e0b" style={{ marginRight: 4 }} />
+                              <Text className="text-white text-sm font-medium">
+                                {userRating}
+                              </Text>
+                            </View>
+                          )}
+                          {userLevel && (
+                            <View className="bg-slate-600/50 border border-slate-500/50 rounded-lg px-2 py-1">
+                              <Text className="text-slate-300 text-xs font-bold">
+                                Niveau {userLevel}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        
+                        {/* Stats */}
+                        <View className="flex-row items-center" style={{ gap: 16 }}>
+                          <View className="flex-row items-center">
+                            <Ionicons name="calendar" size={12} color="#64748b" style={{ marginRight: 4 }} />
+                            <Text className="text-slate-400 text-xs">
+                              {userEventsCount} événements
+                            </Text>
+                          </View>
+                          <View className="flex-row items-center">
+                            <Ionicons name="time" size={12} color="#64748b" style={{ marginRight: 4 }} />
+                            <Text className="text-slate-400 text-xs">
+                              Inscrit récemment
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
                 
                 {/* Show message if no participants to display */}
-                {(!eventData.participants || eventData.participants.length === 0) && (
-                  <View className="flex-row items-center">
-                    <View className="w-12 h-12 bg-slate-700 rounded-full items-center justify-center mr-4">
-                      <Ionicons name="people" size={20} color="#64748b" />
-                    </View>
-                    <Text className="text-slate-400 text-lg">
-                      Aucun participant pour le moment
-                    </Text>
-                  </View>
-                )}
+                {(() => {
+                  const validParticipants = (eventData.participants || []).filter(participant => {
+                    const userId = getUserId(participant);
+                    return participant && userId;
+                  });
+                  
+                  const totalParticipants = eventData.participants?.length || 0;
+                  const filteredCount = totalParticipants - validParticipants.length;
+                  
+                  if (validParticipants.length === 0) {
+                    return (
+                      <View className="flex-row items-center justify-center py-8">
+                        <View className="items-center">
+                          <View className="w-16 h-16 bg-slate-700 rounded-full items-center justify-center mb-4">
+                            <Ionicons name="people" size={24} color="#64748b" />
+                          </View>
+                          <Text className="text-slate-400 text-lg font-medium">
+                            Aucun participant pour le moment
+                          </Text>
+                          <Text className="text-slate-500 text-sm mt-1">
+                            Soyez le premier à rejoindre cet événement !
+                          </Text>
+                          {filteredCount > 0 && (
+                            <Text className="text-slate-600 text-xs mt-2">
+                              ({filteredCount} participant{filteredCount > 1 ? 's' : ''} avec des comptes supprimés)
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  }
+                  
+                  if (filteredCount > 0) {
+                    return (
+                      <View className="bg-slate-700/50 border border-slate-600/50 rounded-xl p-4 mt-4">
+                        <View className="flex-row items-center">
+                          <Ionicons name="information-circle" size={16} color="#64748b" style={{ marginRight: 8 }} />
+                          <Text className="text-slate-400 text-sm">
+                            {filteredCount} participant{filteredCount > 1 ? 's' : ''} avec des comptes supprimés ne sont pas affichés
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  }
+                  
+                  return null;
+                })()}
               </View>
             </View>
-              </View>
+          </View>
 
            {/* Join Button */}
            <View className="mb-8">
@@ -905,9 +1133,72 @@ const EventDetailsScreen = ({ navigation, route }) => {
                  </TouchableOpacity>
                );
              })()}
+             
+             {/* Bouton pour donner un avis sur l'organisateur */}
+             {(() => {
+               const userId = user?._id || user?.id;
+               const organizerId = getOrganizerId(eventData);
+               const isParticipant = eventData?.participants?.some(
+                 participant => {
+                   const participantId = participant.user?._id || participant.user?.id || participant.user;
+                   return participantId?.toString() === userId?.toString();
+                 }
+               );
+               
+               // L'utilisateur peut donner un avis s'il est participant et n'est pas l'organisateur
+               const canReview = isParticipant && organizerId !== userId;
+               
+               if (!canReview) return null;
+               
+               return (
+                 <TouchableOpacity 
+                   onPress={() => setShowReviewForm(true)}
+                   className="mt-4"
+                   activeOpacity={0.8}
+                 >
+                   <LinearGradient
+                     colors={['#3b82f6', '#3b82f6CC']}
+                     style={{
+                       borderRadius: 12,
+                       paddingVertical: 16,
+                       paddingHorizontal: 24,
+                       flexDirection: 'row',
+                       alignItems: 'center',
+                       justifyContent: 'center',
+                     }}
+                     start={{ x: 0, y: 0 }}
+                     end={{ x: 1, y: 1 }}
+                   >
+                     <Ionicons 
+                       name="star-outline" 
+                       size={20} 
+                       color="#ffffff" 
+                       style={{ marginRight: 8 }} 
+                     />
+                     <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: 'bold' }}>
+                       Donner un avis
+                     </Text>
+                   </LinearGradient>
+                 </TouchableOpacity>
+               );
+             })()}
            </View>
         </View>
       </ScrollView>
+      
+      {/* Modal pour donner un avis */}
+      <ReviewForm
+        visible={showReviewForm}
+        onClose={() => setShowReviewForm(false)}
+        organizerId={getOrganizerId(eventData)}
+        organizerName={getOrganizerName(eventData)}
+        eventId={eventId}
+        eventTitle={eventData?.title}
+        onReviewSubmitted={(review) => {
+          console.log('Avis soumis:', review);
+          // Optionnel: recharger les données de l'événement
+        }}
+      />
     </SafeAreaView>
   );
 };

@@ -29,14 +29,19 @@ export const getId = (obj) => {
 export const getUserId = (userObj) => {
   if (!userObj) return null;
   
+  // Nested user object (participant.user) - PRIORITÉ
+  if (userObj.user) {
+    return getId(userObj.user);
+  }
+  
   // Direct user object
   if (userObj._id || userObj.id) {
     return getId(userObj);
   }
   
-  // Nested user object (participant.user)
-  if (userObj.user) {
-    return getId(userObj.user);
+  // Handle case where userObj itself might be an ID
+  if (typeof userObj === 'string' && userObj.length === 24) {
+    return userObj;
   }
   
   return null;
@@ -74,8 +79,8 @@ export const getEventId = (eventData) => {
 export const safeNavigate = (navigation, route, params, errorMessage = 'Navigation impossible') => {
   try {
     // Check if required ID exists
-    if (params.userId && !params.userId) {
-      throw new Error('User ID manquant');
+    if (params.userId && (!params.userId || params.userId === 'undefined' || params.userId === 'null')) {
+      throw new Error('User ID manquant ou invalide');
     }
     
     console.log(`📍 Navigation sécurisée vers ${route}:`, params);

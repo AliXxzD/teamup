@@ -23,6 +23,7 @@ import { AchievementsList } from '../components/AchievementCard';
 import pointsService from '../services/pointsService';
 import { API_BASE_URL, getAuthHeaders } from '../config/api';
 import TeamupLogo from '../components/TeamupLogo';
+import ReviewForm from '../components/ReviewForm';
 
 const DashboardScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -40,6 +41,8 @@ const DashboardScreen = ({ navigation }) => {
   const [loadingJoinedEvents, setLoadingJoinedEvents] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredEvents, setFilteredEvents] = useState([]);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [selectedEventForReview, setSelectedEventForReview] = useState(null);
 
   useEffect(() => {
     Animated.parallel([
@@ -375,7 +378,7 @@ const DashboardScreen = ({ navigation }) => {
       key={event._id || event.id} 
       className="bg-dark-800/90 border border-dark-600/30 rounded-2xl overflow-hidden shadow-lg mb-4"
       activeOpacity={0.8}
-      onPress={() => navigation.navigate('EventDetails', { eventId: event._id || event.id })}
+      onPress={() => navigation.navigate('EventDetailsModal', { eventId: event._id || event.id })}
     >
       {/* Event Image Background */}
       <View className="h-24 relative">
@@ -493,7 +496,7 @@ const DashboardScreen = ({ navigation }) => {
             <SimplifiedUserCard
               user={user}
               userProgression={userProgression}
-              onProfilePress={() => navigation.navigate('Profile')}
+              onProfilePress={() => navigation.navigate('UserProfileModal')}
             />
           </Animated.View>
         </View>
@@ -586,7 +589,7 @@ const DashboardScreen = ({ navigation }) => {
             <View className="px-6 mb-8">
               <TouchableOpacity 
                 className="bg-lime rounded-xl py-4 px-6 shadow-lg w-full"
-                onPress={() => navigation.navigate('CreateEvent')}
+                onPress={() => navigation.navigate('CreateEventModal')}
                 activeOpacity={0.8}
               >
                 <Text className="text-white text-lg font-bold text-center">Créer un événement</Text>
@@ -598,7 +601,7 @@ const DashboardScreen = ({ navigation }) => {
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-white text-xl font-bold">Événements près de vous</Text>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('Discover')}
+                  onPress={() => navigation.navigate('DiscoverMain')}
                   activeOpacity={0.8}
                 >
                   <Text className="text-lime text-sm font-medium underline">Voir tout</Text>
@@ -678,7 +681,7 @@ const DashboardScreen = ({ navigation }) => {
                   </Text>
                   <TouchableOpacity 
                     className="bg-lime/20 border border-lime/30 px-6 py-3 rounded-2xl mt-4"
-                    onPress={() => navigation.navigate('CreateEvent')}
+                    onPress={() => navigation.navigate('CreateEventModal')}
                   >
                     <Text className="text-lime text-sm font-bold">Créer votre premier événement</Text>
                   </TouchableOpacity>
@@ -718,14 +721,6 @@ const DashboardScreen = ({ navigation }) => {
             </View>
             
             {/* Liste des événements rejoints */}
-            {(() => {
-              console.log('🔍 DEBUG AFFICHAGE - loadingJoinedEvents:', loadingJoinedEvents);
-              console.log('🔍 DEBUG AFFICHAGE - joinedEvents:', joinedEvents);
-              console.log('🔍 DEBUG AFFICHAGE - joinedEvents.length:', joinedEvents?.length);
-              console.log('🔍 DEBUG AFFICHAGE - Array.isArray(joinedEvents):', Array.isArray(joinedEvents));
-              console.log('🔍 DEBUG AFFICHAGE - user:', user);
-              return null;
-            })()}
             {loadingJoinedEvents ? (
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin mb-4" />
@@ -743,32 +738,10 @@ const DashboardScreen = ({ navigation }) => {
                 </Text>
                 <TouchableOpacity 
                   className="bg-lime rounded-xl py-4 px-8"
-                  onPress={() => setActiveTab('discover')}
+                  onPress={() => navigation.navigate('DiscoverMain')}
                   activeOpacity={0.8}
                 >
                   <Text className="text-white text-lg font-bold">Découvrir des événements</Text>
-                </TouchableOpacity>
-                
-                {/* Bouton de debug temporaire */}
-                <TouchableOpacity 
-                  className="bg-slate-700 rounded-xl py-2 px-4 mt-4"
-                  onPress={() => {
-                    console.log('🔍 DEBUG - État actuel:');
-                    console.log('  loadingJoinedEvents:', loadingJoinedEvents);
-                    console.log('  joinedEvents:', joinedEvents);
-                    console.log('  joinedEvents.length:', joinedEvents?.length);
-                    console.log('  Array.isArray(joinedEvents):', Array.isArray(joinedEvents));
-                    console.log('  user:', user);
-                    
-                    // Forcer le rechargement
-                    if (user && user._id) {
-                      console.log('🔄 Forçage du rechargement...');
-                      loadJoinedEvents();
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text className="text-white text-sm">Debug & Recharger</Text>
                 </TouchableOpacity>
               </View>
             ) : Array.isArray(joinedEvents) && joinedEvents.length > 0 ? (
@@ -781,7 +754,7 @@ const DashboardScreen = ({ navigation }) => {
                       className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6"
                       onPress={() => {
                         if (event._id && navigation) {
-                          navigation.navigate('EventDetails', { eventId: event._id });
+                          navigation.navigate('EventDetailsModal', { eventId: event._id });
                         } else {
                           console.error('❌ Erreur navigation: event._id ou navigation manquant', {
                             eventId: event._id,
@@ -833,7 +806,7 @@ const DashboardScreen = ({ navigation }) => {
                       </View>
 
                       {/* Participants */}
-                      <View className="flex-row items-center justify-between">
+                      <View className="flex-row items-center justify-between mb-3">
                         <View className="flex-row items-center">
                           <Ionicons name="people" size={16} color="#64748b" />
                           <Text className="text-slate-400 text-sm ml-2">
@@ -844,6 +817,34 @@ const DashboardScreen = ({ navigation }) => {
                           <Ionicons name="chevron-forward" size={16} color="#64748b" />
                         </View>
                       </View>
+
+                      {/* Bouton pour donner un avis sur l'organisateur */}
+                      {(() => {
+                        const userId = user?._id || user?.id;
+                        const organizerId = event.organizer?._id || event.organizer?.id;
+                        
+                        // L'utilisateur peut donner un avis s'il n'est pas l'organisateur
+                        const canReview = organizerId && organizerId !== userId;
+                        
+                        if (!canReview) return null;
+                        
+                        return (
+                          <TouchableOpacity
+                            className="bg-blue-600/20 border border-blue-500/30 rounded-xl py-2 px-4 flex-row items-center justify-center"
+                            onPress={(e) => {
+                              e.stopPropagation(); // Empêcher la propagation vers le TouchableOpacity parent
+                              setSelectedEventForReview(event);
+                              setShowReviewForm(true);
+                            }}
+                            activeOpacity={0.8}
+                          >
+                            <Ionicons name="star-outline" size={16} color="#3b82f6" />
+                            <Text className="text-blue-400 text-sm font-medium ml-2">
+                              Donner un avis
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })()}
                     </TouchableOpacity>
                     );
                   })}
@@ -881,7 +882,7 @@ const DashboardScreen = ({ navigation }) => {
         visible={managementMenuVisible}
         onClose={() => setManagementMenuVisible(false)}
         onModifyEvent={() => {
-          navigation.navigate('CreateEvent', { 
+          navigation.navigate('CreateEventModal', { 
             eventId: selectedEvent?.id, 
             eventData: selectedEvent, 
             isEditing: true 
@@ -894,6 +895,26 @@ const DashboardScreen = ({ navigation }) => {
           });
         }}
       />
+      
+      {/* Modal pour donner un avis */}
+      {selectedEventForReview && showReviewForm && (
+        <ReviewForm
+          visible={showReviewForm}
+          onClose={() => {
+            setShowReviewForm(false);
+            setSelectedEventForReview(null);
+          }}
+          organizerId={selectedEventForReview.organizer?._id || selectedEventForReview.organizer?.id}
+          organizerName={selectedEventForReview.organizer?.name}
+          eventId={selectedEventForReview._id}
+          eventTitle={selectedEventForReview.title}
+          onReviewSubmitted={(review) => {
+            console.log('Avis soumis:', review);
+            setShowReviewForm(false);
+            setSelectedEventForReview(null);
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };

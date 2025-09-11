@@ -279,7 +279,7 @@ const EventCard = ({ event, onPress, showManageButton = false, onManage, navigat
                   const userId = event.organizer?._id || event.organizer?.id;
                   if (userId) {
                     console.log('📍 Navigation EventCard vers UserProfile:', userId);
-                    navigation.navigate('UserProfile', { userId });
+                    navigation.navigate('UserProfileModal', { userId });
                   } else {
                     console.log('⚠️ Pas d\'ID organisateur dans EventCard');
                     Alert.alert('Info', 'Profil de l\'organisateur non disponible');

@@ -34,6 +34,7 @@ import TermsScreen from '../screens/TermsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import RankingScreen from '../screens/RankingScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
+import UserReviewsScreen from '../screens/UserReviewsScreen';
 
 // Custom Components
 import CreateTabButton from '../components/CreateTabButton';
@@ -105,9 +106,10 @@ const EventsStackNavigator = () => (
   >
     <Stack.Screen name="DiscoverMain" component={DiscoverScreen} />
     <Stack.Screen name="EventDetails" component={EventDetailsScreen} />
-    <Stack.Screen name="CreateEvent" component={CreateEventScreen} />
+    <Stack.Screen name="CreateEventFromDiscover" component={CreateEventScreen} />
   </Stack.Navigator>
 );
+
 
 
 // Navigateur pour les utilisateurs authentifiés
@@ -204,14 +206,6 @@ const RootStackNavigator = () => {
         <>
           <Stack.Screen name="AuthenticatedApp" component={AuthenticatedNavigator} />
           <Stack.Screen 
-            name="EventDetails" 
-            component={EventDetailsScreen}
-            options={{
-              presentation: 'modal',
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen 
             name="EventDetailsModal" 
             component={EventDetailsScreen}
             options={{
@@ -220,10 +214,26 @@ const RootStackNavigator = () => {
             }}
           />
           <Stack.Screen 
+            name="UserProfileModal" 
+            component={UserProfileScreen}
+            options={{
+              presentation: 'card',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
             name="CreateEventModal" 
             component={CreateEventScreen}
             options={{
               presentation: 'modal',
+              gestureEnabled: true,
+            }}
+          />
+          <Stack.Screen 
+            name="UserReviews" 
+            component={UserReviewsScreen}
+            options={{
+              presentation: 'card',
               gestureEnabled: true,
             }}
           />
@@ -301,14 +311,6 @@ const RootStackNavigator = () => {
           <Stack.Screen 
             name="Ranking" 
             component={RankingScreen}
-            options={{
-              presentation: 'card',
-              gestureEnabled: true,
-            }}
-          />
-          <Stack.Screen 
-            name="UserProfile" 
-            component={UserProfileScreen}
             options={{
               presentation: 'card',
               gestureEnabled: true,
