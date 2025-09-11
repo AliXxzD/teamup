@@ -113,13 +113,18 @@ const EventsStackNavigator = () => (
 
 
 // Navigateur pour les utilisateurs authentifiés
-const AuthenticatedNavigator = () => (
-  <Tab.Navigator
-    tabBar={(props) => <CustomTabBar {...props} />}
-    screenOptions={{
-      headerShown: false,
-    }}
-  >
+const AuthenticatedNavigator = () => {
+  console.log('🔍 AuthenticatedNavigator - RENDU DU COMPOSANT');
+  
+  // Vérification de sécurité pour éviter l'erreur NavigationContainer
+  try {
+    return (
+      <Tab.Navigator
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
     <Tab.Screen 
       name="Dashboard" 
       component={DashboardScreen}
@@ -156,7 +161,16 @@ const AuthenticatedNavigator = () => (
       }}
     />
   </Tab.Navigator>
-);
+    );
+  } catch (error) {
+    console.error('🔍 AuthenticatedNavigator - Erreur:', error);
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0f172a' }}>
+        <Text style={{ color: '#e2e8f0' }}>Erreur de navigation</Text>
+      </View>
+    );
+  }
+};
 
 // Écran de chargement
 const LoadingScreen = () => (
@@ -335,8 +349,18 @@ const RootStackNavigator = () => {
 
 // Navigateur principal de l'application
 const AppNavigator = () => {
+  console.log('🔍 AppNavigator - RENDU DU COMPOSANT');
+  
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      onReady={() => {
+        console.log('✅ NavigationContainer is ready');
+        console.log('✅ NavigationContainer - Contexte de navigation disponible');
+      }}
+      onStateChange={(state) => {
+        console.log('🔄 Navigation state changed:', state);
+      }}
+    >
       <RootStackNavigator />
     </NavigationContainer>
   );

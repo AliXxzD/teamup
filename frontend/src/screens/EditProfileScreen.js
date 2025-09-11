@@ -89,18 +89,21 @@ const EditProfileScreen = ({ navigation }) => {
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Utiliser requestAnimationFrame pour éviter les conflits avec React 18
+    const animationFrame = requestAnimationFrame(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
 
     // Charger les données utilisateur
     if (user) {
@@ -118,6 +121,8 @@ const EditProfileScreen = ({ navigation }) => {
         favoriteSports: user.favoriteSports || [],
       });
     }
+    
+    return () => cancelAnimationFrame(animationFrame);
   }, [user]);
 
   const validateForm = () => {

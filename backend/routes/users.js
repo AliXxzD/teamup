@@ -19,12 +19,6 @@ router.get('/:id', authMiddleware, async (req, res) => {
       });
     }
     
-    console.log('🔍 Récupération du profil utilisateur:', {
-      id,
-      idType: typeof id,
-      idLength: id?.length,
-      isValidObjectId: id && id.length === 24
-    });
     
     // Récupérer l'utilisateur avec ses statistiques
     // Essayer d'abord avec l'ID tel quel, puis avec conversion en ObjectId si nécessaire
@@ -36,9 +30,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
         const mongoose = require('mongoose');
         const objectId = new mongoose.Types.ObjectId(id);
         user = await User.findById(objectId).select('-password -__v');
-        console.log('🔍 Tentative avec ObjectId:', objectId);
       } catch (objectIdError) {
-        console.log('❌ Erreur conversion ObjectId:', objectIdError.message);
       }
     }
     

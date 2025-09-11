@@ -233,6 +233,10 @@ export const AuthProvider = ({ children }) => {
         return { success: false, error: 'Le mot de passe doit contenir au moins 6 caractères' };
       }
       
+      if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+        return { success: false, error: 'Le mot de passe doit contenir au moins une minuscule, une majuscule et un chiffre' };
+      }
+      
       // Créer un AbortController pour gérer le timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 secondes timeout

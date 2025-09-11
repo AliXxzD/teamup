@@ -226,3 +226,4 @@ const UserReviewsScreen = ({ navigation, route }) => {
 };
 
 export default UserReviewsScreen;
+

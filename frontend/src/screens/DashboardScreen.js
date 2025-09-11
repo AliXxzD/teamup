@@ -11,6 +11,7 @@ import {
   Image,
   Alert,
   StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,28 +25,50 @@ import pointsService from '../services/pointsService';
 import { API_BASE_URL, getAuthHeaders } from '../config/api';
 import TeamupLogo from '../components/TeamupLogo';
 import ReviewForm from '../components/ReviewForm';
+import { navigateToEventDetails, navigateToUserProfile, navigateToCreateEvent } from '../utils/navigationUtils';
+import { useSafeAnimation } from '../hooks/useSafeAnimation';
 
 const DashboardScreen = ({ navigation }) => {
-  const { user } = useAuth();
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(50));
-  const [activeTab, setActiveTab] = useState('discover');
-  const [userEvents, setUserEvents] = useState([]);
-  const [nearbyEvents, setNearbyEvents] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [managementMenuVisible, setManagementMenuVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [userProgression, setUserProgression] = useState(null);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [joinedEvents, setJoinedEvents] = useState([]);
-  const [loadingJoinedEvents, setLoadingJoinedEvents] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredEvents, setFilteredEvents] = useState([]);
-  const [showReviewForm, setShowReviewForm] = useState(false);
-  const [selectedEventForReview, setSelectedEventForReview] = useState(null);
+  console.log('🔍 DashboardScreen - RENDU DU COMPOSANT');
+  console.log('🔍 DashboardScreen - Props navigation:', navigation);
+  
+  try {
+    const { user } = useAuth();
+    const { startParallelAnimations } = useSafeAnimation();
+  
+    // State declarations
+    const [fadeAnim] = useState(new Animated.Value(0));
+    const [slideAnim] = useState(new Animated.Value(50));
+    const [activeTab, setActiveTab] = useState('discover');
+    const [userEvents, setUserEvents] = useState([]);
+    const [nearbyEvents, setNearbyEvents] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [managementMenuVisible, setManagementMenuVisible] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [userProgression, setUserProgression] = useState(null);
+    const [loadingStats, setLoadingStats] = useState(true);
+    const [joinedEvents, setJoinedEvents] = useState([]);
+    const [loadingJoinedEvents, setLoadingJoinedEvents] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filteredEvents, setFilteredEvents] = useState([]);
+    const [showReviewForm, setShowReviewForm] = useState(false);
+    const [selectedEventForReview, setSelectedEventForReview] = useState(null);
+
+    // Logs de debug pour comprendre le problème
+    console.log('🔍 DashboardScreen - Navigation object:', navigation);
+    console.log('🔍 DashboardScreen - Navigation type:', typeof navigation);
+    console.log('🔍 DashboardScreen - Navigation methods:', navigation ? Object.keys(navigation) : 'null');
+    console.log('🔍 DashboardScreen - joinedEvents:', joinedEvents);
+    console.log('🔍 DashboardScreen - joinedEvents type:', typeof joinedEvents);
+    console.log('🔍 DashboardScreen - joinedEvents length:', Array.isArray(joinedEvents) ? joinedEvents.length : 'not array');
+    
+    // Sécurité : s'assurer que joinedEvents est toujours un tableau
+    const safeJoinedEvents = Array.isArray(joinedEvents) ? joinedEvents : [];
+    console.log('🔍 DashboardScreen - safeJoinedEvents:', safeJoinedEvents);
 
   useEffect(() => {
-    Animated.parallel([
+    // Utiliser le hook d'animation sécurisé
+    startParallelAnimations([
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 800,
@@ -56,7 +79,7 @@ const DashboardScreen = ({ navigation }) => {
         duration: 600,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
     
     // Charger les événements et statistiques au montage du composant
     loadEvents();
@@ -65,6 +88,10 @@ const DashboardScreen = ({ navigation }) => {
 
   // Recharger les données quand l'utilisateur revient sur l'écran
   useEffect(() => {
+    if (!navigation || !navigation.addListener) {
+      return;
+    }
+
     const unsubscribe = navigation.addListener('focus', () => {
       loadEvents();
       loadUserProgression();
@@ -81,15 +108,17 @@ const DashboardScreen = ({ navigation }) => {
   // Charger les événements rejoints quand l'utilisateur est disponible
   useEffect(() => {
     const userId = user?._id || user?.id;
+    console.log('🔍 useEffect user - user:', user, 'userId:', userId);
     if (user && userId) {
-      console.log('🔄 Chargement des événements rejoints pour l\'utilisateur:', userId);
-      console.log('🔄 Détails utilisateur:', { name: user.name, email: user.email, _id: user._id, id: user.id });
-      loadJoinedEvents();
+      console.log('🔍 useEffect user - Chargement des événements rejoints');
+      try {
+        loadJoinedEvents();
+      } catch (error) {
+        console.error('🔍 useEffect user - Erreur dans loadJoinedEvents:', error);
+      }
     } else if (!user) {
-      console.log('⚠️ Utilisateur non connecté, pas de chargement des événements rejoints');
+      console.log('🔍 useEffect user - Pas d\'utilisateur, joinedEvents = []');
       setJoinedEvents([]);
-    } else {
-      console.log('⚠️ Utilisateur partiellement chargé:', user);
     }
   }, [user]);
 
@@ -97,7 +126,6 @@ const DashboardScreen = ({ navigation }) => {
   useEffect(() => {
     const userId = user?._id || user?.id;
     if (activeTab === 'activity' && user && userId) {
-      console.log('🔄 Rechargement des événements rejoints pour l\'onglet activity');
       loadJoinedEvents();
     }
   }, [activeTab]);
@@ -147,15 +175,14 @@ const DashboardScreen = ({ navigation }) => {
   };
 
   const loadJoinedEvents = async () => {
+    console.log('🔍 loadJoinedEvents - Début, user:', user);
     try {
       setLoadingJoinedEvents(true);
-      console.log('📅 Chargement des événements rejoints...');
       
       // Vérifier que l'utilisateur est bien connecté
       const userId = user?._id || user?.id;
       if (!user || !userId) {
-        console.log('⚠️ Utilisateur non connecté, impossible de charger les événements rejoints');
-        console.log('⚠️ Détails utilisateur:', { user, _id: user?._id, id: user?.id });
+        console.log('🔍 loadJoinedEvents - Pas d\'utilisateur ou userId, joinedEvents = []');
         setJoinedEvents([]);
         setLoadingJoinedEvents(false);
         return;
@@ -163,69 +190,42 @@ const DashboardScreen = ({ navigation }) => {
       
       const token = await AsyncStorage.getItem('accessToken');
       if (!token) {
-        console.log('⚠️ Pas de token, impossible de charger les événements rejoints');
+        console.log('🔍 loadJoinedEvents - Pas de token, joinedEvents = []');
         setJoinedEvents([]);
         setLoadingJoinedEvents(false);
         return;
       }
 
-      console.log('🔍 Token trouvé, appel API...');
       const response = await fetch(`${API_BASE_URL}/api/events/my/joined`, {
         headers: getAuthHeaders(token)
       });
 
-      console.log('📊 Réponse API:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Événements rejoints chargés:', data.data?.length || 0);
-        console.log('🔍 Debug - Premier événement rejoint:', data.data?.[0]);
-        console.log('🔍 Tous les événements rejoints:', data.data?.map(e => `${e.title}: ${e.status}`));
-        console.log('🔍 Réponse complète de l\'API:', JSON.stringify(data, null, 2));
         
-        // DEBUG: Vérifier si l'utilisateur actuel est bien dans les participants
-        if (data.data && data.data.length > 0) {
-          console.log('🔍 DEBUG PARTICIPANTS - Utilisateur actuel:', userId);
-          data.data.forEach((event, index) => {
-            console.log(`🔍 Événement ${index + 1}: ${event.title}`);
-            console.log(`   - Participants count: ${event.participants?.length || 0}`);
-            if (event.participants && event.participants.length > 0) {
-              event.participants.forEach((participant, pIndex) => {
-                console.log(`   - Participant ${pIndex + 1}: ${participant.user?._id || participant.user}`);
-                console.log(`     Est l'utilisateur actuel: ${participant.user?._id === userId || participant.user === userId}`);
-              });
-            } else {
-              console.log('   ⚠️ Aucun participant trouvé dans cet événement');
-            }
-          });
-        }
         
         // Filtrer côté frontend pour s'assurer que l'utilisateur est bien participant
         const filteredEvents = (data.data || []).filter(event => {
           if (!event.participants || event.participants.length === 0) {
-            console.log(`⚠️ Événement ${event.title} n'a pas de participants`);
             return false;
           }
           
           const isParticipant = event.participants.some(participant => {
             const participantUserId = participant.user?._id || participant.user;
             const isMatch = participantUserId === userId;
-            console.log(`🔍 Comparaison: ${participantUserId} === ${userId} = ${isMatch}`);
             return isMatch;
           });
           
           if (!isParticipant) {
-            console.log(`⚠️ L'utilisateur ${userId} n'est pas participant de l'événement ${event.title}`);
           }
           
           return isParticipant;
         });
         
-        console.log(`🔍 Événements filtrés: ${filteredEvents.length} sur ${data.data?.length || 0}`);
+        console.log('🔍 setJoinedEvents - filteredEvents:', filteredEvents);
         setJoinedEvents(filteredEvents);
-        console.log('🔍 État joinedEvents mis à jour:', filteredEvents);
       } else if (response.status === 401) {
-        console.log('🔐 Token expiré, déconnexion nécessaire');
         setJoinedEvents([]);
       } else {
         console.error('❌ Erreur chargement événements rejoints:', response.status);
@@ -233,6 +233,7 @@ const DashboardScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('❌ Erreur loadJoinedEvents:', error);
+      console.log('🔍 loadJoinedEvents - Erreur, joinedEvents = []');
       setJoinedEvents([]);
     } finally {
       setLoadingJoinedEvents(false);
@@ -378,7 +379,11 @@ const DashboardScreen = ({ navigation }) => {
       key={event._id || event.id} 
       className="bg-dark-800/90 border border-dark-600/30 rounded-2xl overflow-hidden shadow-lg mb-4"
       activeOpacity={0.8}
-      onPress={() => navigation.navigate('EventDetailsModal', { eventId: event._id || event.id })}
+      onPress={() => {
+        if (navigation) {
+          navigateToEventDetails(navigation, event._id || event.id);
+        }
+      }}
     >
       {/* Event Image Background */}
       <View className="h-24 relative">
@@ -461,6 +466,24 @@ const DashboardScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  // Vérification de sécurité pour la navigation
+  if (!navigation) {
+    console.log('🔍 DashboardScreen - Navigation non disponible, affichage de chargement');
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#0f172a'
+      }}>
+        <ActivityIndicator size="large" color="#20B2AA" />
+        <Text style={{ color: '#e2e8f0', marginTop: 10 }}>
+          Chargement de la navigation...
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-dark-900">
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
@@ -479,7 +502,7 @@ const DashboardScreen = ({ navigation }) => {
           
           {/* Search and Menu Icons */}
           <View className="flex-row items-center">
-            <GlobalMenu navigation={navigation} currentRoute="Dashboard" />
+            {navigation && <GlobalMenu navigation={navigation} currentRoute="Dashboard" />}
           </View>
         </Animated.View>
       </View>
@@ -496,7 +519,11 @@ const DashboardScreen = ({ navigation }) => {
             <SimplifiedUserCard
               user={user}
               userProgression={userProgression}
-              onProfilePress={() => navigation.navigate('UserProfileModal')}
+              onProfilePress={() => {
+                if (navigation) {
+                  navigateToUserProfile(navigation);
+                }
+              }}
             />
           </Animated.View>
         </View>
@@ -589,7 +616,11 @@ const DashboardScreen = ({ navigation }) => {
             <View className="px-6 mb-8">
               <TouchableOpacity 
                 className="bg-lime rounded-xl py-4 px-6 shadow-lg w-full"
-                onPress={() => navigation.navigate('CreateEventModal')}
+                onPress={() => {
+                  if (navigation) {
+                    navigateToCreateEvent(navigation);
+                  }
+                }}
                 activeOpacity={0.8}
               >
                 <Text className="text-white text-lg font-bold text-center">Créer un événement</Text>
@@ -601,7 +632,11 @@ const DashboardScreen = ({ navigation }) => {
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-white text-xl font-bold">Événements près de vous</Text>
                 <TouchableOpacity
-                  onPress={() => navigation.navigate('DiscoverMain')}
+                  onPress={() => {
+                    if (navigation) {
+                      navigation.navigate('Discover');
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text className="text-lime text-sm font-medium underline">Voir tout</Text>
@@ -681,7 +716,11 @@ const DashboardScreen = ({ navigation }) => {
                   </Text>
                   <TouchableOpacity 
                     className="bg-lime/20 border border-lime/30 px-6 py-3 rounded-2xl mt-4"
-                    onPress={() => navigation.navigate('CreateEventModal')}
+                    onPress={() => {
+                      if (navigation) {
+                        navigation.navigate('CreateEventModal');
+                      }
+                    }}
                   >
                     <Text className="text-lime text-sm font-bold">Créer votre premier événement</Text>
                   </TouchableOpacity>
@@ -721,12 +760,19 @@ const DashboardScreen = ({ navigation }) => {
             </View>
             
             {/* Liste des événements rejoints */}
+            {(() => {
+              console.log('🔍 RENDU SECTION ÉVÉNEMENTS REJOINTS');
+              console.log('🔍 loadingJoinedEvents:', loadingJoinedEvents);
+              console.log('🔍 safeJoinedEvents.length:', safeJoinedEvents.length);
+              console.log('🔍 navigation disponible:', !!navigation);
+              return null;
+            })()}
             {loadingJoinedEvents ? (
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-8 h-8 border-2 border-lime border-t-transparent rounded-full animate-spin mb-4" />
                 <Text className="text-slate-400 text-base">Chargement des événements...</Text>
               </View>
-            ) : !Array.isArray(joinedEvents) || joinedEvents.length === 0 ? (
+            ) : safeJoinedEvents.length === 0 ? (
               <View className="flex-1 items-center justify-center py-20">
                 <View className="w-20 h-20 bg-slate-800 rounded-full items-center justify-center mb-6">
                   <Ionicons name="calendar-outline" size={40} color="#64748b" />
@@ -738,28 +784,39 @@ const DashboardScreen = ({ navigation }) => {
                 </Text>
                 <TouchableOpacity 
                   className="bg-lime rounded-xl py-4 px-8"
-                  onPress={() => navigation.navigate('DiscoverMain')}
+                  onPress={() => {
+                    console.log('🔍 Bouton "Découvrir" cliqué - Navigation directe');
+                    console.log('🔍 Navigation disponible:', !!navigation);
+                    console.log('🔍 Navigation.navigate disponible:', !!(navigation && navigation.navigate));
+                    
+                    if (navigation && navigation.navigate) {
+                      console.log('🔍 Tentative de navigation vers Discover');
+                      try {
+                        navigation.navigate('Discover');
+                        console.log('🔍 Navigation réussie vers Discover');
+                      } catch (error) {
+                        console.error('🔍 Erreur de navigation:', error);
+                      }
+                    } else {
+                      console.warn('🔍 Navigation non disponible - impossible de naviguer');
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <Text className="text-white text-lg font-bold">Découvrir des événements</Text>
                 </TouchableOpacity>
               </View>
-            ) : Array.isArray(joinedEvents) && joinedEvents.length > 0 ? (
+            ) : safeJoinedEvents.length > 0 ? (
               <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                 <View className="space-y-4">
-                  {joinedEvents.map((event, index) => {
+                  {safeJoinedEvents.map((event, index) => {
                     return (
                     <TouchableOpacity
                       key={event._id || index}
                       className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6"
                       onPress={() => {
                         if (event._id && navigation) {
-                          navigation.navigate('EventDetailsModal', { eventId: event._id });
-                        } else {
-                          console.error('❌ Erreur navigation: event._id ou navigation manquant', {
-                            eventId: event._id,
-                            hasNavigation: !!navigation
-                          });
+                          navigateToEventDetails(navigation, event._id);
                         }
                       }}
                       activeOpacity={0.8}
@@ -882,17 +939,21 @@ const DashboardScreen = ({ navigation }) => {
         visible={managementMenuVisible}
         onClose={() => setManagementMenuVisible(false)}
         onModifyEvent={() => {
-          navigation.navigate('CreateEventModal', { 
-            eventId: selectedEvent?.id, 
-            eventData: selectedEvent, 
-            isEditing: true 
-          });
+          if (navigation) {
+            navigation.navigate('CreateEventModal', { 
+              eventId: selectedEvent?.id, 
+              eventData: selectedEvent, 
+              isEditing: true 
+            });
+          }
         }}
         onManageParticipants={() => {
-          navigation.navigate('EventParticipants', { 
-            eventId: selectedEvent?.id, 
-            eventData: selectedEvent 
-          });
+          if (navigation) {
+            navigation.navigate('EventParticipants', { 
+              eventId: selectedEvent?.id, 
+              eventData: selectedEvent
+            });
+          }
         }}
       />
       
@@ -917,6 +978,21 @@ const DashboardScreen = ({ navigation }) => {
       )}
     </SafeAreaView>
   );
+  } catch (error) {
+    console.error('🔍 DashboardScreen - Erreur dans le rendu:', error);
+    return (
+      <View style={{ 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        backgroundColor: '#0f172a'
+      }}>
+        <Text style={{ color: '#e2e8f0', fontSize: 16, textAlign: 'center' }}>
+          Erreur de rendu: {error.message}
+        </Text>
+      </View>
+    );
+  }
 };
 
 // Styles pour la section activité

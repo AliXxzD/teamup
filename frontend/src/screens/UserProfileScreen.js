@@ -43,13 +43,6 @@ const UserProfileScreen = ({ navigation, route }) => {
   const { userId } = route.params || {};
   const isOwnProfile = !userId || userId === (user?._id || user?.id);
   
-  // Debug: Log des paramètres reçus
-  console.log('🔍 UserProfileScreen - Paramètres reçus:', {
-    userId,
-    userIdType: typeof userId,
-    isOwnProfile,
-    currentUserId: user?._id || user?.id
-  });
   
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -72,25 +65,29 @@ const UserProfileScreen = ({ navigation, route }) => {
     // Initialiser les données utilisateur
     loadUserData();
     
-    // Animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 100,
-        friction: 8,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    // Utiliser requestAnimationFrame pour éviter les conflits avec React 18
+    const animationFrame = requestAnimationFrame(() => {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    });
+    
+    return () => cancelAnimationFrame(animationFrame);
   }, [user, userId]); // Recharger quand l'utilisateur ou l'userId change
 
   // Charger les avis quand l'onglet Avis est sélectionné

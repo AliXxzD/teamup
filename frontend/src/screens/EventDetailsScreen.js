@@ -916,18 +916,9 @@ const EventDetailsScreen = ({ navigation, route }) => {
                       key={participantKey}
                       className="flex-row items-start"
                       onPress={() => {
-                        console.log('🔍 Clic sur participant:', {
-                          userName,
-                          userId,
-                          isCurrentUser,
-                          participantKey
-                        });
-                        
                         if (userId && !isCurrentUser) {
-                          console.log('🔍 Navigation vers profil participant:', userId);
                           // S'assurer que l'ID est une string
                           const userIdString = userId.toString();
-                          console.log('🔍 ID converti en string:', userIdString);
                           safeNavigate(
                             navigation,
                             'UserProfileModal',

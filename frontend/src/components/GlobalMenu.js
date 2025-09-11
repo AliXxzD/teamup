@@ -26,8 +26,7 @@ const GlobalMenu = ({ navigation, currentRoute }) => {
   const [userPoints, setUserPoints] = useState(0);
 
   // Vérifier que la navigation est disponible
-  if (!navigation) {
-    console.warn('⚠️ GlobalMenu: Navigation not available');
+  if (!navigation || !navigation.navigate) {
     return null;
   }
   
