@@ -65,29 +65,25 @@ const UserProfileScreen = ({ navigation, route }) => {
     // Initialiser les données utilisateur
     loadUserData();
     
-    // Utiliser requestAnimationFrame pour éviter les conflits avec React 18
-    const animationFrame = requestAnimationFrame(() => {
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        Animated.spring(scaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    });
-    
-    return () => cancelAnimationFrame(animationFrame);
+    // Animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, [user, userId]); // Recharger quand l'utilisateur ou l'userId change
 
   // Charger les avis quand l'onglet Avis est sélectionné

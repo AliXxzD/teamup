@@ -53,8 +53,6 @@ const RegisterScreen = ({ navigation }) => {
       newErrors.password = 'Mot de passe requis';
     } else if (password.length < 6) {
       newErrors.password = 'Mot de passe trop court (min 6 caractères)';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      newErrors.password = 'Le mot de passe doit contenir au moins une minuscule, une majuscule et un chiffre';
     }
     
     if (!confirmPassword) {

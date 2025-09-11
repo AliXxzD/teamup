@@ -14,22 +14,27 @@ class EmailService {
       return;
     }
 
-    // Configuration SMTP robuste pour Gmail
+    // Configuration pour Gmail (vous pouvez changer pour un autre service)
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER, // Votre email Gmail
+        pass: process.env.EMAIL_PASSWORD, // Mot de passe d'application Gmail
+      },
+    });
+
+    // Alternative avec configuration SMTP personnalisée
+    /*
+    this.transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: process.env.SMTP_PORT || 587,
       secure: false, // true pour 465, false pour les autres ports
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
       },
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 60000, // 60 secondes
-      greetingTimeout: 30000,   // 30 secondes
-      socketTimeout: 60000,     // 60 secondes
     });
+    */
   }
 
   async sendPasswordResetCode(userEmail, resetCode, userName = '') {

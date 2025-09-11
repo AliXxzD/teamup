@@ -47,14 +47,14 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
   const { eventId, eventData, isEditing } = route.params || {};
 
   useEffect(() => {
-    // Utiliser requestAnimationFrame pour s'assurer que l'animation s'exécute après le rendu
-    const animationFrame = requestAnimationFrame(() => {
+    // Délayer l'animation pour éviter les conflits avec React 18
+    const timer = setTimeout(() => {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 600,
         useNativeDriver: true,
       }).start();
-    });
+    }, 100);
 
     if (isEditing && eventData) {
       // Mode édition : remplir avec les données de l'événement
@@ -91,7 +91,7 @@ const CreateEventScreenTailwind = ({ navigation, route }) => {
       setErrors({});
     }
 
-    return () => cancelAnimationFrame(animationFrame);
+    return () => clearTimeout(timer);
   }, [isEditing, eventData]);
 
   // Réinitialiser le formulaire quand on navigue vers la page (focus)
