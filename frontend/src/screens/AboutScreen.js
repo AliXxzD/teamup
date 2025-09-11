@@ -174,3 +174,4 @@ const AboutScreen = ({ navigation }) => {
 };
 
 export default AboutScreen;
+

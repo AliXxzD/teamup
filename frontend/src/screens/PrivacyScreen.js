@@ -239,3 +239,4 @@ const PrivacyScreen = ({ navigation }) => {
 };
 
 export default PrivacyScreen;
+

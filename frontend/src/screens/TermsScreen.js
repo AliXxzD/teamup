@@ -238,3 +238,4 @@ const TermsScreen = ({ navigation }) => {
 };
 
 export default TermsScreen;
+

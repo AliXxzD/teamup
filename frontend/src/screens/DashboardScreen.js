@@ -66,7 +66,8 @@ const DashboardScreen = ({ navigation }) => {
       loadEvents();
       loadUserProgression();
       // Recharger aussi les événements rejoints si l'utilisateur est connecté
-      if (user && user._id) {
+      const userId = user?._id || user?.id;
+      if (user && userId) {
         loadJoinedEvents();
       }
     });
@@ -76,9 +77,10 @@ const DashboardScreen = ({ navigation }) => {
 
   // Charger les événements rejoints quand l'utilisateur est disponible
   useEffect(() => {
-    if (user && user._id) {
-      console.log('🔄 Chargement des événements rejoints pour l\'utilisateur:', user._id);
-      console.log('🔄 Détails utilisateur:', { name: user.name, email: user.email, _id: user._id });
+    const userId = user?._id || user?.id;
+    if (user && userId) {
+      console.log('🔄 Chargement des événements rejoints pour l\'utilisateur:', userId);
+      console.log('🔄 Détails utilisateur:', { name: user.name, email: user.email, _id: user._id, id: user.id });
       loadJoinedEvents();
     } else if (!user) {
       console.log('⚠️ Utilisateur non connecté, pas de chargement des événements rejoints');
@@ -90,7 +92,8 @@ const DashboardScreen = ({ navigation }) => {
 
   // Recharger les événements rejoints quand l'onglet activity est sélectionné
   useEffect(() => {
-    if (activeTab === 'activity' && user && user._id) {
+    const userId = user?._id || user?.id;
+    if (activeTab === 'activity' && user && userId) {
       console.log('🔄 Rechargement des événements rejoints pour l\'onglet activity');
       loadJoinedEvents();
     }
@@ -146,8 +149,10 @@ const DashboardScreen = ({ navigation }) => {
       console.log('📅 Chargement des événements rejoints...');
       
       // Vérifier que l'utilisateur est bien connecté
-      if (!user || !user._id) {
+      const userId = user?._id || user?.id;
+      if (!user || !userId) {
         console.log('⚠️ Utilisateur non connecté, impossible de charger les événements rejoints');
+        console.log('⚠️ Détails utilisateur:', { user, _id: user?._id, id: user?.id });
         setJoinedEvents([]);
         setLoadingJoinedEvents(false);
         return;
@@ -175,9 +180,47 @@ const DashboardScreen = ({ navigation }) => {
         console.log('🔍 Tous les événements rejoints:', data.data?.map(e => `${e.title}: ${e.status}`));
         console.log('🔍 Réponse complète de l\'API:', JSON.stringify(data, null, 2));
         
-        // Le backend filtre déjà les événements, pas besoin de filtrer côté frontend
-        setJoinedEvents(data.data || []);
-        console.log('🔍 État joinedEvents mis à jour:', data.data || []);
+        // DEBUG: Vérifier si l'utilisateur actuel est bien dans les participants
+        if (data.data && data.data.length > 0) {
+          console.log('🔍 DEBUG PARTICIPANTS - Utilisateur actuel:', userId);
+          data.data.forEach((event, index) => {
+            console.log(`🔍 Événement ${index + 1}: ${event.title}`);
+            console.log(`   - Participants count: ${event.participants?.length || 0}`);
+            if (event.participants && event.participants.length > 0) {
+              event.participants.forEach((participant, pIndex) => {
+                console.log(`   - Participant ${pIndex + 1}: ${participant.user?._id || participant.user}`);
+                console.log(`     Est l'utilisateur actuel: ${participant.user?._id === userId || participant.user === userId}`);
+              });
+            } else {
+              console.log('   ⚠️ Aucun participant trouvé dans cet événement');
+            }
+          });
+        }
+        
+        // Filtrer côté frontend pour s'assurer que l'utilisateur est bien participant
+        const filteredEvents = (data.data || []).filter(event => {
+          if (!event.participants || event.participants.length === 0) {
+            console.log(`⚠️ Événement ${event.title} n'a pas de participants`);
+            return false;
+          }
+          
+          const isParticipant = event.participants.some(participant => {
+            const participantUserId = participant.user?._id || participant.user;
+            const isMatch = participantUserId === userId;
+            console.log(`🔍 Comparaison: ${participantUserId} === ${userId} = ${isMatch}`);
+            return isMatch;
+          });
+          
+          if (!isParticipant) {
+            console.log(`⚠️ L'utilisateur ${userId} n'est pas participant de l'événement ${event.title}`);
+          }
+          
+          return isParticipant;
+        });
+        
+        console.log(`🔍 Événements filtrés: ${filteredEvents.length} sur ${data.data?.length || 0}`);
+        setJoinedEvents(filteredEvents);
+        console.log('🔍 État joinedEvents mis à jour:', filteredEvents);
       } else if (response.status === 401) {
         console.log('🔐 Token expiré, déconnexion nécessaire');
         setJoinedEvents([]);

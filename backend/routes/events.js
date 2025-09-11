@@ -686,6 +686,7 @@ router.get('/my/joined', authMiddleware, async (req, res) => {
     console.log('🔍 Recherche des événements rejoints pour l\'utilisateur:', req.userId);
     console.log('🔍 Type de req.userId:', typeof req.userId);
     console.log('🔍 req.userId toString:', req.userId.toString());
+    console.log('🔍 req.user (complet):', req.user);
     
     // S'assurer que req.userId est bien un ObjectId
     const mongoose = require('mongoose');
@@ -693,12 +694,36 @@ router.get('/my/joined', authMiddleware, async (req, res) => {
     
     // Requête pour trouver les événements où l'utilisateur est participant
     // Inclure plus de statuts pour voir tous les événements rejoints
+    console.log('🔍 Requête MongoDB avec userId:', userId);
+    console.log('🔍 Type de userId pour la requête:', typeof userId);
+    
+    // Requête plus explicite pour s'assurer que l'utilisateur est bien participant
     const events = await Event.find({
-      'participants.user': userId,
-      status: { $in: ['active', 'full', 'completed'] }
+      $and: [
+        { 'participants.user': userId },
+        { status: { $in: ['active', 'full', 'completed'] } }
+      ]
     })
       .populate('organizer', 'name profile.avatar')
+      .populate('participants.user', 'name _id') // Ajouter populate pour voir les participants
       .sort({ date: 1 });
+    
+    console.log('🔍 Requête exécutée, événements trouvés:', events.length);
+    
+    // Test: Vérifier s'il y a des événements avec cet utilisateur comme participant (tous statuts)
+    const testEvents = await Event.find({
+      'participants.user': userId
+    }).select('title participants status');
+    
+    console.log('🧪 TEST - Événements avec cet utilisateur (tous statuts):', testEvents.length);
+    testEvents.forEach((event, index) => {
+      console.log(`  ${index + 1}. ${event.title} - Status: ${event.status}`);
+      console.log(`     Participants: ${event.participants.length}`);
+      event.participants.forEach((participant, pIndex) => {
+        console.log(`       ${pIndex + 1}. User ID: ${participant.user} (type: ${typeof participant.user})`);
+        console.log(`            Égal à userId recherché: ${participant.user.toString() === userId.toString()}`);
+      });
+    });
 
     console.log('📊 Événements trouvés:', events.length);
     
@@ -712,6 +737,8 @@ router.get('/my/joined', authMiddleware, async (req, res) => {
         console.log(`     Participants: ${event.participants.length}`);
         event.participants.forEach((participant, pIndex) => {
           console.log(`       ${pIndex + 1}. User ID: ${participant.user}`);
+          console.log(`            Type: ${typeof participant.user}`);
+          console.log(`            Égal à userId recherché: ${participant.user.toString() === userId.toString()}`);
         });
       });
     } else {

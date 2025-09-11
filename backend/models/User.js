@@ -197,7 +197,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Index pour améliorer les performances
-userSchema.index({ email: 1 });
+// Note: email a déjà un index unique automatique via unique: true
 userSchema.index({ 'profile.location.coordinates': '2dsphere' });
 
 // Méthode pour générer un nom d'utilisateur unique
