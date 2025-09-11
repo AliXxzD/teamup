@@ -344,7 +344,7 @@ const RankingScreen = ({ navigation }) => {
                   key={user._id || user.id || index}
                   rank={user.rank || index + 1}
                   user={user}
-                  currentUserId={user?._id}
+                  currentUserId={user?._id || user?.id}
                 />
               ))}
             </View>
