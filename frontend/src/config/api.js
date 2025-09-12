@@ -2,17 +2,12 @@
 
 // URL de base selon l'environnement
 export const API_BASE_URL = (() => {
-  // En développement (Expo Go)
-  if (__DEV__) {
-    return process.env.EXPO_PUBLIC_API_URL || 'https://teamup-oa5q.onrender.com';
-  }
-  
-  // En production (EAS Build)
+  // Priorité 1: Variable d'environnement (fonctionne en dev et production)
   if (process.env.EXPO_PUBLIC_API_URL) {
     return process.env.EXPO_PUBLIC_API_URL;
   }
   
-  // URL par défaut pour la production - Render backend
+  // Priorité 2: URL par défaut pour tous les environnements
   return 'https://teamup-oa5q.onrender.com';
 })();
 
@@ -75,13 +70,12 @@ export const getAuthHeaders = (token) => ({
   'Authorization': `Bearer ${token}`,
 });
 
-// Configuration pour le développement
-if (__DEV__) {
-  console.log('🔧 TeamUp API Configuration:');
-  console.log(`   Environment: ${__DEV__ ? 'Development' : 'Production'}`);
-  console.log(`   API Base URL: ${API_BASE_URL}`);
-  console.log(`   Timeout: ${API_CONFIG.TIMEOUT}ms`);
-}
+// Configuration pour le débogage (dev et production)
+console.log('🔧 TeamUp API Configuration:');
+console.log(`   Environment: ${__DEV__ ? 'Development' : 'Production'}`);
+console.log(`   API Base URL: ${API_BASE_URL}`);
+console.log(`   EXPO_PUBLIC_API_URL: ${process.env.EXPO_PUBLIC_API_URL || 'Non défini'}`);
+console.log(`   Timeout: ${API_CONFIG.TIMEOUT}ms`);
 
 export default {
   API_BASE_URL,
