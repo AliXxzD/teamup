@@ -1,64 +1,104 @@
+// ========================================
+// IMPORTS ET DÉPENDANCES
+// ========================================
+
+// React pour la création des composants
 import React from 'react';
+// Composants de base React Native pour l'interface utilisateur
 import { View, Text } from 'react-native';
+// NavigationContainer : conteneur principal de la navigation React Navigation
 import { NavigationContainer } from '@react-navigation/native';
+// createStackNavigator : pour créer des navigateurs en pile (écrans empilés)
 import { createStackNavigator } from '@react-navigation/stack';
+// createBottomTabNavigator : pour créer des onglets en bas d'écran
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+// Ionicons : bibliothèque d'icônes pour React Native
 import { Ionicons } from '@expo/vector-icons';
+// Couleurs globales de l'application
 import { colors } from '../styles/globalStyles';
 
-// Auth Context
+// ========================================
+// IMPORTATION DU CONTEXTE D'AUTHENTIFICATION
+// ========================================
+
+// Hook pour accéder au contexte d'authentification
 import { useAuth } from '../contexts/AuthContext';
 
-// Screens
-import HomeScreen from '../screens/HomeScreen';
-import LoginScreen from '../screens/LoginScreen';
-import RegisterScreen from '../screens/RegisterScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import CreateEventScreen from '../screens/CreateEventScreen';
-import DiscoverScreen from '../screens/DiscoverScreen';
-import EventDetailsScreen from '../screens/EventDetailsScreen';
-import MessagesScreen from '../screens/MessagesScreen';
-import ChatScreen from '../screens/ChatScreen';
-import NewConversationScreen from '../screens/NewConversationScreen';
-import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
-import ResetPasswordScreen from '../screens/ResetPasswordScreen';
-import VerifyCodeScreen from '../screens/VerifyCodeScreen';
+// ========================================
+// IMPORTATION DES ÉCRANS DE L'APPLICATION
+// ========================================
 
-import UserProfileScreen from '../screens/UserProfileScreen';
-import StatsScreen from '../screens/StatsScreen';
-import EventParticipantsScreen from '../screens/EventParticipantsScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import AboutScreen from '../screens/AboutScreen';
-import PrivacyScreen from '../screens/PrivacyScreen';
-import TermsScreen from '../screens/TermsScreen';
-import NotificationsScreen from '../screens/NotificationsScreen';
-import RankingScreen from '../screens/RankingScreen';
-import EditProfileScreen from '../screens/EditProfileScreen';
-import UserReviewsScreen from '../screens/UserReviewsScreen';
+// Écrans d'authentification (utilisateurs non connectés)
+import HomeScreen from '../screens/HomeScreen';                    // Page d'accueil publique
+import LoginScreen from '../screens/LoginScreen';                  // Connexion
+import RegisterScreen from '../screens/RegisterScreen';            // Inscription
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen'; // Mot de passe oublié
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';   // Réinitialisation mot de passe
+import VerifyCodeScreen from '../screens/VerifyCodeScreen';         // Vérification code
 
-// Custom Components
-import CreateTabButton from '../components/CreateTabButton';
-import TabIconWithBadge from '../components/TabIconWithBadge';
-import CustomTabBar from '../components/CustomTabBar';
+// Écrans principaux (utilisateurs connectés)
+import DashboardScreen from '../screens/DashboardScreen';          // Tableau de bord principal
+import CreateEventScreen from '../screens/CreateEventScreen';      // Création d'événement
+import DiscoverScreen from '../screens/DiscoverScreen';            // Découverte d'événements
+import EventDetailsScreen from '../screens/EventDetailsScreen';    // Détails d'un événement
+import EventParticipantsScreen from '../screens/EventParticipantsScreen'; // Participants d'un événement
 
-const Stack = createStackNavigator();
-const Tab = createBottomTabNavigator();
+// Écrans de messagerie
+import MessagesScreen from '../screens/MessagesScreen';            // Liste des conversations
+import ChatScreen from '../screens/ChatScreen';                    // Chat individuel
+import NewConversationScreen from '../screens/NewConversationScreen'; // Nouvelle conversation
 
-// Navigateur pour les utilisateurs non authentifiés
+// Écrans de profil et paramètres
+import UserProfileScreen from '../screens/UserProfileScreen';      // Profil utilisateur
+import EditProfileScreen from '../screens/EditProfileScreen';      // Modification du profil
+import UserReviewsScreen from '../screens/UserReviewsScreen';      // Avis sur l'utilisateur
+import StatsScreen from '../screens/StatsScreen';                  // Statistiques
+import SettingsScreen from '../screens/SettingsScreen';            // Paramètres
+import AboutScreen from '../screens/AboutScreen';                  // À propos
+import PrivacyScreen from '../screens/PrivacyScreen';              // Politique de confidentialité
+import TermsScreen from '../screens/TermsScreen';                  // Conditions d'utilisation
+import NotificationsScreen from '../screens/NotificationsScreen';  // Notifications
+import RankingScreen from '../screens/RankingScreen';              // Classement
+
+// ========================================
+// IMPORTATION DES COMPOSANTS PERSONNALISÉS
+// ========================================
+
+// Composants personnalisés pour la navigation
+import CreateTabButton from '../components/CreateTabButton';       // Bouton de création personnalisé
+import TabIconWithBadge from '../components/TabIconWithBadge';     // Icône d'onglet avec badge
+import CustomTabBar from '../components/CustomTabBar';             // Barre d'onglets personnalisée
+
+// ========================================
+// CRÉATION DES NAVIGATEURS
+// ========================================
+
+// Créer les instances des navigateurs
+const Stack = createStackNavigator();  // Navigateur en pile pour les écrans empilés
+const Tab = createBottomTabNavigator(); // Navigateur à onglets pour la navigation principale
+
+// ========================================
+// NAVIGATEUR POUR UTILISATEURS NON AUTHENTIFIÉS
+// ========================================
+
+// Navigateur pour les utilisateurs non connectés (invités)
+// Affiche les écrans d'authentification et la page d'accueil publique
 const GuestNavigator = () => (
   <Stack.Navigator 
     screenOptions={{
-      headerShown: false,
-      cardStyle: { backgroundColor: colors.background }
+      headerShown: false,                                    // Masquer l'en-tête par défaut
+      cardStyle: { backgroundColor: colors.background }     // Couleur de fond des écrans
     }}
   >
+    {/* Page d'accueil publique - premier écran affiché */}
     <Stack.Screen name="Home" component={HomeScreen} />
+    
+    {/* Écrans d'authentification */}
     <Stack.Screen name="Login" component={LoginScreen} />
     <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-        <Stack.Screen name="VerifyCode" component={VerifyCodeScreen} />
-        <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
-
+    <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+    <Stack.Screen name="VerifyCode" component={VerifyCodeScreen} />
+    <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
   </Stack.Navigator>
 );
 

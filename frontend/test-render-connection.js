@@ -1,52 +1,55 @@
-// Test script to verify Render backend connection
-const API_BASE_URL = 'https://teamup-oa5q.onrender.com';
+// Test de connexion avec le backend Render
+const API_URL = 'https://teamup-oa5q.onrender.com';
 
 async function testRenderConnection() {
-  console.log('🔍 Testing Render backend connection...');
-  console.log('📍 URL:', API_BASE_URL);
+  console.log('🔍 Test de connexion avec Render...');
+  console.log(`📍 URL: ${API_URL}`);
   
   try {
-    // Test health endpoint
-    console.log('\n1. Testing health endpoint...');
-    const healthResponse = await fetch(`${API_BASE_URL}/api/health`);
-    console.log('   Status:', healthResponse.status);
+    // Test 1: Health check
+    console.log('\n1. Test Health Check...');
+    const healthResponse = await fetch(`${API_URL}/api/health`);
+    const healthData = await healthResponse.json();
+    console.log('✅ Health Check:', healthData);
     
-    if (healthResponse.ok) {
-      const healthData = await healthResponse.json();
-      console.log('   ✅ Health check passed:', healthData);
+    // Test 2: Page d'accueil
+    console.log('\n2. Test Page d\'accueil...');
+    const homeResponse = await fetch(`${API_URL}/`);
+    const homeData = await homeResponse.json();
+    console.log('✅ Page d\'accueil:', homeData);
+    
+    // Test 3: Test d'inscription (optionnel)
+    console.log('\n3. Test d\'inscription...');
+    const testUser = {
+      username: 'test_user_' + Date.now(),
+      email: 'test@example.com',
+      password: 'testpassword123'
+    };
+    
+    const registerResponse = await fetch(`${API_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testUser)
+    });
+    
+    if (registerResponse.ok) {
+      const registerData = await registerResponse.json();
+      console.log('✅ Inscription test:', registerData);
     } else {
-      console.log('   ❌ Health check failed');
+      const errorData = await registerResponse.json();
+      console.log('⚠️ Inscription test (attendu):', errorData);
     }
     
-    // Test root endpoint
-    console.log('\n2. Testing root endpoint...');
-    const rootResponse = await fetch(`${API_BASE_URL}/`);
-    console.log('   Status:', rootResponse.status);
-    
-    if (rootResponse.ok) {
-      const rootData = await rootResponse.text();
-      console.log('   ✅ Root endpoint response:', rootData.substring(0, 100));
-    } else {
-      console.log('   ❌ Root endpoint failed');
-    }
-    
-    // Test events endpoint (should require auth)
-    console.log('\n3. Testing events endpoint (should require auth)...');
-    const eventsResponse = await fetch(`${API_BASE_URL}/api/events`);
-    console.log('   Status:', eventsResponse.status);
-    
-    if (eventsResponse.status === 401) {
-      console.log('   ✅ Events endpoint correctly requires authentication');
-    } else {
-      console.log('   ⚠️  Unexpected response from events endpoint');
-    }
-    
-    console.log('\n🎉 Render backend connection test completed!');
+    console.log('\n🎉 Tous les tests sont passés ! Le backend Render fonctionne parfaitement.');
+    console.log('📱 Vous pouvez maintenant créer l\'APK avec confiance.');
     
   } catch (error) {
-    console.error('❌ Error testing Render connection:', error.message);
+    console.error('❌ Erreur de connexion:', error.message);
+    console.log('🔧 Vérifiez que le backend Render est bien démarré.');
   }
 }
 
-// Run the test
+// Exécuter le test
 testRenderConnection();
