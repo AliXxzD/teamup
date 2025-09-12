@@ -57,6 +57,12 @@ const PORT = process.env.PORT || 5000;
 // CONFIGURATION DES MIDDLEWARES DE SÉCURITÉ
 // ========================================
 
+// Configuration du trust proxy pour Render
+// Render utilise un proxy, donc nous devons faire confiance aux headers X-Forwarded-*
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', true);
+}
+
 // Helmet : middleware de sécurité qui définit des en-têtes HTTP sécurisés
 // Protège contre les attaques XSS, clickjacking, etc.
 app.use(helmet());
