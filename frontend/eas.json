@@ -7,7 +7,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.205:5000"
+        "EXPO_PUBLIC_API_URL": "https://teamup-oa5q.onrender.com"
       }
     },
     "preview": {
@@ -16,7 +16,7 @@
       },
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://192.168.1.205:5000"
+        "EXPO_PUBLIC_API_URL": "https://teamup-oa5q.onrender.com"
       }
     },
     "production": {
